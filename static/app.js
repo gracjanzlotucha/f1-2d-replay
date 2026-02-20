@@ -725,6 +725,28 @@ function bindControls() {
 
   // Keyboard shortcuts
   document.addEventListener('keydown', onKeyDown);
+
+  // Mobile tab switcher
+  bindMobileTabs();
+}
+
+function bindMobileTabs() {
+  const tabs   = document.querySelectorAll('.mobile-tab');
+  const panels = {
+    standings: document.querySelector('.standings-panel'),
+    insights:  document.querySelector('.insights-panel'),
+  };
+
+  function activateTab(panelName) {
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.panel === panelName));
+    Object.keys(panels).forEach(name => {
+      panels[name].classList.toggle('mobile-active', name === panelName);
+    });
+  }
+
+  tabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab.dataset.panel)));
+
+  activateTab('standings'); // default
 }
 
 function togglePlay() {

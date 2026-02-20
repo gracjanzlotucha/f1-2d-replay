@@ -77,20 +77,8 @@ html, body {
 
 /* ─── F1 LOGO BADGE ──────────────────────────────────────────────────────── */
 .f1-logo, .f1-badge {
-  display: flex; align-items: center; gap: 1px;
-  font-size: 26px; font-weight: 900; line-height: 1;
-  letter-spacing: -.04em;
+  display: flex; align-items: center;
 }
-.f1-f { color: var(--text); }
-.f1-1 {
-  color: #fff;
-  background: var(--red);
-  padding: 0 5px 0 4px;
-  border-radius: 3px;
-  font-style: italic;
-}
-.f1-badge { font-size: 18px; }
-.f1-badge .f1-1 { padding: 0 4px 0 3px; border-radius: 2px; }
 
 /* ─── LAYOUT ─────────────────────────────────────────────────────────────── */
 #app {

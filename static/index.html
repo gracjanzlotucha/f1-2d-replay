@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>F1 2D Replay — British Grand Prix 2025</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══ LOADING SCREEN ══════════════════════════════════════════════════════ -->
+<div id="loading-screen">
+  <div class="loading-inner">
+    <div class="f1-logo">
+      <span class="f1-f">F</span><span class="f1-1">1</span>
+    </div>
+    <div class="loading-title">British Grand Prix 2025</div>
+    <div class="loading-subtitle">Silverstone Circuit</div>
+    <div class="loading-bar-wrap">
+      <div id="loading-bar"></div>
+    </div>
+    <div id="loading-msg" class="loading-msg">Initialising…</div>
+  </div>
+</div>
+
+<!-- ═══ MAIN APP ════════════════════════════════════════════════════════════ -->
+<div id="app" class="hidden">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="f1-badge">
+        <span class="f1-f">F</span><span class="f1-1">1</span>
+      </div>
+      <div class="race-info">
+        <span class="race-name">British Grand Prix</span>
+        <span class="race-circuit">Silverstone Circuit · 2025</span>
+      </div>
+    </div>
+    <div class="header-center">
+      <div class="lap-counter">
+        <span class="lap-label">LAP</span>
+        <span id="hdr-lap-cur" class="lap-num">—</span>
+        <span class="lap-sep">/</span>
+        <span id="hdr-lap-total" class="lap-total">—</span>
+      </div>
+      <div id="hdr-status-badge" class="status-badge status-green">RACE</div>
+    </div>
+    <div class="header-right">
+      <div class="weather-box" id="weather-box">
+        <span class="weather-item" id="weather-air">— °C</span>
+        <span class="weather-dot">·</span>
+        <span class="weather-item" id="weather-track">— °C Track</span>
+      </div>
+      <div class="race-time-box">
+        <span class="race-time-label">RACE TIME</span>
+        <span id="hdr-race-time" class="race-time-val">0:00:00</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN GRID -->
+  <main class="main-grid">
+
+    <!-- LEFT: STANDINGS -->
+    <aside class="standings-panel">
+      <div class="panel-header">
+        <span class="panel-title">STANDINGS</span>
+        <span class="panel-subtitle" id="standings-lap-label">LAP —</span>
+      </div>
+      <div class="standings-list" id="standings-list">
+        <!-- populated by JS -->
+      </div>
+    </aside>
+
+    <!-- CENTER: TRACK CANVAS -->
+    <section class="track-section">
+      <div class="track-container" id="track-container">
+        <canvas id="track-canvas"></canvas>
+        <!-- Speed tooltip -->
+        <div id="car-tooltip" class="car-tooltip hidden">
+          <div class="tooltip-driver"></div>
+          <div class="tooltip-team"></div>
+          <div class="tooltip-pos"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: INSIGHTS -->
+    <aside class="insights-panel">
+      <div class="panel-header">
+        <span class="panel-title">LAP INSIGHTS</span>
+        <span class="panel-subtitle" id="insights-lap-label">LAP —</span>
+      </div>
+      <div class="insights-content" id="insights-content">
+        <div class="insights-empty">Insights will appear as the race progresses</div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- BOTTOM: TIMELINE / CONTROLS -->
+  <footer class="controls-bar">
+
+    <!-- Playback buttons -->
+    <div class="ctrl-group ctrl-buttons">
+      <button class="ctrl-btn" id="btn-to-start" title="Jump to start">⏮</button>
+      <button class="ctrl-btn" id="btn-prev-lap" title="Previous lap">⏪</button>
+      <button class="ctrl-btn ctrl-btn-primary" id="btn-play" title="Play / Pause">▶</button>
+      <button class="ctrl-btn" id="btn-next-lap" title="Next lap">⏩</button>
+      <button class="ctrl-btn" id="btn-to-end" title="Jump to end">⏭</button>
+    </div>
+
+    <!-- Timeline -->
+    <div class="ctrl-group ctrl-timeline">
+      <span id="ctrl-time-cur" class="ctrl-time">0:00</span>
+      <div class="timeline-wrap">
+        <input type="range" id="timeline" min="0" max="1000" value="0" class="timeline-slider" />
+        <div class="timeline-lap-markers" id="timeline-lap-markers"></div>
+      </div>
+      <span id="ctrl-time-total" class="ctrl-time">0:00</span>
+    </div>
+
+    <!-- Speed + options -->
+    <div class="ctrl-group ctrl-options">
+      <div class="speed-selector">
+        <span class="speed-label">SPEED</span>
+        <div class="speed-btns">
+          <button class="speed-btn" data-speed="0.5">0.5×</button>
+          <button class="speed-btn speed-active" data-speed="1">1×</button>
+          <button class="speed-btn" data-speed="2">2×</button>
+          <button class="speed-btn" data-speed="4">4×</button>
+          <button class="speed-btn" data-speed="8">8×</button>
+          <button class="speed-btn" data-speed="16">16×</button>
+        </div>
+      </div>
+      <label class="toggle-label">
+        <input type="checkbox" id="toggle-trails" checked />
+        <span class="toggle-track"></span>
+        <span>Trails</span>
+      </label>
+      <label class="toggle-label">
+        <input type="checkbox" id="toggle-labels" checked />
+        <span class="toggle-track"></span>
+        <span>Labels</span>
+      </label>
+    </div>
+
+  </footer>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

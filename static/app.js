@@ -689,8 +689,6 @@ function bindControls() {
   document.getElementById('btn-play').addEventListener('click', togglePlay);
 
   // Navigation
-  document.getElementById('btn-to-start').addEventListener('click', () => seekToT(0));
-  document.getElementById('btn-to-end').addEventListener('click',   () => seekToT(G.maxT));
   document.getElementById('btn-prev-lap').addEventListener('click', () => jumpLap(-1));
   document.getElementById('btn-next-lap').addEventListener('click', () => jumpLap(+1));
 
@@ -853,6 +851,6 @@ function showApp() {
 
 init().catch(err => {
   document.getElementById('loading-msg').textContent = `Error: ${err.message}`;
-  document.getElementById('loading-bar').style.background = '#e10600';
+  document.getElementById('loading-bar').style.background = '#BFFF4A';
   console.error('F1 Replay init error:', err);
 });

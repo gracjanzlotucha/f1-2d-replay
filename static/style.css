@@ -13,8 +13,8 @@
   --text:        #f0f0f0;
   --text-dim:    #888888;
   --text-dimmer: #555555;
-  --red:         #e10600;
-  --red-dim:     rgba(225,6,0,.18);
+  --red:         #BFFF4A;
+  --red-dim:     rgba(191,255,74,.18);
   --green:       #39b54a;
   --yellow:      #ffd700;
   --purple:      #a855f7;
@@ -65,7 +65,7 @@ html, body {
 }
 #loading-bar {
   height: 100%; width: 0%;
-  background: linear-gradient(90deg, var(--red), #ff4433);
+  background: linear-gradient(90deg, var(--red), #d4ff5a);
   border-radius: 99px;
   transition: width .4s ease;
   box-shadow: 0 0 12px var(--red);
@@ -379,8 +379,9 @@ html, body {
   font-size: 16px;
   background: var(--red); border-color: transparent;
   border-radius: var(--radius-md);
+  color: #000;
 }
-.ctrl-btn-primary:hover { background: #ff2010; }
+.ctrl-btn-primary:hover { background: #d4ff5a; }
 
 /* Timeline */
 .ctrl-time {
@@ -404,7 +405,7 @@ html, body {
   width: 14px; height: 14px;
   border-radius: 50%;
   background: var(--red);
-  box-shadow: 0 0 8px rgba(225,6,0,.6);
+  box-shadow: 0 0 8px rgba(191,255,74,.6);
   cursor: grab;
 }
 .timeline-slider::-moz-range-thumb {

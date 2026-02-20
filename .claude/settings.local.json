@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip show:*)",
+      "Bash(pip install:*)",
+      "Bash(python -c:*)",
+      "Bash(pkill:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(node -e:*)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(# Check what the running server actually has by adding a test endpoint curl -s \"\"http://localhost:5000/api/debug_test\"\" || echo \"\"no debug endpoint\"\" # Check which python script is actually running tasklist /fi \"\"imagename eq python.exe\"\" /v)",
+      "Bash(powershell -Command:*)",
+      "Bash(__NEW_LINE_1ef75ceeffdde7d3__ sleep 3)",
+      "Bash(__NEW_LINE_1ef75ceeffdde7d3__ python -c \":*)",
+      "Bash(for pid in 40188 32848 37040 41364 41628 40264 36720 40664)",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(gh:*)",
+      "Bash(python generate_static.py:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)"
+    ]
+  }
+}

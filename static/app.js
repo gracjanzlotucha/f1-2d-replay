@@ -195,18 +195,21 @@ function setupCanvas() {
   function resize() {
     const dpr  = window.devicePixelRatio || 1;
     const rect = container.getBoundingClientRect();
-    const size = Math.min(rect.width * 0.96, rect.height * 0.96);
+    // Round to integer CSS pixels to avoid subpixel positioning blur
+    const size = Math.round(Math.min(rect.width * 0.96, rect.height * 0.96));
     // Physical pixel dimensions (retina-sharp)
     G.canvas.width  = Math.round(size * dpr);
     G.canvas.height = Math.round(size * dpr);
-    // CSS display size unchanged
+    // CSS display size
     G.canvas.style.width  = size + 'px';
     G.canvas.style.height = size + 'px';
     // Logical (CSS-pixel) size used by all coordinate math
     G.canvasW = size;
     G.canvasH = size;
-    // Scale context so drawing coordinates stay in CSS pixels
-    G.ctx.scale(dpr, dpr);
+    // Use setTransform instead of scale() so the matrix is always set to
+    // exactly dpr — avoids accumulation if canvas.width didn't reset the
+    // context (browsers may skip reset when the value is unchanged).
+    G.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     buildToCanvasFn();
     buildOffscreenTrack();
   }

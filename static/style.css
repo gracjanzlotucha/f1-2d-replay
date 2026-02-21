@@ -595,12 +595,12 @@ html, body {
   .race-circuit  { display: none; }
   .lap-num       { font-size: 16px; }
 
-  /* Vertical flex layout — visual order: track → tab-bar → controls → panel */
+  /* Vertical flex layout — visual order: track → controls → tab-bar → panel */
   .main-grid { display: flex; flex-direction: column; overflow: visible; }
 
   .track-section   { order: 1; }
-  .mobile-tab-bar  { order: 2; }
-  .controls-bar    { order: 3; }
+  .controls-bar    { order: 2; }
+  .mobile-tab-bar  { order: 3; }
   .standings-panel,
   .insights-panel  { order: 4; flex-shrink: 0; }
 
@@ -615,9 +615,9 @@ html, body {
   /* Hide the nested desktop INSIGHTS/EVENTS tab bar — handled by mobile tabs */
   .panel-tab-bar { display: none; }
 
-  /* Tab bar: sticky directly below the pinned track, always reachable */
+  /* Tab bar: sticky directly below track + controls, always reachable */
   .mobile-tab-bar {
-    order: 2;
+    order: 3;
     display: flex;
     height: 40px;
     background: var(--bg-2);

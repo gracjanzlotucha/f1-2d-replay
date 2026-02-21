@@ -290,6 +290,29 @@ html, body {
 .tooltip-team   { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
 .tooltip-pos    { font-size: 11px; color: var(--text-dimmer); margin-top: 2px; }
 
+/* ─── PANEL TAB BAR (inside right sidebar) ───────────────────────────────── */
+.panel-tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-tab {
+  flex: 1;
+  background: none; border: none; outline: none;
+  padding: 11px 0;
+  font-size: 10px; font-weight: 700; letter-spacing: .12em;
+  color: var(--text-dimmer);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s;
+  margin-bottom: -1px;
+}
+.panel-tab:hover { color: var(--text-dim); }
+.panel-tab.active {
+  color: var(--red);
+  border-bottom-color: var(--red);
+}
+
 /* ─── INSIGHTS PANEL ─────────────────────────────────────────────────────── */
 .insights-content {
   flex: 1; overflow-y: auto; padding: 10px 0;
@@ -304,6 +327,56 @@ html, body {
   line-height: 1.6;
 }
 
+/* ─── RACE INSIGHT STORY CARDS ───────────────────────────────────────────── */
+.race-insight-card {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .15s;
+  position: relative;
+}
+.race-insight-card:hover { background: var(--bg-3); }
+.race-insight-card:last-child { border-bottom: none; }
+
+.ric-header {
+  display: flex; align-items: center; gap: 8px;
+}
+.ric-icon {
+  font-size: 17px; line-height: 1; flex-shrink: 0;
+}
+.ric-title {
+  font-size: 12px; font-weight: 700;
+  line-height: 1.3; flex: 1;
+}
+.ric-lap {
+  font-size: 9px; font-weight: 700; letter-spacing: .1em;
+  color: var(--text-dimmer);
+  background: var(--bg-4);
+  padding: 2px 6px; border-radius: 3px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.ric-body {
+  font-size: 11px; color: var(--text-dim);
+  line-height: 1.5;
+  padding-left: 25px;
+}
+.ric-stat {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 600;
+  color: var(--text);
+}
+.ric-seek-hint {
+  display: flex; align-items: center; gap: 4px;
+  padding-left: 25px;
+  font-size: 10px; color: var(--red);
+  opacity: 0;
+  transition: opacity .15s;
+}
+.race-insight-card:hover .ric-seek-hint { opacity: 1; }
+
+/* ─── LAP EVENTS (formerly "insights") ─────────────────────────────────── */
 .insight-item {
   display: flex; align-items: flex-start; gap: 10px;
   padding: 10px 14px;
@@ -345,7 +418,7 @@ html, body {
 .insight-item.yellow        .insight-title { color: var(--yellow); }
 .insight-item.position_change.insight-title { color: var(--text); }
 
-/* Lap divider inside insights */
+/* Lap divider inside events */
 .insights-lap-header {
   padding: 8px 14px 4px;
   font-size: 9px; font-weight: 700; letter-spacing: .12em;

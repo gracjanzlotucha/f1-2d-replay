@@ -79,7 +79,8 @@ async function init() {
   bindControls();
   buildLapMarkers();
   renderStandings();
-  renderInsights(1);
+  renderRaceInsights();
+  renderEvents(1);
   startRaf();
 }
 
@@ -398,9 +399,8 @@ function updateCurrentLap() {
   if (lap !== G.currentLap) {
     G.currentLap = lap;
     renderStandings();
-    renderInsights(lap);
+    renderEvents(lap);
     document.getElementById('standings-lap-label').textContent = `LAP ${lap}`;
-    document.getElementById('insights-lap-label').textContent  = `LAP ${lap}`;
     document.getElementById('hdr-lap-cur').textContent = lap;
 
     // Track status badge
@@ -642,16 +642,118 @@ function renderStandings() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// INSIGHTS PANEL
+// RACE INSIGHTS (curated story cards)
 // ═══════════════════════════════════════════════════════════════════════════
 
-let _lastInsightLap = -1;
+// Hand-crafted from actual race data — each card links to a specific moment.
+const RACE_INSIGHTS = [
+  {
+    icon: '🏆',
+    title: 'Norris undercuts Piastri for the win',
+    body: 'Piastri led for 34 laps but pitted first (lap 43). Norris came in a lap later, emerged P1 and held the gap to the flag — a textbook 1-2 for McLaren at their home race.',
+    stat: 'Lap 44 · NOR gap <1 s',
+    lap: 44,
+    t: 5075,
+    driverNum: '4',
+  },
+  {
+    icon: '⚡',
+    title: "Piastri's race fastest lap",
+    body: "On lap 51 with fresh Mediums, Piastri threw everything at it — 1:29.337, the quickest lap of the entire race, 0.4 s faster than Norris' best.",
+    stat: '1:29.337 · Lap 51 · Medium',
+    lap: 51,
+    t: 5658,
+    driverNum: '81',
+  },
+  {
+    icon: '🔝',
+    title: "Hulkenberg: P16 → P3 podium",
+    body: 'Hulkenberg pitted early on lap 9 to cover Stroll. He dropped to P16 as the field cycled through stops, then climbed steadily lap after lap to seal Haas\'s best result of the season.',
+    stat: 'P16 on lap 10 → P3 finish',
+    lap: 10,
+    t: 1068,
+    driverNum: '27',
+  },
+  {
+    icon: '🔴',
+    title: "Hamilton's Soft tire blitz at home",
+    body: 'After pitting onto Softs on lap 41, Hamilton immediately ran sub-91 s laps for 11 consecutive laps, setting the 3rd fastest time of the race (1:30.016) in front of the Silverstone crowd.',
+    stat: '1:30.016 · Lap 49 · Soft',
+    lap: 41,
+    t: 4812,
+    driverNum: '44',
+  },
+  {
+    icon: '🌧️',
+    title: 'Wet-weather chaos reshuffles the grid',
+    body: 'The first 8 laps featured VSC periods, yellow-flag sectors and shifting track conditions. Track status cycled through 6 different codes — forcing teams into opportunistic early pit calls.',
+    stat: 'Laps 1–8 · VSC / Yellow flags',
+    lap: 2,
+    t: 128,
+    driverNum: null,
+  },
+  {
+    icon: '🎲',
+    title: "Stroll's bold Soft gamble on lap 10",
+    body: 'While most drivers were still on Intermediates, Stroll switched to Softs on lap 10 — a high-risk call that briefly launched him into the top 3. He recovered from P12 to finish P7.',
+    stat: 'P12 → P7 · 4 stops',
+    lap: 10,
+    t: 1173,
+    driverNum: '18',
+  },
+  {
+    icon: '💥',
+    title: "Antonelli's 4-stop nightmare",
+    body: "The rookie pitted from P4 on only lap 2, switching to Hard tyres in wet conditions — an experiment that unravelled over the race. Four stops and P16 at the flag.",
+    stat: 'P4 → P16 · 4 pit stops',
+    lap: 2,
+    t: 236,
+    driverNum: '87',
+  },
+];
 
-function renderInsights(lap) {
-  if (lap === _lastInsightLap) return;
-  _lastInsightLap = lap;
+function renderRaceInsights() {
+  const container = document.getElementById('race-insights-content');
+  let html = '';
 
-  const panel = document.getElementById('insights-content');
+  for (const ins of RACE_INSIGHTS) {
+    const color = ins.driverNum ? (G.drivers[ins.driverNum]?.color || '#888') : '#ffd700';
+    html += `
+      <div class="race-insight-card" data-t="${ins.t}">
+        <div class="ric-header">
+          <span class="ric-icon">${ins.icon}</span>
+          <span class="ric-title" style="color:${color}">${ins.title}</span>
+          <span class="ric-lap">L${ins.lap}</span>
+        </div>
+        <div class="ric-body">${ins.body}</div>
+        <div class="ric-body"><span class="ric-stat">${ins.stat}</span></div>
+        <div class="ric-seek-hint">▶ Jump to this moment</div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+
+  container.querySelectorAll('.race-insight-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const t = parseFloat(card.dataset.t);
+      seekToT(t);
+      if (!G.playing) togglePlay();
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LAP EVENTS PANEL (formerly "insights")
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _lastEventLap = -1;
+
+function renderEvents(lap) {
+  if (lap === _lastEventLap) return;
+  _lastEventLap = lap;
+
+  const panel = document.getElementById('events-content');
 
   // Show current + last 2 laps
   const lapsToShow = [];
@@ -728,6 +830,17 @@ function bindControls() {
   });
   document.getElementById('toggle-labels').addEventListener('change', e => {
     G.showLabels = e.target.checked;
+  });
+
+  // Right sidebar tab switcher (Insights / Events)
+  document.querySelectorAll('.panel-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const which = tab.dataset.tab;
+      document.getElementById('race-insights-content').classList.toggle('hidden', which !== 'insights');
+      document.getElementById('events-content').classList.toggle('hidden', which !== 'events');
+    });
   });
 
   // Canvas hover tooltip

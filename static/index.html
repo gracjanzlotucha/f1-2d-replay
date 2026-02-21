@@ -99,14 +99,19 @@
       </div>
     </section>
 
-    <!-- RIGHT: INSIGHTS -->
+    <!-- RIGHT: INSIGHTS / EVENTS -->
     <aside class="insights-panel">
-      <div class="panel-header">
-        <span class="panel-title">LAP INSIGHTS</span>
-        <span class="panel-subtitle" id="insights-lap-label">LAP —</span>
+      <div class="panel-tab-bar">
+        <button class="panel-tab active" id="tab-insights" data-tab="insights">INSIGHTS</button>
+        <button class="panel-tab" id="tab-events" data-tab="events">EVENTS</button>
       </div>
-      <div class="insights-content" id="insights-content">
-        <div class="insights-empty">Insights will appear as the race progresses</div>
+
+      <!-- Curated race insights -->
+      <div class="insights-content" id="race-insights-content"></div>
+
+      <!-- Lap-by-lap events (previously "insights") -->
+      <div class="insights-content hidden" id="events-content">
+        <div class="insights-empty">Events will appear as the race progresses</div>
       </div>
     </aside>
 

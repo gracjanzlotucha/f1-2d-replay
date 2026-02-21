@@ -568,6 +568,9 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 99px; }
 
+/* On desktop the wrapper is invisible to the grid — children participate directly */
+.mobile-top-sticky { display: contents; }
+
 /* ─── RESPONSIVE TWEAKS ─────────────────────────────────────────────────── */
 @media (max-width: 1200px) {
   :root { --side-w: 220px; }
@@ -595,15 +598,22 @@ html, body {
   .race-circuit  { display: none; }
   .lap-num       { font-size: 16px; }
 
-  /* Vertical flex layout: track(1) → controls(2) → tab-bar(3) → panel(4) */
+  /* Vertical flex layout */
   .main-grid { display: flex; flex-direction: column; overflow: visible; }
 
-  /* Track: fixed height so everything below can scroll */
-  .track-section  { order: 1; flex-shrink: 0; height: 58vw; min-height: 220px; max-height: 360px; }
-  .controls-bar   { order: 2; flex-shrink: 0; }
-  .mobile-tab-bar { order: 3; flex-shrink: 0; }
+  /* Sticky group: track + controls + tab bar pin together at the top */
+  .mobile-top-sticky {
+    display: flex; flex-direction: column;
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+
+  /* Track: fixed height so panels can be seen in full below */
+  .track-section  { flex-shrink: 0; height: 58vw; min-height: 220px; max-height: 360px; }
+  .controls-bar   { flex-shrink: 0; }
   .standings-panel,
-  .insights-panel { order: 4; flex-shrink: 0; }
+  .insights-panel { flex-shrink: 0; }
 
   /* Hide the nested desktop INSIGHTS/EVENTS tab bar — handled by mobile tabs */
   .panel-tab-bar { display: none; }

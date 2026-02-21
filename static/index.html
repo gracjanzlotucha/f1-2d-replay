@@ -80,83 +80,25 @@
       </div>
     </aside>
 
-    <!--
-      MOBILE STICKY TOP — wraps track + controls + tab bar so all three
-      pin together when the user scrolls down to the panel content.
-      On desktop: display:contents makes the wrapper invisible to the grid,
-      so the children (track-section, controls-bar, mobile-tab-bar) participate
-      in the grid directly as if the div doesn't exist.
-    -->
-    <div class="mobile-top-sticky">
+    <!-- MOBILE PANEL TABS (hidden on desktop via CSS) -->
+    <div class="mobile-tab-bar">
+      <button class="mobile-tab active" data-panel="standings">STANDINGS</button>
+      <button class="mobile-tab" data-panel="insights">INSIGHTS</button>
+      <button class="mobile-tab" data-panel="events">EVENTS</button>
+    </div>
 
-      <!-- CENTER: TRACK CANVAS -->
-      <section class="track-section">
-        <div class="track-container" id="track-container">
-          <canvas id="track-canvas"></canvas>
-          <!-- Speed tooltip -->
-          <div id="car-tooltip" class="car-tooltip hidden">
-            <div class="tooltip-driver"></div>
-            <div class="tooltip-team"></div>
-            <div class="tooltip-pos"></div>
-          </div>
+    <!-- CENTER: TRACK CANVAS -->
+    <section class="track-section">
+      <div class="track-container" id="track-container">
+        <canvas id="track-canvas"></canvas>
+        <!-- Speed tooltip -->
+        <div id="car-tooltip" class="car-tooltip hidden">
+          <div class="tooltip-driver"></div>
+          <div class="tooltip-team"></div>
+          <div class="tooltip-pos"></div>
         </div>
-      </section>
-
-      <!-- BOTTOM: TIMELINE / CONTROLS -->
-      <footer class="controls-bar">
-
-        <!-- Playback buttons -->
-        <div class="ctrl-group ctrl-buttons">
-          <button class="ctrl-btn" id="btn-prev-lap" title="Previous lap">⏮</button>
-          <button class="ctrl-btn ctrl-btn-primary" id="btn-play" title="Play / Pause">▶</button>
-          <button class="ctrl-btn" id="btn-next-lap" title="Next lap">⏭</button>
-        </div>
-
-        <!-- Timeline -->
-        <div class="ctrl-group ctrl-timeline">
-          <span id="ctrl-time-cur" class="ctrl-time">0:00</span>
-          <div class="timeline-wrap">
-            <input type="range" id="timeline" min="0" max="1000" value="0" class="timeline-slider" />
-            <div class="timeline-lap-markers" id="timeline-lap-markers"></div>
-          </div>
-          <span id="ctrl-time-total" class="ctrl-time">0:00</span>
-        </div>
-
-        <!-- Speed + options -->
-        <div class="ctrl-group ctrl-options">
-          <div class="speed-selector">
-            <span class="speed-label">SPEED</span>
-            <div class="speed-btns">
-              <button class="speed-btn" data-speed="0.5">0.5×</button>
-              <button class="speed-btn speed-active" data-speed="1">1×</button>
-              <button class="speed-btn" data-speed="2">2×</button>
-              <button class="speed-btn" data-speed="4">4×</button>
-              <button class="speed-btn" data-speed="8">8×</button>
-              <button class="speed-btn" data-speed="16">16×</button>
-            </div>
-          </div>
-          <label class="toggle-label">
-            <input type="checkbox" id="toggle-trails" checked />
-            <span class="toggle-track"></span>
-            <span>Trails</span>
-          </label>
-          <label class="toggle-label">
-            <input type="checkbox" id="toggle-labels" checked />
-            <span class="toggle-track"></span>
-            <span>Labels</span>
-          </label>
-        </div>
-
-      </footer>
-
-      <!-- MOBILE PANEL TABS (hidden on desktop via CSS) -->
-      <div class="mobile-tab-bar">
-        <button class="mobile-tab active" data-panel="standings">STANDINGS</button>
-        <button class="mobile-tab" data-panel="insights">INSIGHTS</button>
-        <button class="mobile-tab" data-panel="events">EVENTS</button>
       </div>
-
-    </div><!-- /.mobile-top-sticky -->
+    </section>
 
     <!-- RIGHT: INSIGHTS / EVENTS -->
     <aside class="insights-panel">
@@ -173,6 +115,53 @@
         <div class="insights-empty">Events will appear as the race progresses</div>
       </div>
     </aside>
+
+    <!-- BOTTOM: TIMELINE / CONTROLS -->
+    <footer class="controls-bar">
+
+      <!-- Playback buttons -->
+      <div class="ctrl-group ctrl-buttons">
+        <button class="ctrl-btn" id="btn-prev-lap" title="Previous lap">⏮</button>
+        <button class="ctrl-btn ctrl-btn-primary" id="btn-play" title="Play / Pause">▶</button>
+        <button class="ctrl-btn" id="btn-next-lap" title="Next lap">⏭</button>
+      </div>
+
+      <!-- Timeline -->
+      <div class="ctrl-group ctrl-timeline">
+        <span id="ctrl-time-cur" class="ctrl-time">0:00</span>
+        <div class="timeline-wrap">
+          <input type="range" id="timeline" min="0" max="1000" value="0" class="timeline-slider" />
+          <div class="timeline-lap-markers" id="timeline-lap-markers"></div>
+        </div>
+        <span id="ctrl-time-total" class="ctrl-time">0:00</span>
+      </div>
+
+      <!-- Speed + options -->
+      <div class="ctrl-group ctrl-options">
+        <div class="speed-selector">
+          <span class="speed-label">SPEED</span>
+          <div class="speed-btns">
+            <button class="speed-btn" data-speed="0.5">0.5×</button>
+            <button class="speed-btn speed-active" data-speed="1">1×</button>
+            <button class="speed-btn" data-speed="2">2×</button>
+            <button class="speed-btn" data-speed="4">4×</button>
+            <button class="speed-btn" data-speed="8">8×</button>
+            <button class="speed-btn" data-speed="16">16×</button>
+          </div>
+        </div>
+        <label class="toggle-label">
+          <input type="checkbox" id="toggle-trails" checked />
+          <span class="toggle-track"></span>
+          <span>Trails</span>
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="toggle-labels" checked />
+          <span class="toggle-track"></span>
+          <span>Labels</span>
+        </label>
+      </div>
+
+    </footer>
 
   </main>
 

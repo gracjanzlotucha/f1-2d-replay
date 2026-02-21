@@ -568,9 +568,6 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 99px; }
 
-/* On desktop the wrapper is invisible to the grid — children participate directly */
-.mobile-top-sticky { display: contents; }
-
 /* ─── RESPONSIVE TWEAKS ─────────────────────────────────────────────────── */
 @media (max-width: 1200px) {
   :root { --side-w: 220px; }
@@ -598,32 +595,36 @@ html, body {
   .race-circuit  { display: none; }
   .lap-num       { font-size: 16px; }
 
-  /* Vertical flex layout */
+  /* Vertical flex layout — visual order: track → tab-bar → controls → panel */
   .main-grid { display: flex; flex-direction: column; overflow: visible; }
 
-  /* Sticky group: track + controls + tab bar pin together at the top */
-  .mobile-top-sticky {
-    display: flex; flex-direction: column;
-    position: sticky; top: 0; z-index: 10;
-    background: var(--bg);
-    flex-shrink: 0;
-  }
-
-  /* Track: fixed height so panels can be seen in full below */
-  .track-section  { flex-shrink: 0; height: 58vw; min-height: 220px; max-height: 360px; }
-  .controls-bar   { flex-shrink: 0; }
+  .track-section   { order: 1; }
+  .mobile-tab-bar  { order: 2; }
+  .controls-bar    { order: 3; }
   .standings-panel,
-  .insights-panel { flex-shrink: 0; }
+  .insights-panel  { order: 4; flex-shrink: 0; }
+
+  /* Track: fixed height + sticky — pins to the top of the viewport on scroll */
+  .track-section {
+    flex-shrink: 0;
+    height: 58vw; min-height: 220px; max-height: 360px;
+    position: sticky; top: 0; z-index: 11;
+    background: var(--bg);
+  }
 
   /* Hide the nested desktop INSIGHTS/EVENTS tab bar — handled by mobile tabs */
   .panel-tab-bar { display: none; }
 
-  /* Show the mobile tab bar */
+  /* Tab bar: sticky directly below the pinned track, always reachable */
   .mobile-tab-bar {
+    order: 2;
     display: flex;
     height: 40px;
     background: var(--bg-2);
     border-top: 1px solid var(--border);
+    position: sticky;
+    top: clamp(220px, 58vw, 360px);
+    z-index: 10;
   }
   .mobile-tab {
     flex: 1;

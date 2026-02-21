@@ -193,12 +193,20 @@ function setupCanvas() {
   const container = document.getElementById('track-container');
 
   function resize() {
+    const dpr  = window.devicePixelRatio || 1;
     const rect = container.getBoundingClientRect();
     const size = Math.min(rect.width * 0.96, rect.height * 0.96);
-    G.canvas.width  = size;
-    G.canvas.height = size;
+    // Physical pixel dimensions (retina-sharp)
+    G.canvas.width  = Math.round(size * dpr);
+    G.canvas.height = Math.round(size * dpr);
+    // CSS display size unchanged
+    G.canvas.style.width  = size + 'px';
+    G.canvas.style.height = size + 'px';
+    // Logical (CSS-pixel) size used by all coordinate math
     G.canvasW = size;
     G.canvasH = size;
+    // Scale context so drawing coordinates stay in CSS pixels
+    G.ctx.scale(dpr, dpr);
     buildToCanvasFn();
     buildOffscreenTrack();
   }
@@ -232,10 +240,12 @@ function buildOffscreenTrack() {
   const tx = G.track.x, ty = G.track.y;
   if (!tx || tx.length < 2) { G.offscreenTrack = null; return; }
 
+  const dpr = window.devicePixelRatio || 1;
   const oc = document.createElement('canvas');
-  oc.width  = G.canvasW;
-  oc.height = G.canvasH;
+  oc.width  = Math.round(G.canvasW * dpr);
+  oc.height = Math.round(G.canvasH * dpr);
   const octx = oc.getContext('2d');
+  octx.scale(dpr, dpr);
 
   // Outer shadow / glow effect
   octx.shadowColor = 'rgba(255,255,255,0.06)';
@@ -420,7 +430,7 @@ function renderFrame() {
 
   // Draw pre-rendered track
   if (G.offscreenTrack) {
-    ctx.drawImage(G.offscreenTrack, 0, 0);
+    ctx.drawImage(G.offscreenTrack, 0, 0, G.canvasW, G.canvasH);
   } else {
     // Placeholder if no track data
     ctx.fillStyle = '#1a1a1a';
@@ -796,9 +806,9 @@ function onCanvasHover(e) {
   const rect   = G.canvas.getBoundingClientRect();
   const mx     = e.clientX - rect.left;
   const my     = e.clientY - rect.top;
-  const scale  = G.canvas.width / rect.width;
-  const cx2    = mx * scale;
-  const cy2    = my * scale;
+  // mx/my are already in CSS pixels; G.toCanvas also returns CSS pixels
+  const cx2    = mx;
+  const cy2    = my;
 
   let closest = null, closestDist = Infinity;
 

@@ -585,8 +585,9 @@ html, body {
 /* ─── MOBILE LAYOUT ≤ 768px ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
 
-  /* Header row becomes auto-height so it can wrap */
-  #app { grid-template-rows: auto 1fr; }
+  /* Allow full-page scroll so panel content is never clipped */
+  html, body { overflow-y: auto; overflow-x: hidden; }
+  #app { height: auto; min-height: 100dvh; overflow: visible; grid-template-rows: auto auto; }
 
   /* Compact header */
   .header { padding: 8px 12px; flex-wrap: wrap; gap: 6px; height: auto; }
@@ -595,18 +596,21 @@ html, body {
   .lap-num       { font-size: 16px; }
 
   /* Vertical flex layout: track(1) → controls(2) → tab-bar(3) → panel(4) */
-  .main-grid { display: flex; flex-direction: column; overflow: hidden; }
+  .main-grid { display: flex; flex-direction: column; overflow: visible; }
 
-  .track-section  { order: 1; flex: 1; min-height: 0; }
-  .controls-bar   { order: 2; }
-  .mobile-tab-bar { order: 3; }
+  /* Track: fixed height so everything below can scroll */
+  .track-section  { order: 1; flex-shrink: 0; height: 58vw; min-height: 220px; max-height: 360px; }
+  .controls-bar   { order: 2; flex-shrink: 0; }
+  .mobile-tab-bar { order: 3; flex-shrink: 0; }
   .standings-panel,
-  .insights-panel { order: 4; }
+  .insights-panel { order: 4; flex-shrink: 0; }
 
-  /* Show the tab bar */
+  /* Hide the nested desktop INSIGHTS/EVENTS tab bar — handled by mobile tabs */
+  .panel-tab-bar { display: none; }
+
+  /* Show the mobile tab bar */
   .mobile-tab-bar {
     display: flex;
-    flex-shrink: 0;
     height: 40px;
     background: var(--bg-2);
     border-top: 1px solid var(--border);
@@ -615,7 +619,7 @@ html, body {
     flex: 1;
     background: none; border: none;
     color: var(--text-dim);
-    font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    font-size: 10px; font-weight: 700; letter-spacing: .09em;
     cursor: pointer;
     position: relative;
     transition: color .15s;
@@ -624,21 +628,25 @@ html, body {
   .mobile-tab.active { color: var(--red); }
   .mobile-tab.active::after {
     content: '';
-    position: absolute; bottom: 0; left: 16px; right: 16px;
+    position: absolute; bottom: 0; left: 10px; right: 10px;
     height: 2px; background: var(--red); border-radius: 1px 1px 0 0;
   }
 
-  /* Panels: fixed height below tabs, hidden by default */
+  /* Panels: hidden by default, grow to fit content when active */
   .standings-panel,
   .insights-panel {
-    flex-shrink: 0; height: 220px;
     border-right: none; border-left: none;
     border-top: 1px solid var(--border);
     display: none;
+    height: auto;
   }
-  /* .mobile-active overrides the display:none above AND the 900px rule */
+  /* .mobile-active overrides display:none above AND the 900px rule */
   .standings-panel.mobile-active,
   .insights-panel.mobile-active { display: flex; }
+
+  /* Internal list/content: let content flow, no inner scroll */
+  .standings-list,
+  .insights-content { overflow: visible; flex: none; height: auto; }
 
   /* Controls: two-row wrap */
   .controls-bar { height: auto; flex-wrap: wrap; padding: 8px 12px; gap: 8px; }

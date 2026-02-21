@@ -857,17 +857,24 @@ function bindControls() {
 }
 
 function bindMobileTabs() {
-  const tabs   = document.querySelectorAll('.mobile-tab');
-  const panels = {
-    standings: document.querySelector('.standings-panel'),
-    insights:  document.querySelector('.insights-panel'),
-  };
+  const tabs            = document.querySelectorAll('.mobile-tab');
+  const standingsPanel  = document.querySelector('.standings-panel');
+  const insightsPanel   = document.querySelector('.insights-panel');
+  const insightsContent = document.getElementById('race-insights-content');
+  const eventsContent   = document.getElementById('events-content');
 
   function activateTab(panelName) {
     tabs.forEach(t => t.classList.toggle('active', t.dataset.panel === panelName));
-    Object.keys(panels).forEach(name => {
-      panels[name].classList.toggle('mobile-active', name === panelName);
-    });
+
+    // Top-level panel visibility
+    standingsPanel.classList.toggle('mobile-active', panelName === 'standings');
+    insightsPanel.classList.toggle('mobile-active', panelName === 'insights' || panelName === 'events');
+
+    // Which content area is visible inside the insights panel
+    if (panelName === 'insights' || panelName === 'events') {
+      insightsContent.classList.toggle('hidden', panelName !== 'insights');
+      eventsContent.classList.toggle('hidden', panelName !== 'events');
+    }
   }
 
   tabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab.dataset.panel)));

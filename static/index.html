@@ -110,54 +110,54 @@
       </div>
     </aside>
 
-  </main>
+    <!-- BOTTOM: TIMELINE / CONTROLS -->
+    <footer class="controls-bar">
 
-  <!-- BOTTOM: TIMELINE / CONTROLS -->
-  <footer class="controls-bar">
-
-    <!-- Playback buttons -->
-    <div class="ctrl-group ctrl-buttons">
-      <button class="ctrl-btn" id="btn-prev-lap" title="Previous lap">⏮</button>
-      <button class="ctrl-btn ctrl-btn-primary" id="btn-play" title="Play / Pause">▶</button>
-      <button class="ctrl-btn" id="btn-next-lap" title="Next lap">⏭</button>
-    </div>
-
-    <!-- Timeline -->
-    <div class="ctrl-group ctrl-timeline">
-      <span id="ctrl-time-cur" class="ctrl-time">0:00</span>
-      <div class="timeline-wrap">
-        <input type="range" id="timeline" min="0" max="1000" value="0" class="timeline-slider" />
-        <div class="timeline-lap-markers" id="timeline-lap-markers"></div>
+      <!-- Playback buttons -->
+      <div class="ctrl-group ctrl-buttons">
+        <button class="ctrl-btn" id="btn-prev-lap" title="Previous lap">⏮</button>
+        <button class="ctrl-btn ctrl-btn-primary" id="btn-play" title="Play / Pause">▶</button>
+        <button class="ctrl-btn" id="btn-next-lap" title="Next lap">⏭</button>
       </div>
-      <span id="ctrl-time-total" class="ctrl-time">0:00</span>
-    </div>
 
-    <!-- Speed + options -->
-    <div class="ctrl-group ctrl-options">
-      <div class="speed-selector">
-        <span class="speed-label">SPEED</span>
-        <div class="speed-btns">
-          <button class="speed-btn" data-speed="0.5">0.5×</button>
-          <button class="speed-btn speed-active" data-speed="1">1×</button>
-          <button class="speed-btn" data-speed="2">2×</button>
-          <button class="speed-btn" data-speed="4">4×</button>
-          <button class="speed-btn" data-speed="8">8×</button>
-          <button class="speed-btn" data-speed="16">16×</button>
+      <!-- Timeline -->
+      <div class="ctrl-group ctrl-timeline">
+        <span id="ctrl-time-cur" class="ctrl-time">0:00</span>
+        <div class="timeline-wrap">
+          <input type="range" id="timeline" min="0" max="1000" value="0" class="timeline-slider" />
+          <div class="timeline-lap-markers" id="timeline-lap-markers"></div>
         </div>
+        <span id="ctrl-time-total" class="ctrl-time">0:00</span>
       </div>
-      <label class="toggle-label">
-        <input type="checkbox" id="toggle-trails" checked />
-        <span class="toggle-track"></span>
-        <span>Trails</span>
-      </label>
-      <label class="toggle-label">
-        <input type="checkbox" id="toggle-labels" checked />
-        <span class="toggle-track"></span>
-        <span>Labels</span>
-      </label>
-    </div>
 
-  </footer>
+      <!-- Speed + options -->
+      <div class="ctrl-group ctrl-options">
+        <div class="speed-selector">
+          <span class="speed-label">SPEED</span>
+          <div class="speed-btns">
+            <button class="speed-btn" data-speed="0.5">0.5×</button>
+            <button class="speed-btn speed-active" data-speed="1">1×</button>
+            <button class="speed-btn" data-speed="2">2×</button>
+            <button class="speed-btn" data-speed="4">4×</button>
+            <button class="speed-btn" data-speed="8">8×</button>
+            <button class="speed-btn" data-speed="16">16×</button>
+          </div>
+        </div>
+        <label class="toggle-label">
+          <input type="checkbox" id="toggle-trails" checked />
+          <span class="toggle-track"></span>
+          <span>Trails</span>
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="toggle-labels" checked />
+          <span class="toggle-track"></span>
+          <span>Labels</span>
+        </label>
+      </div>
+
+    </footer>
+
+  </main>
 
 </div>
 

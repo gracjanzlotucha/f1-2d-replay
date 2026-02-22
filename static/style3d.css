@@ -148,6 +148,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   position: relative;
+  background: #111111;
 }
 #scene-container canvas {
   display: block;

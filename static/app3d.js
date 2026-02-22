@@ -18,6 +18,10 @@ const SCALE = 0.1;
 const TRACK_WIDTH = 7;             // half-width in meters (~14 m total)
 const CAR_TARGET_LENGTH = 5.7;     // F1 car length in meters
 
+// The GLB model's forward direction. atan2(dx,dz) gives angle from +Z.
+// If the model faces +X by default, we need to subtract PI/2 so it aligns.
+const MODEL_YAW_OFFSET = -Math.PI / 2;
+
 const G = {
   // Data
   session: null,
@@ -38,10 +42,12 @@ const G = {
   labelRenderer: null,
   controls: null,
 
-  // Car meshes: { driverNum: { group, label } }
+  // Car meshes: { driverNum: { group, label, wheels[], visible } }
   cars: {},
   carTemplate: null,   // loaded GLB template
   carScale: 1,         // scale factor applied to the template
+  carBboxCenter: new THREE.Vector3(),
+  carBboxMinY: 0,
 
   // Track geometry
   trackCenter: new THREE.Vector3(),
@@ -131,11 +137,56 @@ async function loadCarModel() {
     const modelLength = Math.max(size.x, size.y, size.z);
     G.carScale = CAR_TARGET_LENGTH / modelLength;
 
+    // Store center and bottom for re-use when cloning
+    bbox.getCenter(G.carBboxCenter);
+    G.carBboxMinY = bbox.min.y;
+
+    // Identify candidate wheel meshes by position:
+    // wheels are the 4 objects closest to the car's corners
+    identifyWheels();
+
     bar.style.width = '100%';
   } catch (e) {
     console.warn('Could not load f1-model.glb, using box fallback:', e);
     G.carTemplate = null;
     bar.style.width = '100%';
+  }
+}
+
+/** Try to identify wheel meshes from the template by their XZ positions. */
+function identifyWheels() {
+  if (!G.carTemplate) return;
+
+  const bbox = new THREE.Box3().setFromObject(G.carTemplate);
+  const center = new THREE.Vector3();
+  bbox.getCenter(center);
+
+  // Collect all meshes with their world positions
+  const meshes = [];
+  G.carTemplate.traverse((child) => {
+    if (child.isMesh) {
+      const wp = new THREE.Vector3();
+      child.getWorldPosition(wp);
+      meshes.push({ child, wp });
+    }
+  });
+
+  // Wheels are small meshes at the 4 corners. Find the 4 meshes furthest
+  // from the center in the XZ plane but below the vertical midpoint.
+  const midY = (bbox.min.y + bbox.max.y) / 2;
+  const candidates = meshes
+    .filter(m => m.wp.y < midY + (bbox.max.y - bbox.min.y) * 0.1)
+    .map(m => {
+      const dx = m.wp.x - center.x;
+      const dz = m.wp.z - center.z;
+      return { ...m, cornerDist: Math.sqrt(dx * dx + dz * dz) };
+    })
+    .sort((a, b) => b.cornerDist - a.cornerDist);
+
+  // Tag the top 4 as wheels (if they exist)
+  const wheelCount = Math.min(4, candidates.length);
+  for (let i = 0; i < wheelCount; i++) {
+    candidates[i].child.userData.isWheel = true;
   }
 }
 
@@ -204,7 +255,7 @@ function setupScene() {
 
   // Camera — far plane large enough for km-scale track
   G.camera = new THREE.PerspectiveCamera(
-    50, container.clientWidth / container.clientHeight, 1, 5000
+    50, container.clientWidth / container.clientHeight, 0.5, 5000
   );
   G.camera.position.set(0, 500, 500);
   G.camera.lookAt(0, 0, 0);
@@ -214,7 +265,7 @@ function setupScene() {
   G.controls.enableDamping = true;
   G.controls.dampingFactor = 0.08;
   G.controls.maxPolarAngle = Math.PI * 0.48;
-  G.controls.minDistance = 10;
+  G.controls.minDistance = 5;
   G.controls.maxDistance = 2000;
 
   // Lights
@@ -228,7 +279,7 @@ function setupScene() {
   const hemi = new THREE.HemisphereLight(0x8899aa, 0x333333, 0.3);
   G.scene.add(hemi);
 
-  // Ground plane — dark asphalt-like, not green
+  // Ground plane — dark asphalt-like
   const groundGeo = new THREE.PlaneGeometry(5000, 5000);
   const groundMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
   const ground = new THREE.Mesh(groundGeo, groundMat);
@@ -278,24 +329,36 @@ function buildTrack() {
   const numSamples = 2000;
   const curvePoints = G.trackCurve.getSpacedPoints(numSamples);
 
-  // Build track ribbon as BufferGeometry
+  // Pre-compute smoothed tangents using a wider window to avoid
+  // sharp perpendicular flips at tight corners.
+  const tangents = [];
+  const SMOOTH_WINDOW = 5;
+  for (let i = 0; i < curvePoints.length; i++) {
+    const t = new THREE.Vector3();
+    for (let w = 1; w <= SMOOTH_WINDOW; w++) {
+      const next = curvePoints[(i + w) % curvePoints.length];
+      const prev = curvePoints[(i - w + curvePoints.length) % curvePoints.length];
+      t.add(new THREE.Vector3().subVectors(next, prev));
+    }
+    t.normalize();
+    tangents.push(t);
+  }
+
+  // Build track ribbon
   const positions = [];
   const normals = [];
   const indices = [];
 
   for (let i = 0; i < curvePoints.length; i++) {
     const p = curvePoints[i];
-    const next = curvePoints[(i + 1) % curvePoints.length];
-    const tangent = new THREE.Vector3().subVectors(next, p).normalize();
-    const perp = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+    const tang = tangents[i];
+    const perp = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
 
-    const left  = new THREE.Vector3().copy(p).addScaledVector(perp, -TRACK_WIDTH);
-    const right = new THREE.Vector3().copy(p).addScaledVector(perp, TRACK_WIDTH);
-
-    positions.push(left.x, 0.05, left.z);
-    positions.push(right.x, 0.05, right.z);
-    normals.push(0, 1, 0);
-    normals.push(0, 1, 0);
+    positions.push(
+      p.x + perp.x * -TRACK_WIDTH, 0.05, p.z + perp.z * -TRACK_WIDTH,
+      p.x + perp.x *  TRACK_WIDTH, 0.05, p.z + perp.z *  TRACK_WIDTH,
+    );
+    normals.push(0, 1, 0, 0, 1, 0);
   }
 
   const vCount = curvePoints.length;
@@ -304,8 +367,7 @@ function buildTrack() {
     const b = i * 2 + 1;
     const c = ((i + 1) % vCount) * 2;
     const d = ((i + 1) % vCount) * 2 + 1;
-    indices.push(a, b, c);
-    indices.push(b, d, c);
+    indices.push(a, b, c, b, d, c);
   }
 
   const geo = new THREE.BufferGeometry();
@@ -314,12 +376,11 @@ function buildTrack() {
   geo.setIndex(indices);
 
   const trackMat = new THREE.MeshLambertMaterial({ color: 0x333333, side: THREE.DoubleSide });
-  const trackMesh = new THREE.Mesh(geo, trackMat);
-  G.scene.add(trackMesh);
+  G.scene.add(new THREE.Mesh(geo, trackMat));
 
   // Track edge lines (white)
-  buildTrackEdge(curvePoints, TRACK_WIDTH, 0xffffff, 0.2);
-  buildTrackEdge(curvePoints, -TRACK_WIDTH, 0xffffff, 0.2);
+  buildTrackEdge(curvePoints, tangents, TRACK_WIDTH, 0xffffff, 0.25);
+  buildTrackEdge(curvePoints, tangents, -TRACK_WIDTH, 0xffffff, 0.25);
 
   // Center line (dashed, subtle)
   const centerPts = curvePoints.map(p => new THREE.Vector3(p.x, 0.1, p.z));
@@ -336,37 +397,33 @@ function buildTrack() {
   if (curvePoints.length > 10) {
     const sfIdx = Math.floor(curvePoints.length * 0.02);
     const sfPt = curvePoints[sfIdx];
-    const sfNext = curvePoints[(sfIdx + 1) % curvePoints.length];
-    const sfTangent = new THREE.Vector3().subVectors(sfNext, sfPt).normalize();
-    const sfPerp = new THREE.Vector3(-sfTangent.z, 0, sfTangent.x);
+    const sfTang = tangents[sfIdx];
+    const sfPerp = new THREE.Vector3(-sfTang.z, 0, sfTang.x);
 
     const sfGeo = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3().copy(sfPt).addScaledVector(sfPerp, -TRACK_WIDTH * 1.2).setY(0.15),
       new THREE.Vector3().copy(sfPt).addScaledVector(sfPerp, TRACK_WIDTH * 1.2).setY(0.15),
     ]);
     const sfMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
-    const sfLine = new THREE.Line(sfGeo, sfMat);
-    G.scene.add(sfLine);
+    G.scene.add(new THREE.Line(sfGeo, sfMat));
   }
 }
 
-function buildTrackEdge(curvePoints, offset, color, opacity) {
+function buildTrackEdge(curvePoints, tangents, offset, color, opacity) {
   const edgePts = [];
   for (let i = 0; i < curvePoints.length; i++) {
     const p = curvePoints[i];
-    const next = curvePoints[(i + 1) % curvePoints.length];
-    const tangent = new THREE.Vector3().subVectors(next, p).normalize();
-    const perp = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-    const ep = new THREE.Vector3().copy(p).addScaledVector(perp, offset);
-    ep.y = 0.1;
-    edgePts.push(ep);
+    const tang = tangents[i];
+    const perp = new THREE.Vector3(-tang.z, 0, tang.x).normalize();
+    edgePts.push(new THREE.Vector3(
+      p.x + perp.x * offset, 0.1, p.z + perp.z * offset
+    ));
   }
   edgePts.push(edgePts[0].clone());
 
   const geo = new THREE.BufferGeometry().setFromPoints(edgePts);
   const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity });
-  const line = new THREE.Line(geo, mat);
-  G.scene.add(line);
+  G.scene.add(new THREE.Line(geo, mat));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -378,28 +435,36 @@ function createCarGroup(driverData) {
   const teamColor = new THREE.Color(driverData.color);
 
   if (G.carTemplate) {
-    // Clone the loaded GLB model
-    const model = G.carTemplate.clone();
+    // Deep-clone the loaded GLB model (SkeletonUtils not needed, no skinned mesh)
+    const model = cloneGltf(G.carTemplate);
     model.scale.setScalar(G.carScale);
 
-    // Tint all meshes to the team color
+    // Tint all meshes to the team color and ensure opaque
+    const wheels = [];
     model.traverse((child) => {
       if (child.isMesh) {
         child.material = child.material.clone();
         child.material.color.copy(teamColor);
+        child.material.transparent = false;
+        child.material.opacity = 1;
+        child.material.depthWrite = true;
+
+        // Collect tagged wheel meshes
+        if (child.userData.isWheel) {
+          wheels.push(child);
+        }
       }
     });
 
-    // Center the model at origin
-    const bbox = new THREE.Box3().setFromObject(model);
-    const center = new THREE.Vector3();
-    bbox.getCenter(center);
-    model.position.sub(center);
-    // Lift so bottom sits on track surface
-    const minY = bbox.min.y * G.carScale;
-    model.position.y -= minY;
+    // Center the model so origin = center bottom
+    model.position.set(
+      -G.carBboxCenter.x * G.carScale,
+      -G.carBboxMinY * G.carScale,
+      -G.carBboxCenter.z * G.carScale,
+    );
 
     group.add(model);
+    group.userData.wheels = wheels;
   } else {
     // Fallback: colored box
     const geo = new THREE.BoxGeometry(CAR_TARGET_LENGTH, 1.0, 2.0);
@@ -407,9 +472,27 @@ function createCarGroup(driverData) {
     const box = new THREE.Mesh(geo, mat);
     box.position.y = 0.5;
     group.add(box);
+    group.userData.wheels = [];
   }
 
   return group;
+}
+
+/** Deep-clone a GLTF scene, preserving userData tags on meshes. */
+function cloneGltf(source) {
+  const clone = source.clone(true);
+
+  // source.clone() shares materials/geometries but not userData deeply.
+  // Walk both trees in parallel to copy userData.isWheel.
+  const srcMeshes = [];
+  source.traverse(c => { if (c.isMesh) srcMeshes.push(c); });
+  const cloneMeshes = [];
+  clone.traverse(c => { if (c.isMesh) cloneMeshes.push(c); });
+  for (let i = 0; i < srcMeshes.length && i < cloneMeshes.length; i++) {
+    cloneMeshes[i].userData.isWheel = srcMeshes[i].userData.isWheel || false;
+  }
+
+  return clone;
 }
 
 function buildCars() {
@@ -420,7 +503,7 @@ function buildCars() {
 
     // Create car group from GLB or fallback
     const group = createCarGroup(d);
-    group.position.set(0, -1000, 0); // off-screen initially
+    group.visible = false; // hidden until first position data
     G.scene.add(group);
 
     // Driver label
@@ -432,7 +515,12 @@ function buildCars() {
     label.position.set(0, 3.5, 0);
     group.add(label);
 
-    G.cars[num] = { group, label };
+    G.cars[num] = {
+      group,
+      label,
+      wheels: group.userData.wheels || [],
+      heading: 0,
+    };
 
     // Add to driver selector dropdown
     const opt = document.createElement('option');
@@ -461,6 +549,9 @@ function getPosition(driverNum, t) {
   const pd = G.positions[driverNum];
   if (!pd || !pd.t.length) return null;
 
+  // If t is outside this driver's data range, hide them
+  if (t < pd.t[0] - 2 || t > pd.t[pd.t.length - 1] + 2) return null;
+
   const idx = bisect(pd.t, t);
   if (idx === 0) return { x: pd.x[0], y: pd.y[0] };
   if (idx >= pd.t.length) return { x: pd.x[pd.t.length - 1], y: pd.y[pd.t.length - 1] };
@@ -486,11 +577,17 @@ const _prevPositions = {};
 
 function updateCars(t) {
   for (const num in G.cars) {
-    const pos = getPosition(num, t);
-    if (!pos) continue;
-
-    const worldPos = toWorld(pos);
     const car = G.cars[num];
+    const pos = getPosition(num, t);
+
+    if (!pos) {
+      // No data: hide car
+      car.group.visible = false;
+      continue;
+    }
+
+    car.group.visible = true;
+    const worldPos = toWorld(pos);
     car.group.position.copy(worldPos);
 
     // Compute heading from velocity
@@ -499,15 +596,28 @@ function updateCars(t) {
       const dx = worldPos.x - prev.x;
       const dz = worldPos.z - prev.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
+
       if (dist > 0.05) {
-        const targetAngle = Math.atan2(dx, dz);
-        const currentY = car.group.rotation.y;
-        let diff = targetAngle - currentY;
-        while (diff > Math.PI) diff -= 2 * Math.PI;
-        while (diff < -Math.PI) diff += 2 * Math.PI;
-        car.group.rotation.y = currentY + diff * 0.15;
+        const targetAngle = Math.atan2(dx, dz) + MODEL_YAW_OFFSET;
+
+        // Smooth rotation — normalize angle diff to [-PI, PI]
+        let diff = targetAngle - car.heading;
+        if (diff > Math.PI) diff -= 2 * Math.PI;
+        if (diff < -Math.PI) diff += 2 * Math.PI;
+
+        // Faster lerp for responsive turning
+        car.heading += diff * 0.25;
+        car.group.rotation.y = car.heading;
+
+        // Animate wheels based on speed
+        // Wheel circumference ~2m (F1 tire ~0.66m diameter) → 1 revolution per ~2.07m
+        const wheelSpin = dist / 2.07 * Math.PI * 2;
+        for (const wheel of car.wheels) {
+          wheel.rotation.x += wheelSpin;
+        }
       }
     }
+
     _prevPositions[num] = worldPos.clone();
   }
 }
@@ -535,20 +645,21 @@ function updateCamera() {
 function updateFollowCamera() {
   if (!G.followDriver || !G.cars[G.followDriver]) return;
 
-  const carPos = G.cars[G.followDriver].group.position;
-  const carRot = G.cars[G.followDriver].group.rotation.y;
+  const car = G.cars[G.followDriver];
+  const carPos = car.group.position;
+  const heading = car.heading - MODEL_YAW_OFFSET; // undo the model offset for camera
 
   // Chase camera: 20 m behind, 8 m above
   const dist = 20;
   const height = 8;
   const targetCamPos = new THREE.Vector3(
-    carPos.x - Math.sin(carRot) * dist,
+    carPos.x - Math.sin(heading) * dist,
     carPos.y + height,
-    carPos.z - Math.cos(carRot) * dist,
+    carPos.z - Math.cos(heading) * dist,
   );
 
-  G.followCamPos.lerp(targetCamPos, 0.04);
-  G.followCamTarget.lerp(carPos, 0.08);
+  G.followCamPos.lerp(targetCamPos, 0.06);
+  G.followCamTarget.lerp(carPos, 0.1);
 
   G.camera.position.copy(G.followCamPos);
   G.camera.lookAt(G.followCamTarget);
@@ -573,9 +684,14 @@ function setCameraMode(mode) {
   });
 
   if (mode === 'follow' && G.followDriver && G.cars[G.followDriver]) {
-    const carPos = G.cars[G.followDriver].group.position;
-    G.followCamPos.set(carPos.x, carPos.y + 8, carPos.z - 20);
-    G.followCamTarget.copy(carPos);
+    const car = G.cars[G.followDriver];
+    const heading = car.heading - MODEL_YAW_OFFSET;
+    G.followCamPos.set(
+      car.group.position.x - Math.sin(heading) * 20,
+      car.group.position.y + 8,
+      car.group.position.z - Math.cos(heading) * 20,
+    );
+    G.followCamTarget.copy(car.group.position);
   }
 
   if (mode === 'orbit') {
@@ -603,6 +719,7 @@ function updatePlayButton() {
 function seekToT(t) {
   G.currentT = Math.max(0, Math.min(t, G.maxT));
   G.lastFrameTime = null;
+  // Clear previous positions so heading recomputes cleanly
   for (const num in _prevPositions) delete _prevPositions[num];
 }
 
@@ -736,7 +853,12 @@ function bindControls() {
     if (G.cameraMode === 'follow') {
       const car = G.cars[G.followDriver];
       if (car) {
-        G.followCamPos.copy(car.group.position).add(new THREE.Vector3(0, 8, -20));
+        const heading = car.heading - MODEL_YAW_OFFSET;
+        G.followCamPos.set(
+          car.group.position.x - Math.sin(heading) * 20,
+          car.group.position.y + 8,
+          car.group.position.z - Math.cos(heading) * 20,
+        );
         G.followCamTarget.copy(car.group.position);
       }
     }

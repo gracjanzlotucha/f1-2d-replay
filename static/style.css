@@ -258,6 +258,28 @@ html, body {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* ─── DRIVER STATUS BADGES ───────────────────────────────────────────────── */
+.dr-status-badge {
+  display: inline-block;
+  font-size: 9px; font-weight: 700; letter-spacing: .06em;
+  padding: 1px 5px; border-radius: 3px;
+  margin-left: 6px; vertical-align: middle;
+}
+.dr-status-badge.dns {
+  background: rgba(136,136,136,.25); color: #888;
+}
+.dr-status-badge.dnf {
+  background: rgba(232,0,45,.2); color: #E8002D;
+}
+.dr-pit-start {
+  display: inline-block;
+  font-size: 8px; font-weight: 700; letter-spacing: .06em;
+  padding: 1px 4px; border-radius: 3px;
+  margin-left: 5px; vertical-align: middle;
+  background: rgba(255,215,0,.18); color: #ffd700;
+}
+.driver-row.retired { opacity: 0.5; }
+
 /* ─── TRACK SECTION ──────────────────────────────────────────────────────── */
 .track-section {
   display: flex; align-items: center; justify-content: center;

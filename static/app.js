@@ -18,6 +18,27 @@ const TRAIL_LENGTH = 28;   // How many past positions to show as trail
 const DRIVER_RADIUS = 9;   // Car marker radius on canvas
 const PADDING_FRAC  = 0.08; // Canvas padding as fraction
 
+// Track rotation — aligns Silverstone pit straight horizontally, S/F at top
+// Angle: -32.5° (pit straight runs at ~32.5° from horizontal in data space)
+const TRACK_ROT_COS = 0.8434;   // cos(-32.5°)
+const TRACK_ROT_SIN = -0.5373;  // sin(-32.5°)
+
+function rotatePoint(x, y) {
+  // Rotate by -32.5° then negate Y to put S/F at top
+  const rx = x * TRACK_ROT_COS - y * TRACK_ROT_SIN;
+  const ry = -(x * TRACK_ROT_SIN + y * TRACK_ROT_COS);
+  return [rx, ry];
+}
+
+// Pit lane path coordinates (extracted from position telemetry during pit stops)
+const PIT_LANE_PATH = [
+  [-1049, -129], [-1007, 125], [-960, 390], [-910, 660],
+  [-856, 935], [-824, 1130], [-800, 1350], [-780, 1570],
+  [-755, 1785], [-720, 1985], [-670, 2200], [-610, 2420],
+  [-540, 2640], [-460, 2860], [-370, 3070], [-270, 3280],
+  [-160, 3470], [-40, 3650], [90, 3790], [230, 3900], [380, 3960], [529, 3978],
+];
+
 let G = {
   // Raw data
   session: null,
@@ -153,6 +174,40 @@ function setupDerivedData() {
     .map(([l, t]) => ({ lap: parseInt(l), t }))
     .sort((a, b) => a.lap - b.lap);
 
+  // ── Detect DNS / DNF / pit-start drivers ────────────────────────────────
+  G.driverStatus = {}; // { driverNum: { status, retirementLap, pitStart } }
+
+  // Count max lap per driver and detect pit-lane starters
+  const maxLapByDriver = {};
+  const pitStartDrivers = new Set();
+
+  for (const lap of G.laps) {
+    const d = lap.driver;
+    if (lap.lap != null) {
+      maxLapByDriver[d] = Math.max(maxLapByDriver[d] || 0, lap.lap);
+    }
+    // Pit-lane start: has pit_out on lap 1 but no pit_in on lap 1
+    if (lap.lap === 1 && lap.pit_out != null && lap.pit_in == null) {
+      pitStartDrivers.add(d);
+    }
+  }
+
+  for (const num in G.drivers) {
+    const maxLap = maxLapByDriver[num] || 0;
+    const status = { status: 'racing', retirementLap: null, pitStart: pitStartDrivers.has(num) };
+
+    if (maxLap === 0) {
+      // No laps at all = DNS
+      status.status = 'dns';
+    } else if (maxLap < G.totalLaps) {
+      // Fewer laps than total = DNF/RET
+      status.status = 'dnf';
+      status.retirementLap = maxLap;
+    }
+
+    G.driverStatus[num] = status;
+  }
+
   // ── Track normalisation ──────────────────────────────────────────────────
   computeTrackBounds();
 
@@ -169,15 +224,29 @@ function computeTrackBounds() {
   const tx = G.track.x, ty = G.track.y;
   if (!tx || !tx.length) { G.trackBounds = null; return; }
 
-  // Compute bounds iteratively — spreading 300k+ values as args overflows the stack
+  // Compute bounds in ROTATED coordinate space
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
 
-  for (const x of tx) { if (x < minX) minX = x; if (x > maxX) maxX = x; }
-  for (const y of ty) { if (y < minY) minY = y; if (y > maxY) maxY = y; }
+  for (let i = 0; i < tx.length; i++) {
+    const [rx, ry] = rotatePoint(tx[i], ty[i]);
+    if (rx < minX) minX = rx; if (rx > maxX) maxX = rx;
+    if (ry < minY) minY = ry; if (ry > maxY) maxY = ry;
+  }
 
   for (const num in G.positions) {
-    for (const x of G.positions[num].x) { if (x < minX) minX = x; if (x > maxX) maxX = x; }
-    for (const y of G.positions[num].y) { if (y < minY) minY = y; if (y > maxY) maxY = y; }
+    const px = G.positions[num].x, py = G.positions[num].y;
+    for (let i = 0; i < px.length; i++) {
+      const [rx, ry] = rotatePoint(px[i], py[i]);
+      if (rx < minX) minX = rx; if (rx > maxX) maxX = rx;
+      if (ry < minY) minY = ry; if (ry > maxY) maxY = ry;
+    }
+  }
+
+  // Include pit lane path in bounds
+  for (const [px, py] of PIT_LANE_PATH) {
+    const [rx, ry] = rotatePoint(px, py);
+    if (rx < minX) minX = rx; if (rx > maxX) maxX = rx;
+    if (ry < minY) minY = ry; if (ry > maxY) maxY = ry;
   }
 
   G.trackBounds = { minX, maxX, minY, maxY };
@@ -231,9 +300,11 @@ function buildToCanvasFn() {
   const pad   = PADDING_FRAC;
 
   G.toCanvas = function (x, y) {
-    const nx = (x - minX) / dataW;
+    // Apply rotation to match F1 website Silverstone orientation
+    const [rx, ry] = rotatePoint(x, y);
+    const nx = (rx - minX) / dataW;
     // Flip Y (screen Y grows downward)
-    const ny = 1 - (y - minY) / dataH;
+    const ny = 1 - (ry - minY) / dataH;
     const cx = (pad + nx * (1 - 2 * pad)) * G.canvasW;
     const cy = (pad + ny * (1 - 2 * pad)) * G.canvasH;
     return [cx, cy];
@@ -300,6 +371,32 @@ function buildOffscreenTrack() {
   octx.stroke();
   octx.setLineDash([]);
 
+  // Pit lane line (gray, dashed)
+  if (PIT_LANE_PATH.length >= 2) {
+    octx.beginPath();
+    const [plx0, ply0] = G.toCanvas(PIT_LANE_PATH[0][0], PIT_LANE_PATH[0][1]);
+    octx.moveTo(plx0, ply0);
+    for (let i = 1; i < PIT_LANE_PATH.length; i++) {
+      const [plx, ply] = G.toCanvas(PIT_LANE_PATH[i][0], PIT_LANE_PATH[i][1]);
+      octx.lineTo(plx, ply);
+    }
+    octx.strokeStyle = 'rgba(255,255,255,0.25)';
+    octx.lineWidth   = 4;
+    octx.setLineDash([6, 6]);
+    octx.lineCap     = 'round';
+    octx.lineJoin    = 'round';
+    octx.stroke();
+    octx.setLineDash([]);
+
+    // "PIT" label near the middle of the pit lane
+    const pitMid = Math.floor(PIT_LANE_PATH.length / 2);
+    const [pmx, pmy] = G.toCanvas(PIT_LANE_PATH[pitMid][0], PIT_LANE_PATH[pitMid][1]);
+    octx.font = 'bold 8px Inter, sans-serif';
+    octx.fillStyle = 'rgba(255,255,255,0.3)';
+    octx.textAlign = 'center';
+    octx.fillText('PIT', pmx - 12, pmy + 3);
+  }
+
   // Start/Finish line
   if (tx.length > 10) {
     const midIdx = Math.floor(tx.length * 0.02);
@@ -307,7 +404,10 @@ function buildOffscreenTrack() {
     octx.save();
     octx.strokeStyle = '#FFFFFF';
     octx.lineWidth   = 3;
-    const angle = Math.atan2(ty[midIdx+2] - ty[midIdx], tx[midIdx+2] - tx[midIdx]);
+    // Compute angle using rotated coordinates
+    const [rx1, ry1] = rotatePoint(tx[midIdx], ty[midIdx]);
+    const [rx2, ry2] = rotatePoint(tx[midIdx + 2], ty[midIdx + 2]);
+    const angle = Math.atan2(-(ry2 - ry1), rx2 - rx1);
     octx.translate(sfx, sfy);
     octx.rotate(angle + Math.PI / 2);
     octx.beginPath();
@@ -448,6 +548,14 @@ function renderFrame() {
   // Collect current positions and sort by screen Y (depth)
   const carData = [];
   for (const num in G.drivers) {
+    const ds = G.driverStatus[num];
+    // Skip DNS drivers — they never started
+    if (ds && ds.status === 'dns') continue;
+    // Skip DNF drivers after their retirement lap
+    if (ds && ds.status === 'dnf' && ds.retirementLap != null) {
+      const retLapT = G.lapStartMap[ds.retirementLap + 1] || G.lapStartMap[ds.retirementLap];
+      if (retLapT != null && G.currentT > retLapT + 10) continue; // +10s grace period
+    }
     const pos = getPosition(num, G.currentT);
     if (!pos) continue;
     const [cx, cy] = G.toCanvas(pos.x, pos.y);
@@ -593,14 +701,37 @@ function renderStandings() {
     const driver = G.drivers[num];
     if (!driver) return;
     const meta    = posAtT[num] || {};
+    const ds      = G.driverStatus[num] || {};
     const pos     = meta.pos || (idx + 1);
     const compound = (meta.compound || 'UNKNOWN').toUpperCase();
     const tireColor = TIRE_COLORS[compound] || '#555';
     const tyreLife  = meta.tyre_life ?? '—';
 
+    // Status badge (DNS / DNF / RET / PIT)
+    let statusBadge = '';
+    let isRetired = false;
+    if (ds.status === 'dns') {
+      statusBadge = '<span class="dr-status-badge dns">DNS</span>';
+      isRetired = true;
+    } else if (ds.status === 'dnf') {
+      // Show DNF only after the retirement lap
+      if (ds.retirementLap != null && G.currentLap > ds.retirementLap) {
+        statusBadge = '<span class="dr-status-badge dnf">DNF</span>';
+        isRetired = true;
+      }
+    }
+
+    // Pit lane start indicator (only on lap 1)
+    let pitStartLabel = '';
+    if (ds.pitStart && G.currentLap <= 1) {
+      pitStartLabel = '<span class="dr-pit-start">PIT START</span>';
+    }
+
     // Gap to leader
     let gapStr = '';
-    if (idx === 0) {
+    if (isRetired) {
+      gapStr = ds.status === 'dns' ? '—' : `LAP ${ds.retirementLap}`;
+    } else if (idx === 0) {
       gapStr = meta.lap_time ? fmtLapTime(meta.lap_time) : 'LEADER';
     } else {
       const myTime  = meta.lap_time;
@@ -613,7 +744,7 @@ function renderStandings() {
     }
 
     const row = document.createElement('div');
-    row.className = 'driver-row';
+    row.className = 'driver-row' + (isRetired ? ' retired' : '');
     row.dataset.driver = num;
 
     const posClass = pos === 1 ? 'dr-pos p1' : pos === 2 ? 'dr-pos p2' : pos === 3 ? 'dr-pos p3' : 'dr-pos';
@@ -625,7 +756,7 @@ function renderStandings() {
         ${driver.number}
       </div>
       <div class="dr-info">
-        <div class="dr-abbr">${driver.abbr}</div>
+        <div class="dr-abbr">${driver.abbr}${statusBadge}${pitStartLabel}</div>
         <div class="dr-team">${driver.team}</div>
       </div>
       <div class="dr-right">
@@ -936,6 +1067,12 @@ function onCanvasHover(e) {
   let closest = null, closestDist = Infinity;
 
   for (const num in G.drivers) {
+    const ds = G.driverStatus[num];
+    if (ds && ds.status === 'dns') continue;
+    if (ds && ds.status === 'dnf' && ds.retirementLap != null) {
+      const retLapT = G.lapStartMap[ds.retirementLap + 1] || G.lapStartMap[ds.retirementLap];
+      if (retLapT != null && G.currentT > retLapT + 10) continue;
+    }
     const pos = getPosition(num, G.currentT);
     if (!pos) continue;
     const [cx, cy] = G.toCanvas(pos.x, pos.y);

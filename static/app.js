@@ -32,13 +32,22 @@ function rotatePoint(x, y) {
 }
 
 // Pit lane path (extracted from position telemetry during Hulkenberg's lap-9 pit stop)
+// Includes full entry curve (diverging from track) through pit boxes to exit (rejoining track)
 const PIT_LANE_PATH = [
-  [-1535, 388],  [-1623, 598],  [-1596, 813],  [-1499, 977],
-  [-1368, 1172], [-1228, 1381], [-1115, 1550], [-991, 1735],
-  [-861, 1930],  [-754, 2090],  [-625, 2280],  [-495, 2474],
-  [-366, 2665],  [-251, 2835],  [-116, 3036],  [-12, 3190],
-  [100, 3358],   [218, 3534],   [273, 3614],   [329, 3698],
-  [417, 3830],   [524, 3973],   [632, 4056],
+  // Pit entry — diverging from main track towards pit lane
+  [-496, -716],  [-906, -280],  [-1025, -155], [-1094, -81],
+  [-1146, -26],  [-1231, 63],   [-1396, 238],  [-1442, 286],
+  // Entry curve — the sharp turn into the pit lane
+  [-1535, 388],  [-1584, 464],  [-1623, 598],  [-1625, 694],
+  // Pit lane proper (running parallel to the main straight)
+  [-1596, 813],  [-1499, 977],  [-1368, 1172], [-1228, 1381],
+  [-1115, 1550], [-991, 1735],  [-861, 1930],  [-754, 2090],
+  [-625, 2280],  [-495, 2474],  [-366, 2665],  [-251, 2835],
+  [-116, 3036],  [-12, 3190],   [100, 3358],   [218, 3534],
+  [273, 3614],
+  // Pit exit — accelerating back onto the track
+  [329, 3698],   [417, 3830],   [524, 3973],   [632, 4056],
+  [748, 4113],   [911, 4154],   [1052, 4172],
 ];
 
 let G = {

@@ -224,6 +224,27 @@ def main():
         log.warning(f'Track outline fallback: {e}')
         track = {'x': [], 'y': []}
 
+    log.info('Extracting circuit info…')
+    circuit_info = {}
+    try:
+        ci = session.get_circuit_info()
+        circuit_info['rotation'] = round(float(ci.rotation), 2)
+        corners = ci.corners
+        circuit_info['corners'] = [
+            {
+                'number': int(row.get('Number', 0)),
+                'letter': str(row.get('Letter', '')),
+                'x': round(float(row.get('X', 0)), 1),
+                'y': round(float(row.get('Y', 0)), 1),
+                'angle': round(float(row.get('Angle', 0)), 1),
+                'distance': round(float(row.get('Distance', 0)), 1),
+            }
+            for _, row in corners.iterrows()
+        ]
+        log.info(f'  Circuit rotation: {circuit_info["rotation"]}°, {len(circuit_info["corners"])} corners')
+    except Exception as e:
+        log.warning(f'Circuit info fallback: {e}')
+
     log.info('Detecting race start time…')
     laps_df = session.laps.copy()
     race_start_t = 0.0
@@ -329,6 +350,7 @@ def main():
         },
         'drivers': drivers,
         'track': track,
+        'circuit_info': circuit_info,
         'laps': laps_list,
         'insights': insights,
     }

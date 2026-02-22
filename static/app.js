@@ -431,8 +431,12 @@ function buildOffscreenTrack() {
   octx.stroke();
   octx.setLineDash([]);
 
-  // Pit lane line (gray, dashed)
+  // Pit lane line (gray, dashed) — scale with canvas size for mobile
   if (PIT_LANE_PATH.length >= 2) {
+    const pitScale = Math.min(1, G.canvasW / 500);
+    const pitLW    = 2 + 2 * pitScale;   // 2px on small screens, 4px on ≥500
+    const pitDash  = 3 + 3 * pitScale;   // [3,3] on small, [6,6] on ≥500
+
     octx.beginPath();
     const [plx0, ply0] = G.toCanvas(PIT_LANE_PATH[0][0], PIT_LANE_PATH[0][1]);
     octx.moveTo(plx0, ply0);
@@ -441,20 +445,30 @@ function buildOffscreenTrack() {
       octx.lineTo(plx, ply);
     }
     octx.strokeStyle = 'rgba(255,255,255,0.25)';
-    octx.lineWidth   = 4;
-    octx.setLineDash([6, 6]);
+    octx.lineWidth   = pitLW;
+    octx.setLineDash([pitDash, pitDash]);
     octx.lineCap     = 'round';
     octx.lineJoin    = 'round';
     octx.stroke();
     octx.setLineDash([]);
 
-    // "PIT" label near the middle of the pit lane
+    // "PIT" label offset below the pit lane (perpendicular, away from main track)
     const pitMid = Math.floor(PIT_LANE_PATH.length / 2);
     const [pmx, pmy] = G.toCanvas(PIT_LANE_PATH[pitMid][0], PIT_LANE_PATH[pitMid][1]);
-    octx.font = 'bold 8px Inter, sans-serif';
+    const [pa, pb]   = G.toCanvas(PIT_LANE_PATH[pitMid - 1][0], PIT_LANE_PATH[pitMid - 1][1]);
+    const [pc, pd]   = G.toCanvas(PIT_LANE_PATH[pitMid + 1][0], PIT_LANE_PATH[pitMid + 1][1]);
+    const pdx = pc - pa, pdy = pd - pb;
+    const plen = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
+    // Right-perpendicular to travel direction (away from main track)
+    const nx = pdy / plen, ny = -pdx / plen;
+    const labelDist = 10 + 4 * pitScale;
+    const fontSize  = Math.max(7, Math.round(6 + 3 * pitScale));
+
+    octx.font      = `bold ${fontSize}px Inter, sans-serif`;
     octx.fillStyle = 'rgba(255,255,255,0.3)';
     octx.textAlign = 'center';
-    octx.fillText('PIT', pmx - 12, pmy + 3);
+    octx.textBaseline = 'middle';
+    octx.fillText('PIT', pmx + nx * labelDist, pmy + ny * labelDist);
   }
 
   // Start/Finish line

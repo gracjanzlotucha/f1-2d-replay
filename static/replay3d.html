@@ -3,11 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>F1 2D Replay — British Grand Prix 2025</title>
+  <title>F1 3D Replay — British Grand Prix 2025</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style3d.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 <body>
 
@@ -20,7 +28,7 @@
       </svg>
     </div>
     <div class="loading-title">British Grand Prix 2025</div>
-    <div class="loading-subtitle">Silverstone Circuit</div>
+    <div class="loading-subtitle">3D Replay · Silverstone Circuit</div>
     <div class="loading-bar-wrap">
       <div id="loading-bar"></div>
     </div>
@@ -41,7 +49,7 @@
       </div>
       <div class="race-info">
         <span class="race-name">British Grand Prix</span>
-        <span class="race-circuit">Silverstone Circuit · 2025</span>
+        <span class="race-circuit">Silverstone · 2025 · 3D</span>
       </div>
     </div>
     <div class="header-center">
@@ -54,123 +62,74 @@
       <div id="hdr-status-badge" class="status-badge status-green">RACE</div>
     </div>
     <div class="header-right">
-      <div class="weather-box" id="weather-box">
-        <span class="weather-item" id="weather-air">— °C</span>
-        <span class="weather-dot">·</span>
-        <span class="weather-item" id="weather-track">— °C Track</span>
-      </div>
-      <div class="race-time-box">
-        <span class="race-time-label">RACE TIME</span>
-        <span id="hdr-race-time" class="race-time-val">0:00:00</span>
-      </div>
-      <a href="replay3d.html" id="btn-switch-3d" class="view-switch-btn" title="Switch to 3D view">
-        <span class="view-switch-icon">3D</span>
+      <a href="index.html" id="btn-switch-2d" class="view-switch-btn" title="Switch to 2D view">
+        <span class="view-switch-icon">2D</span>
         <span class="view-switch-label">View</span>
       </a>
     </div>
   </header>
 
-  <!-- MAIN GRID -->
-  <main class="main-grid">
+  <!-- 3D CANVAS -->
+  <div id="scene-container"></div>
 
-    <!-- LEFT: STANDINGS -->
-    <aside class="standings-panel">
-      <div class="panel-header">
-        <span class="panel-title">STANDINGS</span>
-        <span class="panel-subtitle" id="standings-lap-label">LAP —</span>
-      </div>
-      <div class="standings-list" id="standings-list">
-        <!-- populated by JS -->
-      </div>
-    </aside>
+  <!-- HUD OVERLAY -->
+  <div class="hud">
 
-    <!-- MOBILE PANEL TABS (hidden on desktop via CSS) -->
-    <div class="mobile-tab-bar">
-      <button class="mobile-tab active" data-panel="standings">STANDINGS</button>
-      <button class="mobile-tab" data-panel="insights">INSIGHTS</button>
-      <button class="mobile-tab" data-panel="events">EVENTS</button>
+    <!-- Camera mode selector -->
+    <div class="hud-top-right">
+      <div class="camera-bar">
+        <button class="cam-btn active" data-mode="orbit" title="Free camera">🌐 Orbit</button>
+        <button class="cam-btn" data-mode="follow" title="Follow driver">🎯 Follow</button>
+        <button class="cam-btn" data-mode="topdown" title="Top-down view">⬇ Top</button>
+      </div>
+      <div class="driver-selector-wrap">
+        <label class="driver-sel-label">FOLLOW</label>
+        <select id="driver-select" class="driver-select"></select>
+      </div>
     </div>
 
-    <!-- CENTER: TRACK CANVAS -->
-    <section class="track-section">
-      <div class="track-container" id="track-container">
-        <canvas id="track-canvas"></canvas>
-        <!-- Speed tooltip -->
-        <div id="car-tooltip" class="car-tooltip hidden">
-          <div class="tooltip-driver"></div>
-          <div class="tooltip-team"></div>
-          <div class="tooltip-pos"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- RIGHT: INSIGHTS / EVENTS -->
-    <aside class="insights-panel">
-      <div class="panel-tab-bar">
-        <button class="panel-tab active" id="tab-insights" data-tab="insights">INSIGHTS</button>
-        <button class="panel-tab" id="tab-events" data-tab="events">EVENTS</button>
-      </div>
-
-      <!-- Curated race insights -->
-      <div class="insights-content" id="race-insights-content"></div>
-
-      <!-- Lap-by-lap events (previously "insights") -->
-      <div class="insights-content hidden" id="events-content">
-        <div class="insights-empty">Events will appear as the race progresses</div>
-      </div>
-    </aside>
-
-    <!-- BOTTOM: TIMELINE / CONTROLS -->
-    <footer class="controls-bar">
+    <!-- Bottom controls bar -->
+    <div class="hud-bottom">
 
       <!-- Playback buttons -->
-      <div class="ctrl-group ctrl-buttons">
+      <div class="hud-group hud-buttons">
         <button class="ctrl-btn" id="btn-prev-lap" title="Previous lap">⏮</button>
         <button class="ctrl-btn ctrl-btn-primary" id="btn-play" title="Play / Pause">▶</button>
         <button class="ctrl-btn" id="btn-next-lap" title="Next lap">⏭</button>
       </div>
 
       <!-- Timeline -->
-      <div class="ctrl-group ctrl-timeline">
+      <div class="hud-group hud-timeline">
         <span id="ctrl-time-cur" class="ctrl-time">0:00</span>
         <div class="timeline-wrap">
           <input type="range" id="timeline" min="0" max="1000" value="0" class="timeline-slider" />
-          <div class="timeline-lap-markers" id="timeline-lap-markers"></div>
         </div>
         <span id="ctrl-time-total" class="ctrl-time">0:00</span>
       </div>
 
-      <!-- Speed + options -->
-      <div class="ctrl-group ctrl-options">
-        <div class="speed-selector">
-          <span class="speed-label">SPEED</span>
-          <div class="speed-btns">
-            <button class="speed-btn" data-speed="0.5">0.5×</button>
-            <button class="speed-btn speed-active" data-speed="1">1×</button>
-            <button class="speed-btn" data-speed="2">2×</button>
-            <button class="speed-btn" data-speed="4">4×</button>
-            <button class="speed-btn" data-speed="8">8×</button>
-            <button class="speed-btn" data-speed="16">16×</button>
-          </div>
+      <!-- Speed selector -->
+      <div class="hud-group hud-speed">
+        <div class="speed-btns">
+          <button class="speed-btn" data-speed="0.5">0.5×</button>
+          <button class="speed-btn speed-active" data-speed="1">1×</button>
+          <button class="speed-btn" data-speed="2">2×</button>
+          <button class="speed-btn" data-speed="4">4×</button>
+          <button class="speed-btn" data-speed="8">8×</button>
         </div>
-        <label class="toggle-label">
-          <input type="checkbox" id="toggle-trails" checked />
-          <span class="toggle-track"></span>
-          <span>Trails</span>
-        </label>
-        <label class="toggle-label">
-          <input type="checkbox" id="toggle-labels" checked />
-          <span class="toggle-track"></span>
-          <span>Labels</span>
-        </label>
       </div>
 
-    </footer>
+      <!-- Race time -->
+      <div class="hud-group hud-racetime">
+        <span class="race-time-label">RACE TIME</span>
+        <span id="hdr-race-time" class="race-time-val">0:00:00</span>
+      </div>
 
-  </main>
+    </div>
+
+  </div>
 
 </div>
 
-<script src="app.js"></script>
+<script type="module" src="app3d.js"></script>
 </body>
 </html>

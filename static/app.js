@@ -849,11 +849,24 @@ function bindControls() {
     document.getElementById('car-tooltip').classList.add('hidden');
   });
 
+  // 3D view switch — pass current time
+  const switch3dBtn = document.getElementById('btn-switch-3d');
+  if (switch3dBtn) {
+    switch3dBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const t = Math.round(G.currentT * 100) / 100;
+      window.location.href = `replay3d.html?t=${t}`;
+    });
+  }
+
   // Keyboard shortcuts
   document.addEventListener('keydown', onKeyDown);
 
   // Mobile tab switcher
   bindMobileTabs();
+
+  // Read ?t= URL parameter (for 3D→2D sync)
+  readUrlParams();
 }
 
 function bindMobileTabs() {
@@ -902,6 +915,14 @@ function jumpLap(delta) {
   const target = Math.max(1, Math.min(G.totalLaps, G.currentLap + delta));
   const t = G.lapStartMap[target];
   if (t != null) seekToT(t);
+}
+
+function readUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  const t = parseFloat(params.get('t'));
+  if (!isNaN(t) && t > 0) {
+    seekToT(t);
+  }
 }
 
 function updateTimelineUI() {

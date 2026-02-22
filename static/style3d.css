@@ -1,0 +1,363 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   F1 3D Replay — Styles
+   Reuses design tokens from the 2D viewer
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --bg:          #090909;
+  --bg-2:        #111111;
+  --bg-3:        #1a1a1a;
+  --bg-4:        #222222;
+  --border:      rgba(255,255,255,.07);
+  --border-2:    rgba(255,255,255,.12);
+  --text:        #f0f0f0;
+  --text-dim:    #888888;
+  --text-dimmer: #555555;
+  --red:         #BFFF4A;
+  --red-dim:     rgba(191,255,74,.18);
+  --green:       #39b54a;
+  --yellow:      #ffd700;
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --header-h:    56px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.hidden { display: none !important; }
+
+/* ─── LOADING SCREEN ───────────────────────────────────────────────────── */
+#loading-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+}
+.loading-inner {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  width: 340px;
+}
+.loading-title {
+  font-size: 22px; font-weight: 700; letter-spacing: .04em;
+  color: var(--text);
+}
+.loading-subtitle {
+  font-size: 13px; color: var(--text-dim); letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.loading-bar-wrap {
+  width: 100%; height: 3px;
+  background: var(--bg-4); border-radius: 99px; overflow: hidden;
+  margin-top: 8px;
+}
+#loading-bar {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--red), #d4ff5a);
+  border-radius: 99px;
+  transition: width .4s ease;
+  box-shadow: 0 0 12px var(--red);
+}
+.loading-msg {
+  font-size: 12px; color: var(--text-dimmer); letter-spacing: .04em;
+  min-height: 18px;
+}
+.f1-logo, .f1-badge {
+  display: flex; align-items: center;
+}
+
+/* ─── LAYOUT ────────────────────────────────────────────────────────────── */
+#app {
+  display: grid;
+  grid-template-rows: var(--header-h) 1fr;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── HEADER ────────────────────────────────────────────────────────────── */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  height: var(--header-h);
+  flex-shrink: 0;
+  z-index: 20;
+  position: relative;
+}
+.header-left  { display: flex; align-items: center; gap: 14px; }
+.header-center { display: flex; align-items: center; gap: 16px; }
+.header-right  { display: flex; align-items: center; gap: 20px; }
+
+.race-info { display: flex; flex-direction: column; gap: 1px; }
+.race-name   { font-size: 14px; font-weight: 700; letter-spacing: .02em; }
+.race-circuit{ font-size: 11px; color: var(--text-dim); letter-spacing: .06em; }
+
+.lap-counter {
+  display: flex; align-items: baseline; gap: 4px;
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+}
+.lap-label  { font-size: 10px; font-weight: 700; color: var(--text-dim); letter-spacing: .1em; margin-right: 4px; }
+.lap-num    { font-size: 20px; font-weight: 900; font-family: 'JetBrains Mono', monospace; color: var(--text); }
+.lap-sep    { font-size: 14px; color: var(--text-dimmer); }
+.lap-total  { font-size: 14px; color: var(--text-dim); }
+
+.status-badge {
+  padding: 4px 10px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: .1em;
+}
+.status-green  { background: rgba(57,181,74,.2);  color: var(--green);  }
+.status-yellow { background: rgba(255,215,0,.2);  color: var(--yellow); }
+
+/* ─── 2D/3D VIEW SWITCH ─────────────────────────────────────────────────── */
+.view-switch-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2);
+  background: var(--bg-3);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: background .12s, border-color .12s;
+}
+.view-switch-btn:hover { background: var(--bg-4); border-color: var(--red); }
+.view-switch-icon {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 900; font-size: 14px;
+  color: var(--red);
+}
+.view-switch-label { color: var(--text-dim); font-size: 11px; }
+
+/* ─── 3D SCENE CONTAINER ────────────────────────────────────────────────── */
+#scene-container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+#scene-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ─── HUD OVERLAY ───────────────────────────────────────────────────────── */
+.hud {
+  position: absolute;
+  inset: var(--header-h) 0 0 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud-top-right {
+  position: absolute;
+  top: 16px; right: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: auto;
+}
+
+/* Camera mode selector */
+.camera-bar {
+  display: flex; gap: 2px;
+  background: rgba(17,17,17,.85);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  backdrop-filter: blur(12px);
+}
+.cam-btn {
+  padding: 6px 12px;
+  border: none; border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px; font-weight: 600;
+  cursor: pointer;
+  transition: all .12s;
+  white-space: nowrap;
+}
+.cam-btn:hover { color: var(--text); background: var(--bg-4); }
+.cam-btn.active {
+  background: var(--red-dim);
+  color: var(--red);
+}
+
+/* Driver selector */
+.driver-selector-wrap {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(17,17,17,.85);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  backdrop-filter: blur(12px);
+}
+.driver-sel-label {
+  font-size: 9px; font-weight: 700; letter-spacing: .1em;
+  color: var(--text-dimmer);
+}
+.driver-select {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px; font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+  min-width: 120px;
+}
+.driver-select option {
+  background: var(--bg-2);
+  color: var(--text);
+}
+
+/* ─── BOTTOM CONTROLS ───────────────────────────────────────────────────── */
+.hud-bottom {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 20px;
+  background: rgba(17,17,17,.88);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+}
+
+.hud-group { display: flex; align-items: center; gap: 6px; }
+.hud-buttons { gap: 4px; }
+.hud-timeline { flex: 1; gap: 10px; }
+.hud-speed { gap: 3px; }
+.hud-racetime {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+}
+
+/* Shared button styles */
+.ctrl-btn {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2);
+  background: var(--bg-3);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s, border-color .12s, transform .08s;
+  flex-shrink: 0;
+}
+.ctrl-btn:hover { background: var(--bg-4); }
+.ctrl-btn:active { transform: scale(.94); }
+.ctrl-btn-primary {
+  width: 44px; height: 44px;
+  font-size: 16px;
+  background: var(--red); border-color: transparent;
+  border-radius: var(--radius-md);
+  color: #000;
+}
+.ctrl-btn-primary:hover { background: #d4ff5a; }
+
+/* Timeline */
+.ctrl-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text-dim);
+  flex-shrink: 0; min-width: 42px;
+}
+.timeline-wrap {
+  flex: 1; position: relative; height: 28px;
+  display: flex; align-items: center;
+}
+.timeline-slider {
+  width: 100%; height: 4px;
+  -webkit-appearance: none; appearance: none;
+  background: var(--bg-4);
+  border-radius: 99px; outline: none; cursor: pointer;
+}
+.timeline-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 8px rgba(191,255,74,.6);
+  cursor: grab;
+}
+.timeline-slider::-moz-range-thumb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--red);
+  border: none;
+  cursor: grab;
+}
+
+/* Speed */
+.speed-btns { display: flex; gap: 3px; }
+.speed-btn {
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-3);
+  color: var(--text-dim);
+  font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all .12s;
+}
+.speed-btn:hover { border-color: var(--border-2); color: var(--text); }
+.speed-btn.speed-active {
+  background: var(--red-dim);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* Race time */
+.race-time-label { font-size: 9px; font-weight: 700; color: var(--text-dimmer); letter-spacing: .1em; }
+.race-time-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px; font-weight: 600;
+  color: var(--text);
+}
+
+/* ─── DRIVER LABEL SPRITES (CSS2DRenderer) ─────────────────────────────── */
+.driver-label-3d {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700;
+  color: #fff;
+  background: rgba(0,0,0,.65);
+  padding: 2px 5px;
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  text-align: center;
+  transform: translate(-50%, -100%);
+  margin-top: -12px;
+}
+
+/* ─── MOBILE ≤ 768px ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .header { padding: 8px 12px; flex-wrap: wrap; gap: 6px; height: auto; }
+  .race-circuit { display: none; }
+  .lap-num { font-size: 16px; }
+
+  .hud-top-right { top: 8px; right: 8px; }
+  .camera-bar { padding: 2px; }
+  .cam-btn { padding: 5px 8px; font-size: 10px; }
+
+  .hud-bottom { flex-wrap: wrap; padding: 8px 12px; gap: 8px; }
+  .hud-buttons { flex-shrink: 0; }
+  .hud-timeline { flex: 1; min-width: 0; }
+  .hud-speed { order: 2; }
+  .hud-racetime { display: none; }
+
+  .ctrl-btn { width: 40px; height: 40px; font-size: 14px; }
+  .speed-btn { padding: 5px 6px; font-size: 10px; }
+}

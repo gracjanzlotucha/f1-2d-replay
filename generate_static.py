@@ -274,8 +274,13 @@ def extract_track_outline(location_samples, race_start, laps_data, driver_number
     }
 
 
-def extract_pit_lane_path(location_samples, race_start, pit_data, driver_number):
-    """Extract pit lane path from a driver's pit stop location data."""
+def extract_pit_lane_path(location_samples, race_start, pit_data, driver_number,
+                          track_x, track_y):
+    """Extract pit lane path from a driver's pit stop location data.
+
+    Filters out points that are close to the racing line (track outline),
+    keeping only points where the car deviates into the pit lane.
+    """
     # Find a pit stop for this driver
     driver_pits = [p for p in pit_data if p.get('driver_number') == driver_number]
     if not driver_pits:
@@ -285,17 +290,41 @@ def extract_pit_lane_path(location_samples, race_start, pit_data, driver_number)
     pit_date = parse_iso(pit['date'])
     lane_duration = pit.get('lane_duration', 30)
 
-    # The pit 'date' is typically the pit entry time
-    # Location data during pit lane transit
     pit_start_t = to_seconds(pit_date, race_start)
-    pit_end_t = pit_start_t + lane_duration + 5  # +5s buffer for exit
+    pit_end_t = pit_start_t + lane_duration
 
-    path = []
+    # Collect all location points during pit lane transit (with small buffer)
+    raw_path = []
     for loc in location_samples:
         dt = parse_iso(loc['date'])
         t = to_seconds(dt, race_start)
-        if pit_start_t - 5 <= t <= pit_end_t:  # -5s to catch entry approach
-            path.append([loc['x'], loc['y']])
+        if pit_start_t - 8 <= t <= pit_end_t + 8:
+            raw_path.append((t, loc['x'], loc['y']))
+
+    if not raw_path or not track_x:
+        return [[p[1], p[2]] for p in raw_path]
+
+    # For each point, compute distance to nearest track outline point.
+    # Points far from the racing line are in the pit lane.
+    DEVIATION_THRESHOLD = 150  # units — pit lane is offset from track
+
+    # Build simple track point list for nearest-neighbor search
+    track_pts = list(zip(track_x, track_y))
+
+    def min_dist_to_track(px, py):
+        best = float('inf')
+        for tx, ty in track_pts:
+            d = (px - tx) ** 2 + (py - ty) ** 2
+            if d < best:
+                best = d
+        return math.sqrt(best)
+
+    # Filter to points that deviate from the racing line
+    path = []
+    for t, x, y in raw_path:
+        dist = min_dist_to_track(x, y)
+        if dist > DEVIATION_THRESHOLD:
+            path.append([x, y])
 
     return path
 
@@ -440,36 +469,67 @@ def main():
         if not ts:
             continue
 
-        # Deduplicate by 0.27s buckets (~3.7 Hz)
-        bucket_size = 0.27
-        deduped_t, deduped_x, deduped_y = [], [], []
-        last_bucket = -1
-        for i in range(len(ts)):
-            bucket = int(ts[i] / bucket_size)
-            if bucket != last_bucket:
-                deduped_t.append(ts[i])
-                deduped_x.append(xs[i])
-                deduped_y.append(ys[i])
-                last_bucket = bucket
+        # Resample at uniform 4 Hz (0.25s intervals) using linear interpolation.
+        # The raw data has irregular spacing (0.1s–0.5s+) which causes
+        # jagged car movement when the frontend interpolates between samples.
+        RESAMPLE_DT = 0.25  # 4 Hz — smooth, manageable file size
+        resampled_t, resampled_x, resampled_y = [], [], []
+        t_cursor = ts[0]
+        t_end = ts[-1]
+        j = 0  # index into raw arrays
+
+        while t_cursor <= t_end:
+            # Advance j so ts[j-1] <= t_cursor <= ts[j]
+            while j < len(ts) - 1 and ts[j] < t_cursor:
+                j += 1
+            if j == 0:
+                resampled_t.append(round(t_cursor, 2))
+                resampled_x.append(xs[0])
+                resampled_y.append(ys[0])
+            else:
+                t0, t1 = ts[j - 1], ts[j]
+                frac = (t_cursor - t0) / (t1 - t0) if t1 != t0 else 0
+                resampled_t.append(round(t_cursor, 2))
+                resampled_x.append(round(xs[j - 1] + frac * (xs[j] - xs[j - 1])))
+                resampled_y.append(round(ys[j - 1] + frac * (ys[j] - ys[j - 1])))
+            t_cursor += RESAMPLE_DT
 
         positions[snum] = {
-            't': deduped_t,
-            'x': deduped_x,
-            'y': deduped_y,
+            't': resampled_t,
+            'x': resampled_x,
+            'y': resampled_y,
         }
-        log.info(f'    {len(deduped_t)} samples ({len(locs)} raw)')
+        log.info(f'    {len(resampled_t)} samples ({len(locs)} raw, {RESAMPLE_DT}s resampled)')
 
     # ── Step 6: Extract track outline ─────────────────────────────────────────
     log.info('Extracting track outline…')
-    # Use the first driver with location data (ideally the winner / P1)
-    outline_driver = driver_numbers[0] if driver_numbers else None
     track = {'x': [], 'y': []}
-    if outline_driver and outline_driver in all_location_by_driver:
-        track = extract_track_outline(
-            all_location_by_driver[outline_driver],
-            race_start, all_laps, outline_driver,
-        )
-    log.info(f'  {len(track["x"])} track points')
+
+    # Try multiviewer circuit API first (higher resolution: ~900 points)
+    circuit_key = session.get('circuit_key')
+    if circuit_key:
+        try:
+            log.info(f'  Trying multiviewer API for circuit {circuit_key}…')
+            mv = requests.get(
+                f'https://api.multiviewer.app/api/v1/circuits/{circuit_key}/{args.year}',
+                timeout=10,
+                headers={'User-Agent': 'f1-2d-replay/1.0'},
+            ).json()
+            if mv.get('x') and mv.get('y'):
+                track = {'x': mv['x'], 'y': mv['y']}
+                log.info(f'  Got {len(track["x"])} points from multiviewer API')
+        except Exception as e:
+            log.warning(f'  Multiviewer API failed: {e}')
+
+    # Fallback: extract from driver location data
+    if not track['x']:
+        outline_driver = driver_numbers[0] if driver_numbers else None
+        if outline_driver and outline_driver in all_location_by_driver:
+            track = extract_track_outline(
+                all_location_by_driver[outline_driver],
+                race_start, all_laps, outline_driver,
+            )
+        log.info(f'  {len(track["x"])} track points (from location data)')
 
     # ── Step 7: Extract pit lane path ─────────────────────────────────────────
     log.info('Extracting pit lane path…')
@@ -481,6 +541,7 @@ def main():
             pit_lane_path = extract_pit_lane_path(
                 all_location_by_driver[pnum],
                 race_start, all_pits, pnum,
+                track['x'], track['y'],
             )
             if pit_lane_path:
                 log.info(f'  {len(pit_lane_path)} points from #{pnum} pit stop')
@@ -692,10 +753,6 @@ def main():
 
     # ── Step 16: Write output files ───────────────────────────────────────────
     out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
-
-    gp_name = f'{circuit_name} Grand Prix {args.year}'
-    # Try to get a nicer name from the session
-    meeting_key = session.get('meeting_key')
 
     data_payload = {
         'session': {

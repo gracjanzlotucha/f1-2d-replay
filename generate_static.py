@@ -1,30 +1,34 @@
 """
-generate_static.py — Pre-generate static JSON data files for Vercel deployment.
+generate_static.py — Pre-generate static JSON data files from OpenF1 API.
 
-Run this ONCE locally before deploying. Uses your existing local FastF1 cache
-so no re-download is needed.
+Run this ONCE locally before deploying.  No external Python libraries needed
+beyond `requests`.
 
 Usage:
     python generate_static.py
+    python generate_static.py --year 2025 --country "United Kingdom"
 
 Output:
-    static/data.json       — session, drivers, track, laps, insights
-    static/positions.json  — per-driver position timeseries
+    static/data.json       — session, drivers, track, laps, insights, pit_lane_path
+    static/positions.json  — per-driver position timeseries (~3.7 Hz)
 """
 
-import os
-import re
+import argparse
 import json
 import logging
 import math
-import pandas as pd
-import numpy as np
-import fastf1
+import os
+import time
+from datetime import datetime, timezone
+
+import requests
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
 log = logging.getLogger(__name__)
 
-# ─── Helpers ─────────────────────────────────────────────────────────────────
+# ─── Constants ────────────────────────────────────────────────────────────────
+
+API_BASE = 'https://api.openf1.org/v1'
 
 TEAM_COLORS = {
     'Red Bull Racing': '#3671C6',
@@ -53,14 +57,45 @@ TIRE_COLORS = {
     'nan': '#888888',
 }
 
+# ─── API helper ───────────────────────────────────────────────────────────────
+
+_last_req = 0.0
+
+
+def api_get(endpoint, **params):
+    """Fetch JSON from OpenF1 API with rate-limiting (max 3 req/s)."""
+    global _last_req
+    elapsed = time.time() - _last_req
+    if elapsed < 0.34:
+        time.sleep(0.34 - elapsed)
+    url = f'{API_BASE}/{endpoint}'
+    r = requests.get(url, params=params, timeout=120)
+    _last_req = time.time()
+    r.raise_for_status()
+    return r.json()
+
+
+def parse_iso(s):
+    """Parse ISO 8601 timestamp string to datetime (UTC)."""
+    if not s:
+        return None
+    # Handle timezone-aware strings
+    return datetime.fromisoformat(s)
+
+
+def to_seconds(dt, ref):
+    """Convert datetime to seconds relative to a reference datetime."""
+    return (dt - ref).total_seconds()
+
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
 
 def _scrub(obj):
+    """Remove NaN / Infinity from nested data structures."""
     if isinstance(obj, dict):
         return {k: _scrub(v) for k, v in obj.items()}
     if isinstance(obj, list):
         return [_scrub(v) for v in obj]
-    if isinstance(obj, np.generic):
-        obj = obj.item()
     if isinstance(obj, float):
         return None if (math.isnan(obj) or math.isinf(obj)) else obj
     return obj
@@ -68,13 +103,11 @@ def _scrub(obj):
 
 def _safe_json(data):
     s = json.dumps(_scrub(data))
-    s = re.sub(r'\bNaN\b', 'null', s)
-    s = re.sub(r'\bInfinity\b', 'null', s)
     return s
 
 
 def fmt_time(seconds):
-    if seconds is None or math.isnan(seconds):
+    if seconds is None or (isinstance(seconds, float) and math.isnan(seconds)):
         return '—'
     m = int(seconds // 60)
     s = seconds % 60
@@ -83,14 +116,24 @@ def fmt_time(seconds):
     return f'{s:.3f}'
 
 
-def compute_insights(laps, drivers, total_laps):
+# ─── Insights ─────────────────────────────────────────────────────────────────
+
+def compute_insights(laps, drivers, total_laps, race_control_events):
+    """Compute per-lap event insights from lap data and race control messages."""
     insights = {}
     by_lap = {}
     for lap in laps:
-        ln = lap['lap']
+        ln = lap.get('lap')
         if ln is None:
             continue
         by_lap.setdefault(ln, []).append(lap)
+
+    # Index race control events by lap
+    rc_by_lap = {}
+    for rc in race_control_events:
+        ln = rc.get('lap_number')
+        if ln is not None:
+            rc_by_lap.setdefault(ln, []).append(rc)
 
     prev_positions = {}
 
@@ -98,15 +141,23 @@ def compute_insights(laps, drivers, total_laps):
         lap_group = by_lap[ln]
         events = []
 
-        statuses = set(l['track_status'] for l in lap_group)
-        if '4' in statuses:
+        # Race control events (SC, VSC, flags)
+        rc_events = rc_by_lap.get(ln, [])
+        has_sc = any('SAFETY CAR' in (rc.get('message') or '').upper() and 'VIRTUAL' not in (rc.get('message') or '').upper() for rc in rc_events)
+        has_vsc = any('VIRTUAL SAFETY CAR' in (rc.get('message') or '').upper() for rc in rc_events)
+        has_yellow = any(rc.get('flag') in ('YELLOW', 'DOUBLE YELLOW') for rc in rc_events)
+
+        # Also check track_status from lap data as fallback
+        statuses = set(str(l.get('track_status', '')) for l in lap_group)
+
+        if has_sc or '4' in statuses:
             events.append({'type': 'safety_car', 'icon': '🚗', 'title': 'Safety Car deployed', 'detail': '', 'driver': None, 'priority': 10})
-        elif '5' in statuses:
+        elif has_vsc or '5' in statuses:
             events.append({'type': 'vsc', 'icon': '🟡', 'title': 'Virtual Safety Car', 'detail': '', 'driver': None, 'priority': 9})
-        elif '2' in statuses or '3' in statuses:
+        elif has_yellow or '2' in statuses or '3' in statuses:
             events.append({'type': 'yellow', 'icon': '🟡', 'title': 'Yellow Flag', 'detail': '', 'driver': None, 'priority': 8})
 
-        valid = [l for l in lap_group if l['lap_time']]
+        valid = [l for l in lap_group if l.get('lap_time')]
         if valid:
             fastest = min(valid, key=lambda x: x['lap_time'])
             abbr = drivers.get(fastest['driver'], {}).get('abbr', fastest['driver'])
@@ -183,174 +234,480 @@ def compute_insights(laps, drivers, total_laps):
     return insights
 
 
+# ─── Track geometry helpers ───────────────────────────────────────────────────
+
+def extract_track_outline(location_samples, race_start, laps_data, driver_number):
+    """Extract track outline from one driver's clean mid-race lap location data."""
+    # Find a clean mid-race lap (avoid lap 1 chaos)
+    driver_laps = [l for l in laps_data
+                   if l.get('driver_number') == driver_number
+                   and l.get('lap_duration') is not None
+                   and l.get('is_pit_out_lap') is not True
+                   and l.get('lap_number', 0) > 3]
+    if not driver_laps:
+        # Fallback: any lap
+        driver_laps = [l for l in laps_data
+                       if l.get('driver_number') == driver_number
+                       and l.get('lap_duration') is not None]
+    if not driver_laps:
+        return {'x': [], 'y': []}
+
+    # Pick the fastest clean lap
+    driver_laps.sort(key=lambda l: l['lap_duration'])
+    best_lap = driver_laps[0]
+    lap_start = parse_iso(best_lap['date_start'])
+    lap_end_t = to_seconds(lap_start, race_start) + best_lap['lap_duration']
+    lap_start_t = to_seconds(lap_start, race_start)
+
+    # Filter location samples to this lap's time window
+    xs, ys = [], []
+    for loc in location_samples:
+        dt = parse_iso(loc['date'])
+        t = to_seconds(dt, race_start)
+        if lap_start_t <= t <= lap_end_t:
+            xs.append(loc['x'])
+            ys.append(loc['y'])
+
+    return {
+        'x': xs,
+        'y': ys,
+    }
+
+
+def extract_pit_lane_path(location_samples, race_start, pit_data, driver_number):
+    """Extract pit lane path from a driver's pit stop location data."""
+    # Find a pit stop for this driver
+    driver_pits = [p for p in pit_data if p.get('driver_number') == driver_number]
+    if not driver_pits:
+        return []
+
+    pit = driver_pits[0]
+    pit_date = parse_iso(pit['date'])
+    lane_duration = pit.get('lane_duration', 30)
+
+    # The pit 'date' is typically the pit entry time
+    # Location data during pit lane transit
+    pit_start_t = to_seconds(pit_date, race_start)
+    pit_end_t = pit_start_t + lane_duration + 5  # +5s buffer for exit
+
+    path = []
+    for loc in location_samples:
+        dt = parse_iso(loc['date'])
+        t = to_seconds(dt, race_start)
+        if pit_start_t - 5 <= t <= pit_end_t:  # -5s to catch entry approach
+            path.append([loc['x'], loc['y']])
+
+    return path
+
+
+def compute_track_rotation(track_x, track_y):
+    """Compute rotation angle to align the start/finish straight horizontally.
+
+    Returns the angle in degrees such that rotating by this angle makes
+    the S/F straight approximately horizontal.
+    """
+    if len(track_x) < 20:
+        return 0.0
+
+    # The first ~3% of points form the S/F straight
+    n = max(5, len(track_x) * 3 // 100)
+    # Direction vector of the S/F straight
+    dx = track_x[n] - track_x[0]
+    dy = track_y[n] - track_y[0]
+    # Angle of the straight from horizontal
+    angle_rad = math.atan2(dy, dx)
+    angle_deg = math.degrees(angle_rad)
+
+    # We want to rotate by -angle so the straight becomes horizontal
+    return round(-angle_deg, 2)
+
+
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 def main():
-    CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    fastf1.Cache.enable_cache(CACHE_DIR)
+    parser = argparse.ArgumentParser(description='Generate F1 replay data from OpenF1 API')
+    parser.add_argument('--year', type=int, default=2025, help='Season year')
+    parser.add_argument('--country', default='United Kingdom', help='Country name for the GP')
+    args = parser.parse_args()
 
-    log.info('Loading Silverstone 2025 GP from cache…')
-    session = fastf1.get_session(2025, 'British Grand Prix', 'R')
-    session.load(laps=True, telemetry=True, weather=True, messages=False)
+    # ── Step 1: Find session ──────────────────────────────────────────────────
+    log.info(f'Finding {args.year} {args.country} GP Race session…')
+    sessions = api_get('sessions', country_name=args.country, session_type='Race', year=args.year)
+    if not sessions:
+        log.error(f'No race session found for {args.year} {args.country}')
+        return
+    session = sessions[0]
+    session_key = session['session_key']
+    meeting_key = session.get('meeting_key')
+    circuit_name = session.get('circuit_short_name', session.get('location', 'Unknown'))
+    log.info(f'  Session key: {session_key} — {circuit_name}')
 
+    # Fetch meeting name (e.g., "British Grand Prix")
+    gp_name = f'{args.country} Grand Prix'
+    if meeting_key:
+        meetings = api_get('meetings', meeting_key=meeting_key)
+        if meetings:
+            gp_name = meetings[0].get('meeting_name', gp_name)
+    log.info(f'  GP name: {gp_name}')
+
+    # ── Step 2: Fetch all bulk data ───────────────────────────────────────────
+    log.info('Fetching drivers…')
+    drivers_raw = api_get('drivers', session_key=session_key)
+    log.info(f'  {len(drivers_raw)} drivers')
+
+    log.info('Fetching laps…')
+    all_laps = api_get('laps', session_key=session_key)
+    log.info(f'  {len(all_laps)} lap records')
+
+    log.info('Fetching stints…')
+    all_stints = api_get('stints', session_key=session_key)
+    log.info(f'  {len(all_stints)} stints')
+
+    log.info('Fetching pit stops…')
+    all_pits = api_get('pit', session_key=session_key)
+    log.info(f'  {len(all_pits)} pit stops')
+
+    log.info('Fetching position changes…')
+    all_pos_changes = api_get('position', session_key=session_key)
+    log.info(f'  {len(all_pos_changes)} position updates')
+
+    log.info('Fetching race control…')
+    all_rc = api_get('race_control', session_key=session_key)
+    log.info(f'  {len(all_rc)} race control messages')
+
+    log.info('Fetching weather…')
+    all_weather = api_get('weather', session_key=session_key)
+    log.info(f'  {len(all_weather)} weather records')
+
+    # ── Step 3: Determine race start time ─────────────────────────────────────
+    log.info('Determining race start time…')
+    lap1_starts = []
+    for l in all_laps:
+        if l.get('lap_number') == 1 and l.get('date_start'):
+            lap1_starts.append(parse_iso(l['date_start']))
+    if not lap1_starts:
+        log.error('Could not determine race start time')
+        return
+    race_start = min(lap1_starts)
+    log.info(f'  Race start: {race_start.isoformat()}')
+
+    # ── Step 4: Process drivers ───────────────────────────────────────────────
     log.info('Processing drivers…')
     drivers = {}
-    for num in session.drivers:
-        d = session.get_driver(num)
-        team = d.get('TeamName', '')
+    driver_numbers = []
+    for d in drivers_raw:
+        num = str(d['driver_number'])
+        team = d.get('team_name', '')
         color = TEAM_COLORS.get(team)
         if not color:
-            raw = d.get('TeamColor', None)
+            raw = d.get('team_colour')
             color = ('#' + raw) if raw else '#888888'
-        drivers[str(num)] = {
-            'number': str(num),
-            'abbr': d.get('Abbreviation', str(num)),
-            'name': d.get('FullName', ''),
+        drivers[num] = {
+            'number': num,
+            'abbr': d.get('name_acronym', num),
+            'name': d.get('full_name', ''),
             'team': team,
             'color': color,
         }
+        driver_numbers.append(d['driver_number'])
 
-    log.info('Extracting track outline…')
-    try:
-        fast_lap = session.laps.pick_fastest()
-        tel = fast_lap.get_telemetry()[['X', 'Y', 'Distance']].dropna()
-        tel = tel.drop_duplicates('Distance').sort_values('Distance')
-        track = {
-            'x': [round(float(v), 1) for v in tel['X'].tolist()],
-            'y': [round(float(v), 1) for v in tel['Y'].tolist()],
-        }
-    except Exception as e:
-        log.warning(f'Track outline fallback: {e}')
-        track = {'x': [], 'y': []}
-
-    log.info('Extracting circuit info…')
-    circuit_info = {}
-    try:
-        ci = session.get_circuit_info()
-        circuit_info['rotation'] = round(float(ci.rotation), 2)
-        corners = ci.corners
-        circuit_info['corners'] = [
-            {
-                'number': int(row.get('Number', 0)),
-                'letter': str(row.get('Letter', '')),
-                'x': round(float(row.get('X', 0)), 1),
-                'y': round(float(row.get('Y', 0)), 1),
-                'angle': round(float(row.get('Angle', 0)), 1),
-                'distance': round(float(row.get('Distance', 0)), 1),
-            }
-            for _, row in corners.iterrows()
-        ]
-        log.info(f'  Circuit rotation: {circuit_info["rotation"]}°, {len(circuit_info["corners"])} corners')
-    except Exception as e:
-        log.warning(f'Circuit info fallback: {e}')
-
-    log.info('Detecting race start time…')
-    laps_df = session.laps.copy()
-    race_start_t = 0.0
-    try:
-        lap1_starts = laps_df[laps_df['LapNumber'] == 1]['LapStartTime'].dropna()
-        if len(lap1_starts):
-            race_start_t = float(lap1_starts.min().total_seconds())
-            log.info(f'Race start at session t={race_start_t:.1f}s')
-    except Exception as e:
-        log.warning(f'Could not detect race start: {e}')
-
-    def safe_sec(td):
-        try:
-            if pd.isna(td):
-                return None
-            val = float(td.total_seconds())
-            if math.isnan(val) or math.isinf(val):
-                return None
-            return round(val, 3)
-        except Exception:
-            return None
-
-    def safe_sec_r(td):
-        v = safe_sec(td)
-        return None if v is None else round(v - race_start_t, 3)
-
-    def safe_int(v):
-        try:
-            return int(v) if pd.notna(v) else None
-        except Exception:
-            return None
-
-    log.info('Resampling position data (2 Hz)…')
+    # ── Step 5: Fetch location data per driver ────────────────────────────────
+    log.info('Fetching location data for all drivers…')
     positions = {}
-    for num in session.drivers:
-        snum = str(num)
-        if num not in session.pos_data:
-            continue
-        try:
-            pos = session.pos_data[num].copy()
-            pos = pos.dropna(subset=['X', 'Y'])
-            pos['t'] = pos['SessionTime'].dt.total_seconds() - race_start_t
-            pos = pos[pos['t'] >= 0].sort_values('t')
-            if pos.empty:
-                continue
-            pos['bucket'] = (pos['t'] / 0.5).astype(int)
-            pos = pos.drop_duplicates('bucket')
-            positions[snum] = {
-                't': [round(float(v), 2) for v in pos['t'].tolist()],
-                'x': [round(float(v), 1) for v in pos['X'].tolist()],
-                'y': [round(float(v), 1) for v in pos['Y'].tolist()],
-            }
-        except Exception as e:
-            log.warning(f'Pos data error for {num}: {e}')
+    all_location_by_driver = {}  # raw, for track outline / pit lane extraction
 
-    log.info('Processing lap data…')
+    for num in driver_numbers:
+        snum = str(num)
+        log.info(f'  #{num} ({drivers.get(snum, {}).get("abbr", "?")})…')
+        locs = api_get('location', session_key=session_key, driver_number=num)
+        if not locs:
+            log.warning(f'    No location data')
+            continue
+
+        all_location_by_driver[num] = locs
+
+        # Convert to race-relative time series
+        ts, xs, ys = [], [], []
+        for loc in locs:
+            dt = parse_iso(loc['date'])
+            t = to_seconds(dt, race_start)
+            if t < 0:
+                continue  # skip pre-race data
+            ts.append(round(t, 2))
+            xs.append(loc['x'])
+            ys.append(loc['y'])
+
+        if not ts:
+            continue
+
+        # Deduplicate by 0.27s buckets (~3.7 Hz)
+        bucket_size = 0.27
+        deduped_t, deduped_x, deduped_y = [], [], []
+        last_bucket = -1
+        for i in range(len(ts)):
+            bucket = int(ts[i] / bucket_size)
+            if bucket != last_bucket:
+                deduped_t.append(ts[i])
+                deduped_x.append(xs[i])
+                deduped_y.append(ys[i])
+                last_bucket = bucket
+
+        positions[snum] = {
+            't': deduped_t,
+            'x': deduped_x,
+            'y': deduped_y,
+        }
+        log.info(f'    {len(deduped_t)} samples ({len(locs)} raw)')
+
+    # ── Step 6: Extract track outline ─────────────────────────────────────────
+    log.info('Extracting track outline…')
+    # Use the first driver with location data (ideally the winner / P1)
+    outline_driver = driver_numbers[0] if driver_numbers else None
+    track = {'x': [], 'y': []}
+    if outline_driver and outline_driver in all_location_by_driver:
+        track = extract_track_outline(
+            all_location_by_driver[outline_driver],
+            race_start, all_laps, outline_driver,
+        )
+    log.info(f'  {len(track["x"])} track points')
+
+    # ── Step 7: Extract pit lane path ─────────────────────────────────────────
+    log.info('Extracting pit lane path…')
+    pit_lane_path = []
+    # Find a driver who pitted and has location data
+    for pit in all_pits:
+        pnum = pit.get('driver_number')
+        if pnum in all_location_by_driver:
+            pit_lane_path = extract_pit_lane_path(
+                all_location_by_driver[pnum],
+                race_start, all_pits, pnum,
+            )
+            if pit_lane_path:
+                log.info(f'  {len(pit_lane_path)} points from #{pnum} pit stop')
+                break
+    if not pit_lane_path:
+        log.warning('  Could not extract pit lane path')
+
+    # ── Step 8: Compute track rotation ────────────────────────────────────────
+    log.info('Computing track rotation…')
+    track_rotation = compute_track_rotation(track['x'], track['y'])
+    log.info(f'  Rotation: {track_rotation}°')
+
+    # ── Step 9: Build stint lookup ────────────────────────────────────────────
+    # Index stints by driver for quick lookup
+    stints_by_driver = {}
+    for st in all_stints:
+        dnum = str(st['driver_number'])
+        stints_by_driver.setdefault(dnum, []).append(st)
+
+    def find_stint(driver_num, lap_number):
+        """Find the stint for a given driver and lap number."""
+        for st in stints_by_driver.get(str(driver_num), []):
+            start = st.get('lap_start', 0)
+            end = st.get('lap_end')
+            if end is None:
+                end = 9999
+            if start <= lap_number <= end:
+                return st
+        return None
+
+    # ── Step 10: Build pit stop lookup ────────────────────────────────────────
+    pits_by_driver_lap = {}
+    for pit in all_pits:
+        key = (str(pit['driver_number']), pit.get('lap_number'))
+        pits_by_driver_lap[key] = pit
+
+    # ── Step 11: Build position lookup ────────────────────────────────────────
+    # Position changes are timestamped, build a lookup per driver
+    pos_by_driver = {}
+    for pc in all_pos_changes:
+        dnum = str(pc['driver_number'])
+        pos_by_driver.setdefault(dnum, []).append(pc)
+
+    def get_position_at_time(driver_num, t):
+        """Get the most recent position for a driver at time t."""
+        entries = pos_by_driver.get(str(driver_num), [])
+        best = None
+        for entry in entries:
+            dt = parse_iso(entry['date'])
+            et = to_seconds(dt, race_start)
+            if et <= t and (best is None or et > best[0]):
+                best = (et, entry['position'])
+        return best[1] if best else None
+
+    # ── Step 12: Build race control track status lookup ───────────────────────
+    # Map race control flags to track_status codes for compat
+    def get_track_status_for_lap(lap_number):
+        """Get track status code for a given lap (compat with old format)."""
+        rc_for_lap = [rc for rc in all_rc if rc.get('lap_number') == lap_number]
+        for rc in rc_for_lap:
+            msg = (rc.get('message') or '').upper()
+            flag = rc.get('flag') or ''
+            if 'SAFETY CAR' in msg and 'VIRTUAL' not in msg:
+                return '4'
+            if 'VIRTUAL SAFETY CAR' in msg:
+                return '5'
+        for rc in rc_for_lap:
+            flag = rc.get('flag') or ''
+            if flag == 'DOUBLE YELLOW':
+                return '3'
+            if flag == 'YELLOW':
+                return '2'
+        return '1'  # green / normal
+
+    # ── Step 13: Assemble lap records ─────────────────────────────────────────
+    log.info('Assembling lap records…')
     laps_list = []
-    for _, lap in laps_df.iterrows():
+    # Track personal bests per driver
+    driver_best_times = {}
+    total_laps = 0
+
+    # Group OpenF1 laps by driver
+    laps_by_driver = {}
+    for l in all_laps:
+        dnum = str(l['driver_number'])
+        laps_by_driver.setdefault(dnum, []).append(l)
+
+    # Sort each driver's laps by lap number
+    for dnum in laps_by_driver:
+        laps_by_driver[dnum].sort(key=lambda l: l.get('lap_number', 0))
+
+    for l in all_laps:
+        dnum = str(l['driver_number'])
+        lap_num = l.get('lap_number')
+        if lap_num is None:
+            continue
+
+        total_laps = max(total_laps, lap_num)
+
+        lap_time = l.get('lap_duration')
+        s1 = l.get('duration_sector_1')
+        s2 = l.get('duration_sector_2')
+        s3 = l.get('duration_sector_3')
+
+        # Round to 3 decimal places
+        if lap_time is not None:
+            lap_time = round(lap_time, 3)
+        if s1 is not None:
+            s1 = round(s1, 3)
+        if s2 is not None:
+            s2 = round(s2, 3)
+        if s3 is not None:
+            s3 = round(s3, 3)
+
+        # Compute lap_start relative to race_start
+        lap_start = None
+        if l.get('date_start'):
+            lap_start_dt = parse_iso(l['date_start'])
+            lap_start = round(to_seconds(lap_start_dt, race_start), 3)
+
+        # Stint info (compound, tyre_life, stint number)
+        stint = find_stint(l['driver_number'], lap_num)
+        compound = stint.get('compound', 'UNKNOWN') if stint else 'UNKNOWN'
+        stint_num = stint.get('stint_number') if stint else None
+        tyre_age_start = stint.get('tyre_age_at_start', 0) if stint else 0
+        stint_lap_start = stint.get('lap_start', lap_num) if stint else lap_num
+        tyre_life = tyre_age_start + (lap_num - stint_lap_start) + 1
+
+        # Pit stop info
+        pit = pits_by_driver_lap.get((dnum, lap_num))
+        pit_in = None
+        pit_out = None
+        pit_stop_duration = None
+        if pit:
+            pit_date = parse_iso(pit['date'])
+            pit_t = round(to_seconds(pit_date, race_start), 3)
+            lane_dur = pit.get('lane_duration', 0) or 0
+            pit_in = pit_t
+            pit_out = round(pit_t + lane_dur, 3)
+            pit_stop_duration = pit.get('stop_duration')
+            if pit_stop_duration is not None:
+                pit_stop_duration = round(pit_stop_duration, 1)
+
+        # Position at this lap
+        lap_end_t = (lap_start + lap_time) if (lap_start is not None and lap_time is not None) else None
+        position = get_position_at_time(l['driver_number'], lap_end_t) if lap_end_t else None
+
+        # Personal best tracking
+        is_pb = False
+        if lap_time is not None:
+            prev_best = driver_best_times.get(dnum)
+            if prev_best is None or lap_time < prev_best:
+                driver_best_times[dnum] = lap_time
+                is_pb = True
+
+        # Track status
+        track_status = get_track_status_for_lap(lap_num)
+
         laps_list.append({
-            'driver': str(lap.get('DriverNumber', '')),
-            'lap': safe_int(lap.get('LapNumber')),
-            'lap_time': safe_sec(lap.get('LapTime')),
-            'sector1': safe_sec(lap.get('Sector1Time')),
-            'sector2': safe_sec(lap.get('Sector2Time')),
-            'sector3': safe_sec(lap.get('Sector3Time')),
-            'compound': str(lap.get('Compound', 'UNKNOWN')),
-            'tyre_life': safe_int(lap.get('TyreLife')),
-            'pit_in': safe_sec_r(lap.get('PitInTime')),
-            'pit_out': safe_sec_r(lap.get('PitOutTime')),
-            'lap_start': safe_sec_r(lap.get('LapStartTime')),
-            'position': safe_int(lap.get('Position')),
-            'is_pb': bool(lap.get('IsPersonalBest', False)),
-            'track_status': str(lap.get('TrackStatus', '')),
-            'stint': safe_int(lap.get('Stint')),
+            'driver': dnum,
+            'lap': lap_num,
+            'lap_time': lap_time,
+            'sector1': s1,
+            'sector2': s2,
+            'sector3': s3,
+            'compound': compound,
+            'tyre_life': tyre_life,
+            'pit_in': pit_in,
+            'pit_out': pit_out,
+            'pit_stop_duration': pit_stop_duration,
+            'lap_start': lap_start,
+            'position': position,
+            'is_pb': is_pb,
+            'track_status': track_status,
+            'stint': stint_num,
         })
 
-    log.info('Computing insights…')
-    total_laps = int(laps_df['LapNumber'].max()) if not laps_df.empty else 0
-    insights = compute_insights(laps_list, drivers, total_laps)
+    log.info(f'  {len(laps_list)} lap records, {total_laps} total laps')
 
-    log.info('Reading weather data…')
+    # ── Step 14: Weather ──────────────────────────────────────────────────────
+    log.info('Processing weather…')
     weather = {}
-    try:
-        wdf = session.weather_data
-        weather = {
-            'air_temp': round(float(wdf['AirTemp'].mean()), 1),
-            'track_temp': round(float(wdf['TrackTemp'].mean()), 1),
-            'humidity': round(float(wdf['Humidity'].mean()), 1),
-            'rainfall': bool(wdf['Rainfall'].any()),
-        }
-    except Exception:
-        pass
+    if all_weather:
+        # Filter to race window
+        race_weather = []
+        for w in all_weather:
+            dt = parse_iso(w['date'])
+            t = to_seconds(dt, race_start)
+            if -300 <= t <= 7200:  # 5 min before to 2 hours after
+                race_weather.append(w)
 
-    # ── Write output files ────────────────────────────────────────────────────
+        if race_weather:
+            air_temps = [w['air_temperature'] for w in race_weather if w.get('air_temperature') is not None]
+            track_temps = [w['track_temperature'] for w in race_weather if w.get('track_temperature') is not None]
+            humidities = [w['humidity'] for w in race_weather if w.get('humidity') is not None]
+            rainfall_any = any(w.get('rainfall', False) for w in race_weather)
+
+            weather = {
+                'air_temp': round(sum(air_temps) / len(air_temps), 1) if air_temps else None,
+                'track_temp': round(sum(track_temps) / len(track_temps), 1) if track_temps else None,
+                'humidity': round(sum(humidities) / len(humidities), 1) if humidities else None,
+                'rainfall': rainfall_any,
+            }
+    log.info(f'  Weather: {weather}')
+
+    # ── Step 15: Compute insights ─────────────────────────────────────────────
+    log.info('Computing insights…')
+    insights = compute_insights(laps_list, drivers, total_laps, all_rc)
+
+    # ── Step 16: Write output files ───────────────────────────────────────────
     out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+
+    gp_name = f'{circuit_name} Grand Prix {args.year}'
+    # Try to get a nicer name from the session
+    meeting_key = session.get('meeting_key')
 
     data_payload = {
         'session': {
-            'name': 'British Grand Prix 2025',
-            'circuit': 'Silverstone Circuit',
+            'name': f'{gp_name} {args.year}',
+            'circuit': circuit_name,
             'total_laps': total_laps,
             'weather': weather,
         },
         'drivers': drivers,
         'track': track,
-        'circuit_info': circuit_info,
+        'track_rotation': track_rotation,
+        'pit_lane_path': pit_lane_path,
         'laps': laps_list,
         'insights': insights,
     }
@@ -373,10 +730,6 @@ def main():
     log.info('Done! Static files ready:')
     log.info(f'  static/data.json       ({size_kb:.0f} KB)')
     log.info(f'  static/positions.json  ({size_mb:.1f} MB)')
-    log.info('')
-    log.info('Next step: deploy to Vercel')
-    log.info('  npm i -g vercel')
-    log.info('  vercel')
 
 
 if __name__ == '__main__':

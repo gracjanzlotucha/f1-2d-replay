@@ -28,7 +28,8 @@
       "Bash(python3:*)",
       "Bash(node --version:*)",
       "Bash(git checkout:*)",
-      "WebFetch(domain:docs.fastf1.dev)"
+      "WebFetch(domain:docs.fastf1.dev)",
+      "Bash(node:*)"
     ]
   }
 }

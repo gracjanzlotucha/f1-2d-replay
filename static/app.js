@@ -220,8 +220,24 @@ function setupDerivedData() {
       // No laps at all = DNS
       status.status = 'dns';
     } else if (maxLap <= 1 && !hasLap1Data.has(num)) {
-      // Listed for lap 1 but no position or time = effective DNS (e.g. COL)
-      status.status = 'dns';
+      // Listed for lap 1 but no timing data — check if car actually moved on track
+      const pd = G.positions[num];
+      let moved = false;
+      if (pd && pd.x.length > 1) {
+        const x0 = pd.x[0], y0 = pd.y[0];
+        for (let i = Math.min(100, pd.x.length - 1); i > 0; i--) {
+          const dx = pd.x[i] - x0, dy = pd.y[i] - y0;
+          if (dx * dx + dy * dy > 1000000) { moved = true; break; } // > 1000 units from start
+        }
+      }
+      if (moved) {
+        // Car raced but DNF'd before completing lap 1 (e.g. Lawson crash)
+        status.status = 'dnf';
+        status.retirementLap = maxLap;
+      } else {
+        // Car never moved = true DNS (e.g. COL sitting in garage)
+        status.status = 'dns';
+      }
     } else if (maxLap < G.totalLaps) {
       // Fewer laps than total = DNF/RET
       status.status = 'dnf';
@@ -231,64 +247,24 @@ function setupDerivedData() {
     G.driverStatus[num] = status;
   }
 
-  // ── Pre-compute pit stop stationary intervals ──────────────────────────
+  // ── Pre-compute pit stop intervals ─────────────────────────────────────
+  // Use pit_in / pit_out timestamps from lap data directly (position data
+  // at ~2 Hz is too coarse to reliably detect the brief stationary window).
   G.pitStops = []; // [{ driver, tStart, tEnd, duration }]
 
-  // Collect pit_in / pit_out pairs from lap data
-  const pitEvents = {}; // { driverNum: [{ pitIn, pitOut }] }
+  const pitPending = {}; // { driverNum: pitIn timestamp waiting for pit_out }
   for (const lap of G.laps) {
     if (lap.pit_in != null) {
-      if (!pitEvents[lap.driver]) pitEvents[lap.driver] = [];
-      pitEvents[lap.driver].push({ pitIn: lap.pit_in, pitOut: null });
+      pitPending[lap.driver] = lap.pit_in;
     }
-    if (lap.pit_out != null) {
-      const arr = pitEvents[lap.driver];
-      if (arr && arr.length > 0 && arr[arr.length - 1].pitOut == null) {
-        arr[arr.length - 1].pitOut = lap.pit_out;
-      }
-    }
-  }
-
-  // For each pit stop, scan position data to find the stationary interval
-  const STATIONARY_THRESHOLD = 50; // position change < 50 units between samples = stationary
-  for (const num in pitEvents) {
-    const pd = G.positions[num];
-    if (!pd || !pd.t.length) continue;
-
-    for (const evt of pitEvents[num]) {
-      if (evt.pitIn == null || evt.pitOut == null) continue;
-      // Scan positions between pitIn and pitOut to find stationary window
-      const iStart = bisect(pd.t, evt.pitIn);
-      const iEnd   = Math.min(bisect(pd.t, evt.pitOut), pd.t.length - 1);
-
-      let stationaryStart = null;
-      let stationaryEnd   = null;
-
-      for (let i = iStart; i < iEnd; i++) {
-        const dx = pd.x[i + 1] - pd.x[i];
-        const dy = pd.y[i + 1] - pd.y[i];
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < STATIONARY_THRESHOLD) {
-          if (stationaryStart == null) stationaryStart = pd.t[i];
-          stationaryEnd = pd.t[i + 1];
-        } else if (stationaryStart != null) {
-          // Car started moving again — stop
-          break;
-        }
-      }
-
-      if (stationaryStart != null && stationaryEnd != null) {
-        const duration = stationaryEnd - stationaryStart;
-        if (duration > 0.5 && duration < 30) { // sanity check: 0.5s – 30s
-          G.pitStops.push({
-            driver: num,
-            tStart: stationaryStart,
-            tEnd: stationaryEnd,
-            duration: duration,
-          });
-        }
-      }
+    if (lap.pit_out != null && pitPending[lap.driver] != null) {
+      G.pitStops.push({
+        driver: lap.driver,
+        tStart: pitPending[lap.driver],
+        tEnd: lap.pit_out,
+        duration: lap.pit_out - pitPending[lap.driver],
+      });
+      delete pitPending[lap.driver];
     }
   }
 

@@ -19,24 +19,26 @@ const DRIVER_RADIUS = 9;   // Car marker radius on canvas
 const PADDING_FRAC  = 0.08; // Canvas padding as fraction
 
 // Track rotation — aligns Silverstone pit straight horizontally, S/F at top
-// Angle: -32.5° (pit straight runs at ~32.5° from horizontal in data space)
-const TRACK_ROT_COS = 0.8434;   // cos(-32.5°)
-const TRACK_ROT_SIN = -0.5373;  // sin(-32.5°)
+// The S/F straight runs at ~53° from horizontal in FastF1 data space.
+// Rotating by -53° makes the straight horizontal; the canvas Y-flip puts S/F at top.
+const TRACK_ROT_COS =  0.6018;  // cos(-53°)
+const TRACK_ROT_SIN = -0.7986;  // sin(-53°)
 
 function rotatePoint(x, y) {
-  // Rotate by -32.5° then negate Y to put S/F at top
-  const rx = x * TRACK_ROT_COS - y * TRACK_ROT_SIN;
-  const ry = -(x * TRACK_ROT_SIN + y * TRACK_ROT_COS);
-  return [rx, ry];
+  return [
+    x * TRACK_ROT_COS - y * TRACK_ROT_SIN,
+    x * TRACK_ROT_SIN + y * TRACK_ROT_COS,
+  ];
 }
 
-// Pit lane path coordinates (extracted from position telemetry during pit stops)
+// Pit lane path (extracted from position telemetry during Hulkenberg's lap-9 pit stop)
 const PIT_LANE_PATH = [
-  [-1049, -129], [-1007, 125], [-960, 390], [-910, 660],
-  [-856, 935], [-824, 1130], [-800, 1350], [-780, 1570],
-  [-755, 1785], [-720, 1985], [-670, 2200], [-610, 2420],
-  [-540, 2640], [-460, 2860], [-370, 3070], [-270, 3280],
-  [-160, 3470], [-40, 3650], [90, 3790], [230, 3900], [380, 3960], [529, 3978],
+  [-1535, 388],  [-1623, 598],  [-1596, 813],  [-1499, 977],
+  [-1368, 1172], [-1228, 1381], [-1115, 1550], [-991, 1735],
+  [-861, 1930],  [-754, 2090],  [-625, 2280],  [-495, 2474],
+  [-366, 2665],  [-251, 2835],  [-116, 3036],  [-12, 3190],
+  [100, 3358],   [218, 3534],   [273, 3614],   [329, 3698],
+  [417, 3830],   [524, 3973],   [632, 4056],
 ];
 
 let G = {

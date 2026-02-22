@@ -29,11 +29,7 @@
       "Bash(node --version:*)",
       "Bash(git checkout:*)",
       "WebFetch(domain:docs.fastf1.dev)",
-      "Bash(node:*)",
-      "WebFetch(domain:openf1.org)",
-      "WebFetch(domain:github.com)",
-      "WebFetch(domain:api.openf1.org)",
-      "Bash(python -m json.tool:*)"
+      "Bash(node:*)"
     ]
   }
 }

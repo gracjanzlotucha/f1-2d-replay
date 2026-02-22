@@ -18,10 +18,11 @@ const TRAIL_LENGTH = 28;   // How many past positions to show as trail
 const DRIVER_RADIUS = 9;   // Car marker radius on canvas
 const PADDING_FRAC  = 0.08; // Canvas padding as fraction
 
-// Track rotation — loaded from data.json (computed by generate_static.py)
-// Rotates the track so the pit straight is roughly horizontal, S/F at top.
-let TRACK_ROT_COS = 1;
-let TRACK_ROT_SIN = 0;
+// Track rotation — aligns Silverstone pit straight horizontally, S/F at top
+// The S/F straight runs at ~53° from horizontal in FastF1 data space.
+// Rotating by -53° makes the straight horizontal; the canvas Y-flip puts S/F at top.
+const TRACK_ROT_COS =  0.6018;  // cos(-53°)
+const TRACK_ROT_SIN = -0.7986;  // sin(-53°)
 
 function rotatePoint(x, y) {
   return [
@@ -30,8 +31,25 @@ function rotatePoint(x, y) {
   ];
 }
 
-// Pit lane path — loaded from data.json (extracted from pit stop telemetry)
-let PIT_LANE_PATH = [];
+// Pit lane path (extracted from position telemetry during Hulkenberg's lap-9 pit stop)
+// Includes full entry curve (diverging from track) through pit boxes to exit (rejoining track)
+const PIT_LANE_PATH = [
+  // Pit entry — diverging from main track towards pit lane
+  [-496, -716],  [-906, -280],  [-1025, -155], [-1094, -81],
+  [-1146, -26],  [-1231, 63],   [-1396, 238],  [-1442, 286],
+  // Entry curve — the sharp turn into the pit lane
+  [-1535, 388],  [-1584, 464],  [-1623, 598],  [-1625, 694],
+  // Pit lane proper (running parallel to the main straight)
+  [-1596, 813],  [-1499, 977],  [-1368, 1172], [-1228, 1381],
+  [-1115, 1550], [-991, 1735],  [-861, 1930],  [-754, 2090],
+  [-625, 2280],  [-495, 2474],  [-366, 2665],  [-251, 2835],
+  [-116, 3036],  [-12, 3190],   [100, 3358],   [218, 3534],
+  [273, 3614],
+  // Pit exit — accelerating back onto the track
+  [329, 3698],   [417, 3830],   [524, 3973],   [632, 4056],
+  [748, 4113],   [911, 4154],   [1052, 4172],  [1240, 4195],
+  [1479, 4225],  [1634, 4244],
+];
 
 let G = {
   // Raw data
@@ -128,18 +146,6 @@ async function loadAllData() {
   G.insights = data.insights;
   G.positions = positions;
   G.totalLaps = data.session.total_laps;
-
-  // Load track rotation from data (computed by generate_static.py)
-  if (data.track_rotation != null) {
-    const rad = data.track_rotation * Math.PI / 180;
-    TRACK_ROT_COS = Math.cos(rad);
-    TRACK_ROT_SIN = Math.sin(rad);
-  }
-
-  // Load pit lane path from data
-  if (data.pit_lane_path && data.pit_lane_path.length) {
-    PIT_LANE_PATH = data.pit_lane_path;
-  }
 
   // Populate weather
   const w = data.session.weather;
@@ -246,37 +252,18 @@ function setupDerivedData() {
   // at ~2 Hz is too coarse to reliably detect the brief stationary window).
   G.pitStops = []; // [{ driver, tStart, tEnd, duration }]
 
-  const pitPending = {}; // { driverNum: { pitIn, pit_stop_duration } }
+  const pitPending = {}; // { driverNum: pitIn timestamp waiting for pit_out }
   for (const lap of G.laps) {
     if (lap.pit_in != null) {
-      pitPending[lap.driver] = {
-        pitIn: lap.pit_in,
-        stopDuration: lap.pit_stop_duration,
-      };
+      pitPending[lap.driver] = lap.pit_in;
     }
     if (lap.pit_out != null && pitPending[lap.driver] != null) {
-      const pending = pitPending[lap.driver];
-      const laneDuration = lap.pit_out - pending.pitIn;
-
-      if (pending.stopDuration != null && pending.stopDuration > 0) {
-        // Use real pit box time — estimate stationary window within the lane transit
-        const travelTime = laneDuration - pending.stopDuration;
-        const tStart = pending.pitIn + travelTime * 0.55; // pit box is slightly past midpoint
-        G.pitStops.push({
-          driver: lap.driver,
-          tStart: tStart,
-          tEnd: tStart + pending.stopDuration,
-          duration: pending.stopDuration,
-        });
-      } else {
-        // Fallback: use full lane transit time
-        G.pitStops.push({
-          driver: lap.driver,
-          tStart: pending.pitIn,
-          tEnd: lap.pit_out,
-          duration: laneDuration,
-        });
-      }
+      G.pitStops.push({
+        driver: lap.driver,
+        tStart: pitPending[lap.driver],
+        tEnd: lap.pit_out,
+        duration: lap.pit_out - pitPending[lap.driver],
+      });
       delete pitPending[lap.driver];
     }
   }

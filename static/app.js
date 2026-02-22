@@ -47,7 +47,8 @@ const PIT_LANE_PATH = [
   [273, 3614],
   // Pit exit — accelerating back onto the track
   [329, 3698],   [417, 3830],   [524, 3973],   [632, 4056],
-  [748, 4113],   [911, 4154],   [1052, 4172],
+  [748, 4113],   [911, 4154],   [1052, 4172],  [1240, 4195],
+  [1479, 4225],  [1634, 4244],
 ];
 
 let G = {
@@ -203,12 +204,23 @@ function setupDerivedData() {
     }
   }
 
+  // Check which drivers had meaningful lap data (lap_time or position) on their first lap
+  const hasLap1Data = new Set();
+  for (const lap of G.laps) {
+    if (lap.lap === 1 && (lap.lap_time || lap.position)) {
+      hasLap1Data.add(lap.driver);
+    }
+  }
+
   for (const num in G.drivers) {
     const maxLap = maxLapByDriver[num] || 0;
     const status = { status: 'racing', retirementLap: null, pitStart: pitStartDrivers.has(num) };
 
     if (maxLap === 0) {
       // No laps at all = DNS
+      status.status = 'dns';
+    } else if (maxLap <= 1 && !hasLap1Data.has(num)) {
+      // Listed for lap 1 but no position or time = effective DNS (e.g. COL)
       status.status = 'dns';
     } else if (maxLap < G.totalLaps) {
       // Fewer laps than total = DNF/RET
@@ -217,6 +229,67 @@ function setupDerivedData() {
     }
 
     G.driverStatus[num] = status;
+  }
+
+  // ── Pre-compute pit stop stationary intervals ──────────────────────────
+  G.pitStops = []; // [{ driver, tStart, tEnd, duration }]
+
+  // Collect pit_in / pit_out pairs from lap data
+  const pitEvents = {}; // { driverNum: [{ pitIn, pitOut }] }
+  for (const lap of G.laps) {
+    if (lap.pit_in != null) {
+      if (!pitEvents[lap.driver]) pitEvents[lap.driver] = [];
+      pitEvents[lap.driver].push({ pitIn: lap.pit_in, pitOut: null });
+    }
+    if (lap.pit_out != null) {
+      const arr = pitEvents[lap.driver];
+      if (arr && arr.length > 0 && arr[arr.length - 1].pitOut == null) {
+        arr[arr.length - 1].pitOut = lap.pit_out;
+      }
+    }
+  }
+
+  // For each pit stop, scan position data to find the stationary interval
+  const STATIONARY_THRESHOLD = 50; // position change < 50 units between samples = stationary
+  for (const num in pitEvents) {
+    const pd = G.positions[num];
+    if (!pd || !pd.t.length) continue;
+
+    for (const evt of pitEvents[num]) {
+      if (evt.pitIn == null || evt.pitOut == null) continue;
+      // Scan positions between pitIn and pitOut to find stationary window
+      const iStart = bisect(pd.t, evt.pitIn);
+      const iEnd   = Math.min(bisect(pd.t, evt.pitOut), pd.t.length - 1);
+
+      let stationaryStart = null;
+      let stationaryEnd   = null;
+
+      for (let i = iStart; i < iEnd; i++) {
+        const dx = pd.x[i + 1] - pd.x[i];
+        const dy = pd.y[i + 1] - pd.y[i];
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < STATIONARY_THRESHOLD) {
+          if (stationaryStart == null) stationaryStart = pd.t[i];
+          stationaryEnd = pd.t[i + 1];
+        } else if (stationaryStart != null) {
+          // Car started moving again — stop
+          break;
+        }
+      }
+
+      if (stationaryStart != null && stationaryEnd != null) {
+        const duration = stationaryEnd - stationaryStart;
+        if (duration > 0.5 && duration < 30) { // sanity check: 0.5s – 30s
+          G.pitStops.push({
+            driver: num,
+            tStart: stationaryStart,
+            tEnd: stationaryEnd,
+            duration: duration,
+          });
+        }
+      }
+    }
   }
 
   // ── Track normalisation ──────────────────────────────────────────────────
@@ -609,6 +682,17 @@ function renderFrame() {
     drawCar(ctx, num, cx, cy);
   }
 
+  // Draw pit stop timers above cars currently in pit box
+  for (const ps of G.pitStops) {
+    if (G.currentT >= ps.tStart && G.currentT <= ps.tEnd + 1.5) {
+      // Show timer during stop + 1.5s after (to display final time)
+      const car = carData.find(c => c.num === ps.driver);
+      if (!car) continue;
+      const elapsed = Math.min(G.currentT - ps.tStart, ps.duration);
+      drawPitTimer(ctx, car.cx, car.cy, elapsed, ps.duration, G.currentT > ps.tEnd, G.drivers[ps.driver]);
+    }
+  }
+
   // Update driver order (for standings) based on position at current time
   updateDriverOrder();
 }
@@ -651,6 +735,76 @@ function drawCar(ctx, num, cx, cy) {
     ctx.fillText(driver.abbr.slice(0, 3), cx, cy + 0.5);
     ctx.restore();
   }
+}
+
+function drawPitTimer(ctx, cx, cy, elapsed, /* totalDuration */ _, finished, driver) {
+  const timeStr = elapsed.toFixed(1) + 's';
+  const color   = driver?.color || '#888';
+
+  ctx.save();
+
+  // Position above the car
+  const boxX = cx;
+  const boxY = cy - DRIVER_RADIUS - 22;
+
+  // Measure text
+  ctx.font = 'bold 11px "JetBrains Mono", monospace';
+  const textW = ctx.measureText(timeStr).width;
+  const padH  = 6;
+  const barW  = 3;
+  const boxW  = barW + textW + padH * 2;
+  const boxH  = 16;
+
+  const x0 = boxX - boxW / 2;
+  const y0 = boxY - boxH / 2;
+
+  // Background rounded rect
+  const radius = 4;
+  ctx.beginPath();
+  ctx.moveTo(x0 + radius, y0);
+  ctx.lineTo(x0 + boxW - radius, y0);
+  ctx.arcTo(x0 + boxW, y0, x0 + boxW, y0 + radius, radius);
+  ctx.lineTo(x0 + boxW, y0 + boxH - radius);
+  ctx.arcTo(x0 + boxW, y0 + boxH, x0 + boxW - radius, y0 + boxH, radius);
+  ctx.lineTo(x0 + radius, y0 + boxH);
+  ctx.arcTo(x0, y0 + boxH, x0, y0 + boxH - radius, radius);
+  ctx.lineTo(x0, y0 + radius);
+  ctx.arcTo(x0, y0, x0 + radius, y0, radius);
+  ctx.closePath();
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+  ctx.fill();
+
+  // Team color accent bar on left
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x0 + radius, y0);
+  ctx.lineTo(x0 + barW + 1, y0);
+  ctx.lineTo(x0 + barW + 1, y0 + boxH);
+  ctx.lineTo(x0 + radius, y0 + boxH);
+  ctx.arcTo(x0, y0 + boxH, x0, y0 + boxH - radius, radius);
+  ctx.lineTo(x0, y0 + radius);
+  ctx.arcTo(x0, y0, x0 + radius, y0, radius);
+  ctx.closePath();
+  ctx.fill();
+
+  // Timer text
+  ctx.font         = 'bold 11px "JetBrains Mono", monospace';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle    = finished ? '#2EE86B' : '#FFFFFF';
+  ctx.fillText(timeStr, x0 + barW + padH + textW / 2, boxY + 0.5);
+
+  // Small pointer triangle pointing down to the car
+  ctx.beginPath();
+  ctx.moveTo(boxX - 4, y0 + boxH);
+  ctx.lineTo(boxX + 4, y0 + boxH);
+  ctx.lineTo(boxX, y0 + boxH + 5);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+  ctx.fill();
+
+  ctx.restore();
 }
 
 function isLightColor(hex) {

@@ -494,12 +494,34 @@ def main():
                 resampled_y.append(round(ys[j - 1] + frac * (ys[j] - ys[j - 1])))
             t_cursor += RESAMPLE_DT
 
+        # Two-pass centered moving average to remove GPS jitter.
+        # Pass 1: window 11 (2.75s), Pass 2: window 11 (2.75s).
+        # Two passes with w=11 produce a triangular kernel with effective
+        # width ~5.5s, heavily center-weighted — removes noise while
+        # preserving cornering shape far better than a single wide box.
+        def smooth_pass(arr, w):
+            half = w // 2
+            n = len(arr)
+            out = list(arr)
+            for i in range(half, n - half):
+                s = 0.0
+                for k in range(i - half, i + half + 1):
+                    s += arr[k]
+                out[i] = s / w
+            return out
+
+        sx = smooth_pass(smooth_pass(resampled_x, 11), 11)
+        sy = smooth_pass(smooth_pass(resampled_y, 11), 11)
+        # Round to int for compact JSON
+        smoothed_x = [round(v) for v in sx]
+        smoothed_y = [round(v) for v in sy]
+
         positions[snum] = {
             't': resampled_t,
-            'x': resampled_x,
-            'y': resampled_y,
+            'x': smoothed_x,
+            'y': smoothed_y,
         }
-        log.info(f'    {len(resampled_t)} samples ({len(locs)} raw, {RESAMPLE_DT}s resampled)')
+        log.info(f'    {len(resampled_t)} samples ({len(locs)} raw, {RESAMPLE_DT}s resampled, smoothed)')
 
     # ── Step 6: Extract track outline ─────────────────────────────────────────
     log.info('Extracting track outline…')

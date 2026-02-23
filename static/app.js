@@ -1327,11 +1327,11 @@ function bindControls() {
     if (!row) return;
     const num = row.dataset.driver;
     if (G.followDriver === num) {
-      G.followDriver = null;
+      stopFollowing();
     } else {
       G.followDriver = num;
+      renderStandings();
     }
-    renderStandings();
   });
 
   // Canvas hover tooltip

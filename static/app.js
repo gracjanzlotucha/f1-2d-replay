@@ -416,29 +416,46 @@ function buildOffscreenTrack() {
   octx.lineJoin    = 'round';
   octx.stroke();
 
-  // 3. Pit lane — solid, thinner line
+  // 3. Pit lane — solid, thinner line, extended to meet the track
   if (PIT_LANE_PATH.length >= 2) {
+    // Find nearest track points to pit lane endpoints so the line blends in
+    function nearestTrackPt(px, py) {
+      let best = 0, bestD = Infinity;
+      for (let i = 0; i < tx.length; i++) {
+        const d = (tx[i] - px) ** 2 + (ty[i] - py) ** 2;
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      return [tx[best], ty[best]];
+    }
+    const [ex0, ey0] = nearestTrackPt(PIT_LANE_PATH[0][0], PIT_LANE_PATH[0][1]);
+    const last = PIT_LANE_PATH.length - 1;
+    const [ex1, ey1] = nearestTrackPt(PIT_LANE_PATH[last][0], PIT_LANE_PATH[last][1]);
+
+    // Draw: track anchor → pit lane path → track anchor
     octx.beginPath();
-    const [plx0, ply0] = G.toCanvas(PIT_LANE_PATH[0][0], PIT_LANE_PATH[0][1]);
-    octx.moveTo(plx0, ply0);
-    for (let i = 1; i < PIT_LANE_PATH.length; i++) {
+    const [ax0, ay0] = G.toCanvas(ex0, ey0);
+    octx.moveTo(ax0, ay0);
+    for (let i = 0; i < PIT_LANE_PATH.length; i++) {
       const [plx, ply] = G.toCanvas(PIT_LANE_PATH[i][0], PIT_LANE_PATH[i][1]);
       octx.lineTo(plx, ply);
     }
+    const [ax1, ay1] = G.toCanvas(ex1, ey1);
+    octx.lineTo(ax1, ay1);
     octx.strokeStyle = '#272A35';
     octx.lineWidth   = pitW;
     octx.lineCap     = 'round';
     octx.lineJoin    = 'round';
     octx.stroke();
 
-    // "PIT" label offset away from main track
+    // "PIT" label offset below the pit lane (flipped perpendicular)
     const pitMid = Math.floor(PIT_LANE_PATH.length / 2);
     const [pmx, pmy] = G.toCanvas(PIT_LANE_PATH[pitMid][0], PIT_LANE_PATH[pitMid][1]);
     const [pa, pb]   = G.toCanvas(PIT_LANE_PATH[pitMid - 1][0], PIT_LANE_PATH[pitMid - 1][1]);
     const [pc, pd]   = G.toCanvas(PIT_LANE_PATH[pitMid + 1][0], PIT_LANE_PATH[pitMid + 1][1]);
     const pdx = pc - pa, pdy = pd - pb;
     const plen = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
-    const nx = pdy / plen, ny = -pdx / plen;
+    // Left-perpendicular (below the line, away from S/F side)
+    const nx = -pdy / plen, ny = pdx / plen;
     const labelDist = 8 + 4 * scale;
     const fontSize  = Math.max(7, Math.round(6 + 3 * scale));
 

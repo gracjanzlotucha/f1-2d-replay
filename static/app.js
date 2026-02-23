@@ -18,11 +18,11 @@ const TRAIL_LENGTH = 28;   // How many past positions to show as trail
 const DRIVER_RADIUS = 9;   // Car marker radius on canvas
 const PADDING_FRAC  = 0.08; // Canvas padding as fraction
 
-// Track rotation — aligns Silverstone pit straight horizontally, S/F at top
-// The S/F straight runs at ~53° from horizontal in FastF1 data space.
-// Rotating by -53° makes the straight horizontal; the canvas Y-flip puts S/F at top.
-const TRACK_ROT_COS =  0.6018;  // cos(-53°)
-const TRACK_ROT_SIN = -0.7986;  // sin(-53°)
+// Track rotation — matches the standard Silverstone map orientation (SVG reference)
+// FastF1 circuit_info.rotation = 92°; rotating by -91° aligns the pit straight
+// horizontally with S/F at the top, matching the canonical track layout.
+const TRACK_ROT_COS = -0.01745;  // cos(-91°)
+const TRACK_ROT_SIN = -0.99985;  // sin(-91°)
 
 function rotatePoint(x, y) {
   return [

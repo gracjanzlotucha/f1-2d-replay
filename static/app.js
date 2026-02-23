@@ -404,15 +404,28 @@ function drawTrack(ctx) {
   const centerW  = Math.max(1, 1.5 * scale);
   const pitW     = Math.max(2, 3 * scale);
 
-  // Helper: trace the full track path
+  // Helper: trace the full track path using smooth quadratic bezier curves
+  // Each data point becomes a control point; endpoints are midpoints between them
   function tracePath() {
     ctx.beginPath();
-    const [sx, sy] = G.toCanvas(tx[0], ty[0]);
-    ctx.moveTo(sx, sy);
-    for (let i = 1; i < tx.length; i++) {
-      const [cx, cy] = G.toCanvas(tx[i], ty[i]);
-      ctx.lineTo(cx, cy);
+    const pts = [];
+    for (let i = 0; i < tx.length; i++) {
+      pts.push(G.toCanvas(tx[i], ty[i]));
     }
+    const n = pts.length;
+    ctx.moveTo((pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2);
+    for (let i = 1; i < n - 1; i++) {
+      const mx = (pts[i][0] + pts[i + 1][0]) / 2;
+      const my = (pts[i][1] + pts[i + 1][1]) / 2;
+      ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+    }
+    // Close: curve through last point back to start
+    const mx1 = (pts[n - 1][0] + pts[0][0]) / 2;
+    const my1 = (pts[n - 1][1] + pts[0][1]) / 2;
+    ctx.quadraticCurveTo(pts[n - 1][0], pts[n - 1][1], mx1, my1);
+    const mx2 = (pts[0][0] + pts[1][0]) / 2;
+    const my2 = (pts[0][1] + pts[1][1]) / 2;
+    ctx.quadraticCurveTo(pts[0][0], pts[0][1], mx2, my2);
     ctx.closePath();
   }
 
@@ -433,14 +446,19 @@ function drawTrack(ctx) {
   ctx.stroke();
 
   // 3. Pit lane — solid, thinner line (path is the actual driver telemetry)
-  if (PIT_LANE_PATH.length >= 2) {
+  if (PIT_LANE_PATH.length >= 3) {
+    const plPts = PIT_LANE_PATH.map(p => G.toCanvas(p[0], p[1]));
     ctx.beginPath();
-    const [plx0, ply0] = G.toCanvas(PIT_LANE_PATH[0][0], PIT_LANE_PATH[0][1]);
-    ctx.moveTo(plx0, ply0);
-    for (let i = 1; i < PIT_LANE_PATH.length; i++) {
-      const [plx, ply] = G.toCanvas(PIT_LANE_PATH[i][0], PIT_LANE_PATH[i][1]);
-      ctx.lineTo(plx, ply);
+    ctx.moveTo(plPts[0][0], plPts[0][1]);
+    // Smooth quadratic bezier through midpoints
+    for (let i = 0; i < plPts.length - 2; i++) {
+      const mx = (plPts[i + 1][0] + plPts[i + 2][0]) / 2;
+      const my = (plPts[i + 1][1] + plPts[i + 2][1]) / 2;
+      ctx.quadraticCurveTo(plPts[i + 1][0], plPts[i + 1][1], mx, my);
     }
+    // Final segment to last point
+    const last = plPts[plPts.length - 1];
+    ctx.lineTo(last[0], last[1]);
     ctx.strokeStyle = '#272A35';
     ctx.lineWidth   = pitW;
     ctx.lineCap     = 'round';

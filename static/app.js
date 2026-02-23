@@ -98,6 +98,7 @@ let G = {
   // Follow driver
   followDriver: null,   // driver number string, or null
   followZoom: 3,        // zoom level when following
+  _resettingZoom: false, // true while smoothly zooming back out
 
   // Options
   showTrails: true,
@@ -501,10 +502,7 @@ function drawTrack(ctx) {
 function stopFollowing() {
   if (G.followDriver) {
     G.followDriver = null;
-    G.zoom = 1;
-    G.panX = 0;
-    G.panY = 0;
-    applyZoomPan();
+    G._resettingZoom = true;
     renderStandings();
   }
 }
@@ -522,6 +520,7 @@ function setupZoomPan() {
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     stopFollowing();
+    G._resettingZoom = false;
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
@@ -581,6 +580,7 @@ function setupZoomPan() {
   canvas.addEventListener('dblclick', (e) => {
     e.preventDefault();
     stopFollowing();
+    G._resettingZoom = false;
     if (G.zoom !== 1) {
       G.zoom = 1;
       G.panX = 0;
@@ -771,6 +771,21 @@ function renderFrame() {
       G.panY = G.panY + (targetPanY - G.panY) * lerp;
       buildToCanvasFn();
     }
+  } else if (G._resettingZoom) {
+    // Smooth zoom-out back to default
+    const lerp = 0.1;
+    G.zoom = G.zoom + (1 - G.zoom) * lerp;
+    G.panX = G.panX + (0 - G.panX) * lerp;
+    G.panY = G.panY + (0 - G.panY) * lerp;
+    // Snap when close enough
+    if (Math.abs(G.zoom - 1) < 0.01) {
+      G.zoom = 1;
+      G.panX = 0;
+      G.panY = 0;
+      G._resettingZoom = false;
+    }
+    buildToCanvasFn();
+    for (const num in G.trails) G.trails[num] = [];
   }
 
   // Draw track directly (no offscreen buffer — avoids clipping when zoomed)

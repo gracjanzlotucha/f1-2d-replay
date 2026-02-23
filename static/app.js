@@ -401,8 +401,8 @@ function buildOffscreenTrack() {
   const octx = oc.getContext('2d');
   octx.scale(dpr, dpr);
 
-  // Scale line widths proportionally to canvas size
-  const scale = Math.max(0.5, G.canvasW / 720);
+  // Scale line widths proportionally to canvas size and zoom level
+  const scale = Math.max(0.5, G.canvasW / 720) * G.zoom;
   const trackW   = Math.max(6, 10 * scale);    // thinner track
   const centerW  = Math.max(1, 1.5 * scale);   // proportional center line
   const pitW     = Math.max(2, 3 * scale);     // proportional pit lane
@@ -410,10 +410,10 @@ function buildOffscreenTrack() {
   // Helper: trace the full track path
   function tracePath() {
     octx.beginPath();
-    const [sx, sy] = G.toCanvasBase(tx[0], ty[0]);
+    const [sx, sy] = G.toCanvas(tx[0], ty[0]);
     octx.moveTo(sx, sy);
     for (let i = 1; i < tx.length; i++) {
-      const [cx, cy] = G.toCanvasBase(tx[i], ty[i]);
+      const [cx, cy] = G.toCanvas(tx[i], ty[i]);
       octx.lineTo(cx, cy);
     }
     octx.closePath();
@@ -438,10 +438,10 @@ function buildOffscreenTrack() {
   // 3. Pit lane — solid, thinner line (path is the actual driver telemetry)
   if (PIT_LANE_PATH.length >= 2) {
     octx.beginPath();
-    const [plx0, ply0] = G.toCanvasBase(PIT_LANE_PATH[0][0], PIT_LANE_PATH[0][1]);
+    const [plx0, ply0] = G.toCanvas(PIT_LANE_PATH[0][0], PIT_LANE_PATH[0][1]);
     octx.moveTo(plx0, ply0);
     for (let i = 1; i < PIT_LANE_PATH.length; i++) {
-      const [plx, ply] = G.toCanvasBase(PIT_LANE_PATH[i][0], PIT_LANE_PATH[i][1]);
+      const [plx, ply] = G.toCanvas(PIT_LANE_PATH[i][0], PIT_LANE_PATH[i][1]);
       octx.lineTo(plx, ply);
     }
     octx.strokeStyle = '#272A35';
@@ -452,9 +452,9 @@ function buildOffscreenTrack() {
 
     // "PIT" label offset below the pit lane (flipped perpendicular)
     const pitMid = Math.floor(PIT_LANE_PATH.length / 2);
-    const [pmx, pmy] = G.toCanvasBase(PIT_LANE_PATH[pitMid][0], PIT_LANE_PATH[pitMid][1]);
-    const [pa, pb]   = G.toCanvasBase(PIT_LANE_PATH[pitMid - 1][0], PIT_LANE_PATH[pitMid - 1][1]);
-    const [pc, pd]   = G.toCanvasBase(PIT_LANE_PATH[pitMid + 1][0], PIT_LANE_PATH[pitMid + 1][1]);
+    const [pmx, pmy] = G.toCanvas(PIT_LANE_PATH[pitMid][0], PIT_LANE_PATH[pitMid][1]);
+    const [pa, pb]   = G.toCanvas(PIT_LANE_PATH[pitMid - 1][0], PIT_LANE_PATH[pitMid - 1][1]);
+    const [pc, pd]   = G.toCanvas(PIT_LANE_PATH[pitMid + 1][0], PIT_LANE_PATH[pitMid + 1][1]);
     const pdx = pc - pa, pdy = pd - pb;
     const plen = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
     // Left-perpendicular (below the line, away from S/F side)
@@ -472,7 +472,7 @@ function buildOffscreenTrack() {
   // 4. Start/Finish line
   if (tx.length > 10) {
     const midIdx = Math.floor(tx.length * 0.02);
-    const [sfx, sfy] = G.toCanvasBase(tx[midIdx], ty[midIdx]);
+    const [sfx, sfy] = G.toCanvas(tx[midIdx], ty[midIdx]);
     octx.save();
     octx.strokeStyle = '#FFFFFF';
     octx.lineWidth   = Math.max(2, 3 * scale);
@@ -504,6 +504,7 @@ function buildOffscreenTrack() {
 
 function applyZoomPan() {
   buildToCanvasFn();
+  buildOffscreenTrack();
   // Clear trails — stale canvas coords
   for (const num in G.trails) G.trails[num] = [];
 }
@@ -735,15 +736,9 @@ function renderFrame() {
   // Clear
   ctx.clearRect(0, 0, W, H);
 
-  // Draw pre-rendered track
+  // Draw pre-rendered track (already includes zoom/pan in coordinates)
   if (G.offscreenTrack) {
-    // Draw the pre-rendered track with zoom/pan transform
-    ctx.save();
-    ctx.translate(G.canvasW / 2 + G.panX, G.canvasH / 2 + G.panY);
-    ctx.scale(G.zoom, G.zoom);
-    ctx.translate(-G.canvasW / 2, -G.canvasH / 2);
     ctx.drawImage(G.offscreenTrack, 0, 0, G.canvasW, G.canvasH);
-    ctx.restore();
   } else {
     // Placeholder if no track data
     ctx.fillStyle = '#1a1a1a';

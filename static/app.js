@@ -501,6 +501,10 @@ function drawTrack(ctx) {
 function stopFollowing() {
   if (G.followDriver) {
     G.followDriver = null;
+    G.zoom = 1;
+    G.panX = 0;
+    G.panY = 0;
+    applyZoomPan();
     renderStandings();
   }
 }

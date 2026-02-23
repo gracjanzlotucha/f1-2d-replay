@@ -83,7 +83,7 @@ let G = {
   ctx: null,
   canvasW: 0,
   canvasH: 0,
-  offscreenTrack: null,  // pre-rendered track layer
+  // (track is drawn directly each frame — no offscreen buffer)
 
   // Zoom & pan
   zoom: 1,       // 1 = fit-to-canvas, max 6
@@ -94,6 +94,10 @@ let G = {
   _dragStartY: 0,
   _dragMoved: false,
   _pinchDist: 0, // for touch pinch-to-zoom
+
+  // Follow driver
+  followDriver: null,   // driver number string, or null
+  followZoom: 3,        // zoom level when following
 
   // Options
   showTrails: true,
@@ -352,7 +356,6 @@ function setupCanvas() {
     // context (browsers may skip reset when the value is unchanged).
     G.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     buildToCanvasFn();
-    buildOffscreenTrack();
   }
 
   const ro = new ResizeObserver(resize);
@@ -390,65 +393,58 @@ function buildToCanvasFn() {
   };
 }
 
-function buildOffscreenTrack() {
+function drawTrack(ctx) {
   const tx = G.track.x, ty = G.track.y;
-  if (!tx || tx.length < 2) { G.offscreenTrack = null; return; }
-
-  const dpr = window.devicePixelRatio || 1;
-  const oc = document.createElement('canvas');
-  oc.width  = Math.round(G.canvasW * dpr);
-  oc.height = Math.round(G.canvasH * dpr);
-  const octx = oc.getContext('2d');
-  octx.scale(dpr, dpr);
+  if (!tx || tx.length < 2) return false;
 
   // Scale line widths proportionally to canvas size and zoom level
   const scale = Math.max(0.5, G.canvasW / 720) * G.zoom;
-  const trackW   = Math.max(6, 10 * scale);    // thinner track
-  const centerW  = Math.max(1, 1.5 * scale);   // proportional center line
-  const pitW     = Math.max(2, 3 * scale);     // proportional pit lane
+  const trackW   = Math.max(6, 10 * scale);
+  const centerW  = Math.max(1, 1.5 * scale);
+  const pitW     = Math.max(2, 3 * scale);
 
   // Helper: trace the full track path
   function tracePath() {
-    octx.beginPath();
+    ctx.beginPath();
     const [sx, sy] = G.toCanvas(tx[0], ty[0]);
-    octx.moveTo(sx, sy);
+    ctx.moveTo(sx, sy);
     for (let i = 1; i < tx.length; i++) {
       const [cx, cy] = G.toCanvas(tx[i], ty[i]);
-      octx.lineTo(cx, cy);
+      ctx.lineTo(cx, cy);
     }
-    octx.closePath();
+    ctx.closePath();
   }
 
   // 1. Track surface — thick dark road
   tracePath();
-  octx.strokeStyle = '#272A35';
-  octx.lineWidth   = trackW;
-  octx.lineCap     = 'round';
-  octx.lineJoin    = 'round';
-  octx.stroke();
+  ctx.strokeStyle = '#272A35';
+  ctx.lineWidth   = trackW;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.stroke();
 
   // 2. Center line — thin dark line on top for edge definition
   tracePath();
-  octx.strokeStyle = '#0D0F13';
-  octx.lineWidth   = centerW;
-  octx.lineCap     = 'round';
-  octx.lineJoin    = 'round';
-  octx.stroke();
+  ctx.strokeStyle = '#0D0F13';
+  ctx.lineWidth   = centerW;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.stroke();
 
   // 3. Pit lane — solid, thinner line (path is the actual driver telemetry)
   if (PIT_LANE_PATH.length >= 2) {
-    octx.beginPath();
+    ctx.beginPath();
     const [plx0, ply0] = G.toCanvas(PIT_LANE_PATH[0][0], PIT_LANE_PATH[0][1]);
-    octx.moveTo(plx0, ply0);
+    ctx.moveTo(plx0, ply0);
     for (let i = 1; i < PIT_LANE_PATH.length; i++) {
       const [plx, ply] = G.toCanvas(PIT_LANE_PATH[i][0], PIT_LANE_PATH[i][1]);
-      octx.lineTo(plx, ply);
+      ctx.lineTo(plx, ply);
     }
-    octx.strokeStyle = '#272A35';
-    octx.lineWidth   = pitW;
-    octx.lineCap     = 'round';
-    octx.lineJoin    = 'round';
-    octx.stroke();
+    ctx.strokeStyle = '#272A35';
+    ctx.lineWidth   = pitW;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.stroke();
 
     // "PIT" label offset below the pit lane (flipped perpendicular)
     const pitMid = Math.floor(PIT_LANE_PATH.length / 2);
@@ -462,49 +458,55 @@ function buildOffscreenTrack() {
     const labelDist = 8 + 4 * scale;
     const fontSize  = Math.max(7, Math.round(6 + 3 * scale));
 
-    octx.font      = `bold ${fontSize}px Inter, sans-serif`;
-    octx.fillStyle = 'rgba(255,255,255,0.2)';
-    octx.textAlign = 'center';
-    octx.textBaseline = 'middle';
-    octx.fillText('PIT', pmx + nx * labelDist, pmy + ny * labelDist);
+    ctx.font      = `bold ${fontSize}px Inter, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('PIT', pmx + nx * labelDist, pmy + ny * labelDist);
   }
 
   // 4. Start/Finish line
   if (tx.length > 10) {
     const midIdx = Math.floor(tx.length * 0.02);
     const [sfx, sfy] = G.toCanvas(tx[midIdx], ty[midIdx]);
-    octx.save();
-    octx.strokeStyle = '#FFFFFF';
-    octx.lineWidth   = Math.max(2, 3 * scale);
+    ctx.save();
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth   = Math.max(2, 3 * scale);
     const [rx1, ry1] = rotatePoint(tx[midIdx], ty[midIdx]);
     const [rx2, ry2] = rotatePoint(tx[midIdx + 2], ty[midIdx + 2]);
     const angle = Math.atan2(-(ry2 - ry1), rx2 - rx1);
-    octx.translate(sfx, sfy);
-    octx.rotate(angle + Math.PI / 2);
+    ctx.translate(sfx, sfy);
+    ctx.rotate(angle + Math.PI / 2);
     const sfHalf = trackW * 0.7;
-    octx.beginPath();
-    octx.moveTo(-sfHalf, 0); octx.lineTo(sfHalf, 0);
-    octx.stroke();
-    octx.restore();
+    ctx.beginPath();
+    ctx.moveTo(-sfHalf, 0); ctx.lineTo(sfHalf, 0);
+    ctx.stroke();
+    ctx.restore();
 
     // S/F label
     const sfFont = Math.max(7, Math.round(9 * scale));
-    octx.font = `bold ${sfFont}px Inter, sans-serif`;
-    octx.fillStyle = 'rgba(255,255,255,0.35)';
-    octx.textAlign = 'center';
-    octx.fillText('S/F', sfx, sfy - trackW * 0.8 - 4);
+    ctx.font = `bold ${sfFont}px Inter, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.textAlign = 'center';
+    ctx.fillText('S/F', sfx, sfy - trackW * 0.8 - 4);
   }
 
-  G.offscreenTrack = oc;
+  return true;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ZOOM & PAN
 // ═══════════════════════════════════════════════════════════════════════════
 
+function stopFollowing() {
+  if (G.followDriver) {
+    G.followDriver = null;
+    renderStandings();
+  }
+}
+
 function applyZoomPan() {
   buildToCanvasFn();
-  buildOffscreenTrack();
   // Clear trails — stale canvas coords
   for (const num in G.trails) G.trails[num] = [];
 }
@@ -515,6 +517,7 @@ function setupZoomPan() {
   // ── Mouse wheel → zoom (centered on cursor) ──
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
+    stopFollowing();
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
@@ -528,9 +531,13 @@ function setupZoomPan() {
       G.panY = 0;
     } else {
       // Adjust pan so the point under the cursor stays fixed
+      // Transform is: screen = (base - center) * zoom + center + pan
+      // So we solve for newPan such that the same data point stays at (mx, my)
       const ratio = G.zoom / oldZoom;
-      G.panX = mx - ratio * (mx - G.panX);
-      G.panY = my - ratio * (my - G.panY);
+      const cx = G.canvasW / 2;
+      const cy = G.canvasH / 2;
+      G.panX = (mx - cx) * (1 - ratio) + ratio * G.panX;
+      G.panY = (my - cy) * (1 - ratio) + ratio * G.panY;
     }
 
     applyZoomPan();
@@ -549,7 +556,10 @@ function setupZoomPan() {
     if (!G._dragging) return;
     const dx = e.clientX - G._dragStartX;
     const dy = e.clientY - G._dragStartY;
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) G._dragMoved = true;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      G._dragMoved = true;
+      stopFollowing();
+    }
     G.panX += dx;
     G.panY += dy;
     G._dragStartX = e.clientX;
@@ -566,6 +576,7 @@ function setupZoomPan() {
   // ── Double-click → reset zoom ──
   canvas.addEventListener('dblclick', (e) => {
     e.preventDefault();
+    stopFollowing();
     if (G.zoom !== 1) {
       G.zoom = 1;
       G.panX = 0;
@@ -593,7 +604,10 @@ function setupZoomPan() {
     if (e.touches.length === 1 && G._dragging) {
       const dx = e.touches[0].clientX - G._dragStartX;
       const dy = e.touches[0].clientY - G._dragStartY;
-      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) G._dragMoved = true;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        G._dragMoved = true;
+        stopFollowing();
+      }
       G.panX += dx;
       G.panY += dy;
       G._dragStartX = e.touches[0].clientX;
@@ -601,6 +615,7 @@ function setupZoomPan() {
       applyZoomPan();
       e.preventDefault();
     } else if (e.touches.length === 2) {
+      stopFollowing();
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.hypot(dx, dy);
@@ -614,8 +629,10 @@ function setupZoomPan() {
           G.panX = 0; G.panY = 0;
         } else {
           const ratio = G.zoom / oldZoom;
-          G.panX = mx - ratio * (mx - G.panX);
-          G.panY = my - ratio * (my - G.panY);
+          const cx = G.canvasW / 2;
+          const cy = G.canvasH / 2;
+          G.panX = (mx - cx) * (1 - ratio) + ratio * G.panX;
+          G.panY = (my - cy) * (1 - ratio) + ratio * G.panY;
         }
         applyZoomPan();
       }
@@ -736,10 +753,24 @@ function renderFrame() {
   // Clear
   ctx.clearRect(0, 0, W, H);
 
-  // Draw pre-rendered track (already includes zoom/pan in coordinates)
-  if (G.offscreenTrack) {
-    ctx.drawImage(G.offscreenTrack, 0, 0, G.canvasW, G.canvasH);
-  } else {
+  // Follow driver — smoothly zoom & pan to center on them
+  if (G.followDriver) {
+    const fpos = getPosition(G.followDriver, G.currentT);
+    if (fpos) {
+      const [baseCx, baseCy] = G.toCanvasBase(fpos.x, fpos.y);
+      const targetZoom = G.followZoom;
+      const targetPanX = -(baseCx - W / 2) * targetZoom;
+      const targetPanY = -(baseCy - H / 2) * targetZoom;
+      const lerp = 0.08;
+      G.zoom = G.zoom + (targetZoom - G.zoom) * lerp;
+      G.panX = G.panX + (targetPanX - G.panX) * lerp;
+      G.panY = G.panY + (targetPanY - G.panY) * lerp;
+      buildToCanvasFn();
+    }
+  }
+
+  // Draw track directly (no offscreen buffer — avoids clipping when zoomed)
+  if (!drawTrack(ctx)) {
     // Placeholder if no track data
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, W, H);
@@ -817,8 +848,20 @@ function renderFrame() {
   // Update driver order (for standings) based on position at current time
   updateDriverOrder();
 
-  // Zoom indicator
-  if (G.zoom > 1.01) {
+  // Zoom / follow indicator
+  if (G.followDriver) {
+    ctx.save();
+    const abbr = G.drivers[G.followDriver]?.abbr || G.followDriver;
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`Following ${abbr}`, W - 8, 8);
+    ctx.font = '9px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillText('click driver or dbl-click to stop', W - 8, 22);
+    ctx.restore();
+  } else if (G.zoom > 1.01) {
     ctx.save();
     ctx.font = 'bold 11px Inter, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
@@ -1044,7 +1087,7 @@ function renderStandings() {
     }
 
     const row = document.createElement('div');
-    row.className = 'driver-row' + (isRetired ? ' retired' : '');
+    row.className = 'driver-row' + (isRetired ? ' retired' : '') + (num === G.followDriver ? ' following' : '');
     row.dataset.driver = num;
 
     const posClass = pos === 1 ? 'dr-pos p1' : pos === 2 ? 'dr-pos p2' : pos === 3 ? 'dr-pos p3' : 'dr-pos';
@@ -1272,6 +1315,19 @@ function bindControls() {
       document.getElementById('race-insights-content').classList.toggle('hidden', which !== 'insights');
       document.getElementById('events-content').classList.toggle('hidden', which !== 'events');
     });
+  });
+
+  // Standings row click → follow driver on track
+  document.getElementById('standings-list').addEventListener('click', (e) => {
+    const row = e.target.closest('.driver-row');
+    if (!row) return;
+    const num = row.dataset.driver;
+    if (G.followDriver === num) {
+      G.followDriver = null;
+    } else {
+      G.followDriver = num;
+    }
+    renderStandings();
   });
 
   // Canvas hover tooltip

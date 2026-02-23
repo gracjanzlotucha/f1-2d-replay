@@ -85,6 +85,16 @@ let G = {
   canvasH: 0,
   offscreenTrack: null,  // pre-rendered track layer
 
+  // Zoom & pan
+  zoom: 1,       // 1 = fit-to-canvas, max 6
+  panX: 0,       // pixel offset
+  panY: 0,
+  _dragging: false,
+  _dragStartX: 0,
+  _dragStartY: 0,
+  _dragMoved: false,
+  _pinchDist: 0, // for touch pinch-to-zoom
+
   // Options
   showTrails: true,
   showLabels: true,
@@ -109,6 +119,7 @@ async function init() {
   // Allow one layout pass so the browser assigns pixel sizes
   await new Promise(r => requestAnimationFrame(r));
   setupCanvas();
+  setupZoomPan();
   bindControls();
   buildLapMarkers();
   renderStandings();
@@ -367,7 +378,10 @@ function buildToCanvasFn() {
     const ny = 1 - (ry - minY) / dataH;
     const cx = (pad + nx * (1 - 2 * pad)) * G.canvasW;
     const cy = (pad + ny * (1 - 2 * pad)) * G.canvasH;
-    return [cx, cy];
+    // Apply zoom (around canvas center) and pan
+    const zx = (cx - G.canvasW / 2) * G.zoom + G.canvasW / 2 + G.panX;
+    const zy = (cy - G.canvasH / 2) * G.zoom + G.canvasH / 2 + G.panY;
+    return [zx, zy];
   };
 }
 
@@ -477,6 +491,141 @@ function buildOffscreenTrack() {
   }
 
   G.offscreenTrack = oc;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ZOOM & PAN
+// ═══════════════════════════════════════════════════════════════════════════
+
+function applyZoomPan() {
+  buildToCanvasFn();
+  buildOffscreenTrack();
+  // Clear trails — stale canvas coords
+  for (const num in G.trails) G.trails[num] = [];
+}
+
+function setupZoomPan() {
+  const canvas = G.canvas;
+
+  // ── Mouse wheel → zoom (centered on cursor) ──
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    const oldZoom = G.zoom;
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    G.zoom = Math.min(6, Math.max(1, G.zoom * factor));
+
+    if (G.zoom === 1) {
+      G.panX = 0;
+      G.panY = 0;
+    } else {
+      // Adjust pan so the point under the cursor stays fixed
+      const ratio = G.zoom / oldZoom;
+      G.panX = mx - ratio * (mx - G.panX);
+      G.panY = my - ratio * (my - G.panY);
+    }
+
+    applyZoomPan();
+  }, { passive: false });
+
+  // ── Mouse drag → pan ──
+  canvas.addEventListener('mousedown', (e) => {
+    if (G.zoom <= 1) return;
+    G._dragging = true;
+    G._dragMoved = false;
+    G._dragStartX = e.clientX;
+    G._dragStartY = e.clientY;
+    canvas.style.cursor = 'grabbing';
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!G._dragging) return;
+    const dx = e.clientX - G._dragStartX;
+    const dy = e.clientY - G._dragStartY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) G._dragMoved = true;
+    G.panX += dx;
+    G.panY += dy;
+    G._dragStartX = e.clientX;
+    G._dragStartY = e.clientY;
+    applyZoomPan();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (G._dragging) {
+      G._dragging = false;
+      canvas.style.cursor = G.zoom > 1 ? 'grab' : '';
+    }
+  });
+
+  // ── Double-click → reset zoom ──
+  canvas.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    if (G.zoom !== 1) {
+      G.zoom = 1;
+      G.panX = 0;
+      G.panY = 0;
+      canvas.style.cursor = '';
+      applyZoomPan();
+    }
+  });
+
+  // ── Touch: drag to pan, pinch to zoom ──
+  canvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1 && G.zoom > 1) {
+      G._dragging = true;
+      G._dragMoved = false;
+      G._dragStartX = e.touches[0].clientX;
+      G._dragStartY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      G._dragging = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      G._pinchDist = Math.hypot(dx, dy);
+    }
+  }, { passive: true });
+
+  canvas.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1 && G._dragging) {
+      const dx = e.touches[0].clientX - G._dragStartX;
+      const dy = e.touches[0].clientY - G._dragStartY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) G._dragMoved = true;
+      G.panX += dx;
+      G.panY += dy;
+      G._dragStartX = e.touches[0].clientX;
+      G._dragStartY = e.touches[0].clientY;
+      applyZoomPan();
+      e.preventDefault();
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      if (G._pinchDist > 0) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+        const oldZoom = G.zoom;
+        G.zoom = Math.min(6, Math.max(1, G.zoom * (dist / G._pinchDist)));
+        if (G.zoom === 1) {
+          G.panX = 0; G.panY = 0;
+        } else {
+          const ratio = G.zoom / oldZoom;
+          G.panX = mx - ratio * (mx - G.panX);
+          G.panY = my - ratio * (my - G.panY);
+        }
+        applyZoomPan();
+      }
+      G._pinchDist = dist;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', () => {
+    G._dragging = false;
+    G._pinchDist = 0;
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -665,6 +814,20 @@ function renderFrame() {
 
   // Update driver order (for standings) based on position at current time
   updateDriverOrder();
+
+  // Zoom indicator
+  if (G.zoom > 1.01) {
+    ctx.save();
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`${G.zoom.toFixed(1)}x`, W - 8, 8);
+    ctx.font = '9px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillText('dbl-click to reset', W - 8, 22);
+    ctx.restore();
+  }
 }
 
 function drawCar(ctx, num, cx, cy) {
@@ -1192,6 +1355,8 @@ function buildLapMarkers() {
 }
 
 function onCanvasHover(e) {
+  // Suppress tooltip while dragging to pan
+  if (G._dragging) return;
   const rect   = G.canvas.getBoundingClientRect();
   const mx     = e.clientX - rect.left;
   const my     = e.clientY - rect.top;

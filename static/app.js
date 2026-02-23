@@ -384,9 +384,9 @@ function buildOffscreenTrack() {
 
   // Scale line widths proportionally to canvas size
   const scale = Math.max(0.5, G.canvasW / 720);
-  const trackW   = Math.max(8, 16 * scale);   // SVG: stroke-width 16
-  const centerW  = Math.max(1, 2 * scale);     // SVG: stroke-width 2
-  const pitW     = Math.max(3, 4 * scale);     // SVG: stroke-width 4
+  const trackW   = Math.max(6, 10 * scale);    // thinner track
+  const centerW  = Math.max(1, 1.5 * scale);   // proportional center line
+  const pitW     = Math.max(2, 3 * scale);     // proportional pit lane
 
   // Helper: trace the full track path
   function tracePath() {

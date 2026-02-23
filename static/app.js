@@ -418,29 +418,51 @@ function buildOffscreenTrack() {
 
   // 3. Pit lane — solid, thinner line, extended to meet the track
   if (PIT_LANE_PATH.length >= 2) {
-    // Find nearest track points to pit lane endpoints so the line blends in
-    function nearestTrackPt(px, py) {
-      let best = 0, bestD = Infinity;
+    // Find the track point that best continues the pit lane direction at each end.
+    // This avoids sharp angle connections — the line follows the driver's path.
+    function bestTrackAnchor(px, py, dirX, dirY) {
+      const dlen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+      const udx = dirX / dlen, udy = dirY / dlen;
+      let best = -1, bestScore = -Infinity;
       for (let i = 0; i < tx.length; i++) {
-        const d = (tx[i] - px) ** 2 + (ty[i] - py) ** 2;
-        if (d < bestD) { bestD = d; best = i; }
+        const vx = tx[i] - px, vy = ty[i] - py;
+        const dist = Math.sqrt(vx * vx + vy * vy);
+        if (dist < 1) continue;
+        // Dot product: how well aligned is this track point with the pit direction?
+        const dot = (vx * udx + vy * udy) / dist;
+        // Only consider points roughly in the right direction and within range
+        if (dot > 0.5 && dist < dlen * 5) {
+          const score = dot - dist * 0.0001; // prefer aligned, slightly prefer closer
+          if (score > bestScore) { bestScore = score; best = i; }
+        }
       }
-      return [tx[best], ty[best]];
+      return best >= 0 ? [tx[best], ty[best]] : null;
     }
-    const [ex0, ey0] = nearestTrackPt(PIT_LANE_PATH[0][0], PIT_LANE_PATH[0][1]);
-    const last = PIT_LANE_PATH.length - 1;
-    const [ex1, ey1] = nearestTrackPt(PIT_LANE_PATH[last][0], PIT_LANE_PATH[last][1]);
 
-    // Draw: track anchor → pit lane path → track anchor
+    const last = PIT_LANE_PATH.length - 1;
+    // Start: direction from pit[1] → pit[0] (extending backward)
+    const sd = [PIT_LANE_PATH[0][0] - PIT_LANE_PATH[1][0],
+                PIT_LANE_PATH[0][1] - PIT_LANE_PATH[1][1]];
+    const startAnchor = bestTrackAnchor(PIT_LANE_PATH[0][0], PIT_LANE_PATH[0][1], sd[0], sd[1]);
+    // End: direction from pit[last-1] → pit[last] (extending forward)
+    const ed = [PIT_LANE_PATH[last][0] - PIT_LANE_PATH[last - 1][0],
+                PIT_LANE_PATH[last][1] - PIT_LANE_PATH[last - 1][1]];
+    const endAnchor = bestTrackAnchor(PIT_LANE_PATH[last][0], PIT_LANE_PATH[last][1], ed[0], ed[1]);
+
     octx.beginPath();
-    const [ax0, ay0] = G.toCanvas(ex0, ey0);
-    octx.moveTo(ax0, ay0);
+    if (startAnchor) {
+      const [ax, ay] = G.toCanvas(startAnchor[0], startAnchor[1]);
+      octx.moveTo(ax, ay);
+    }
     for (let i = 0; i < PIT_LANE_PATH.length; i++) {
       const [plx, ply] = G.toCanvas(PIT_LANE_PATH[i][0], PIT_LANE_PATH[i][1]);
-      octx.lineTo(plx, ply);
+      if (i === 0 && !startAnchor) octx.moveTo(plx, ply);
+      else octx.lineTo(plx, ply);
     }
-    const [ax1, ay1] = G.toCanvas(ex1, ey1);
-    octx.lineTo(ax1, ay1);
+    if (endAnchor) {
+      const [ax, ay] = G.toCanvas(endAnchor[0], endAnchor[1]);
+      octx.lineTo(ax, ay);
+    }
     octx.strokeStyle = '#272A35';
     octx.lineWidth   = pitW;
     octx.lineCap     = 'round';

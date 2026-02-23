@@ -362,7 +362,8 @@ function setupCanvas() {
 
 function buildToCanvasFn() {
   if (!G.trackBounds) {
-    G.toCanvas = (x, y) => [G.canvasW / 2, G.canvasH / 2];
+    G.toCanvasBase = (x, y) => [G.canvasW / 2, G.canvasH / 2];
+    G.toCanvas = G.toCanvasBase;
     return;
   }
   const { minX, maxX, minY, maxY } = G.trackBounds;
@@ -370,15 +371,19 @@ function buildToCanvasFn() {
   const dataH = maxY - minY || 1;
   const pad   = PADDING_FRAC;
 
-  G.toCanvas = function (x, y) {
-    // Apply rotation to match F1 website Silverstone orientation
+  // Base transform: data coords → canvas pixels (no zoom/pan)
+  G.toCanvasBase = function (x, y) {
     const [rx, ry] = rotatePoint(x, y);
     const nx = (rx - minX) / dataW;
-    // Flip Y (screen Y grows downward)
     const ny = 1 - (ry - minY) / dataH;
     const cx = (pad + nx * (1 - 2 * pad)) * G.canvasW;
     const cy = (pad + ny * (1 - 2 * pad)) * G.canvasH;
-    // Apply zoom (around canvas center) and pan
+    return [cx, cy];
+  };
+
+  // Full transform: data coords → zoomed/panned canvas pixels
+  G.toCanvas = function (x, y) {
+    const [cx, cy] = G.toCanvasBase(x, y);
     const zx = (cx - G.canvasW / 2) * G.zoom + G.canvasW / 2 + G.panX;
     const zy = (cy - G.canvasH / 2) * G.zoom + G.canvasH / 2 + G.panY;
     return [zx, zy];
@@ -405,10 +410,10 @@ function buildOffscreenTrack() {
   // Helper: trace the full track path
   function tracePath() {
     octx.beginPath();
-    const [sx, sy] = G.toCanvas(tx[0], ty[0]);
+    const [sx, sy] = G.toCanvasBase(tx[0], ty[0]);
     octx.moveTo(sx, sy);
     for (let i = 1; i < tx.length; i++) {
-      const [cx, cy] = G.toCanvas(tx[i], ty[i]);
+      const [cx, cy] = G.toCanvasBase(tx[i], ty[i]);
       octx.lineTo(cx, cy);
     }
     octx.closePath();
@@ -433,10 +438,10 @@ function buildOffscreenTrack() {
   // 3. Pit lane — solid, thinner line (path is the actual driver telemetry)
   if (PIT_LANE_PATH.length >= 2) {
     octx.beginPath();
-    const [plx0, ply0] = G.toCanvas(PIT_LANE_PATH[0][0], PIT_LANE_PATH[0][1]);
+    const [plx0, ply0] = G.toCanvasBase(PIT_LANE_PATH[0][0], PIT_LANE_PATH[0][1]);
     octx.moveTo(plx0, ply0);
     for (let i = 1; i < PIT_LANE_PATH.length; i++) {
-      const [plx, ply] = G.toCanvas(PIT_LANE_PATH[i][0], PIT_LANE_PATH[i][1]);
+      const [plx, ply] = G.toCanvasBase(PIT_LANE_PATH[i][0], PIT_LANE_PATH[i][1]);
       octx.lineTo(plx, ply);
     }
     octx.strokeStyle = '#272A35';
@@ -447,9 +452,9 @@ function buildOffscreenTrack() {
 
     // "PIT" label offset below the pit lane (flipped perpendicular)
     const pitMid = Math.floor(PIT_LANE_PATH.length / 2);
-    const [pmx, pmy] = G.toCanvas(PIT_LANE_PATH[pitMid][0], PIT_LANE_PATH[pitMid][1]);
-    const [pa, pb]   = G.toCanvas(PIT_LANE_PATH[pitMid - 1][0], PIT_LANE_PATH[pitMid - 1][1]);
-    const [pc, pd]   = G.toCanvas(PIT_LANE_PATH[pitMid + 1][0], PIT_LANE_PATH[pitMid + 1][1]);
+    const [pmx, pmy] = G.toCanvasBase(PIT_LANE_PATH[pitMid][0], PIT_LANE_PATH[pitMid][1]);
+    const [pa, pb]   = G.toCanvasBase(PIT_LANE_PATH[pitMid - 1][0], PIT_LANE_PATH[pitMid - 1][1]);
+    const [pc, pd]   = G.toCanvasBase(PIT_LANE_PATH[pitMid + 1][0], PIT_LANE_PATH[pitMid + 1][1]);
     const pdx = pc - pa, pdy = pd - pb;
     const plen = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
     // Left-perpendicular (below the line, away from S/F side)
@@ -467,7 +472,7 @@ function buildOffscreenTrack() {
   // 4. Start/Finish line
   if (tx.length > 10) {
     const midIdx = Math.floor(tx.length * 0.02);
-    const [sfx, sfy] = G.toCanvas(tx[midIdx], ty[midIdx]);
+    const [sfx, sfy] = G.toCanvasBase(tx[midIdx], ty[midIdx]);
     octx.save();
     octx.strokeStyle = '#FFFFFF';
     octx.lineWidth   = Math.max(2, 3 * scale);
@@ -499,7 +504,6 @@ function buildOffscreenTrack() {
 
 function applyZoomPan() {
   buildToCanvasFn();
-  buildOffscreenTrack();
   // Clear trails — stale canvas coords
   for (const num in G.trails) G.trails[num] = [];
 }
@@ -538,7 +542,6 @@ function setupZoomPan() {
     G._dragMoved = false;
     G._dragStartX = e.clientX;
     G._dragStartY = e.clientY;
-    canvas.style.cursor = 'grabbing';
   });
 
   window.addEventListener('mousemove', (e) => {
@@ -556,7 +559,6 @@ function setupZoomPan() {
   window.addEventListener('mouseup', () => {
     if (G._dragging) {
       G._dragging = false;
-      canvas.style.cursor = G.zoom > 1 ? 'grab' : '';
     }
   });
 
@@ -567,7 +569,6 @@ function setupZoomPan() {
       G.zoom = 1;
       G.panX = 0;
       G.panY = 0;
-      canvas.style.cursor = '';
       applyZoomPan();
     }
   });
@@ -736,7 +737,13 @@ function renderFrame() {
 
   // Draw pre-rendered track
   if (G.offscreenTrack) {
+    // Draw the pre-rendered track with zoom/pan transform
+    ctx.save();
+    ctx.translate(G.canvasW / 2 + G.panX, G.canvasH / 2 + G.panY);
+    ctx.scale(G.zoom, G.zoom);
+    ctx.translate(-G.canvasW / 2, -G.canvasH / 2);
     ctx.drawImage(G.offscreenTrack, 0, 0, G.canvasW, G.canvasH);
+    ctx.restore();
   } else {
     // Placeholder if no track data
     ctx.fillStyle = '#1a1a1a';

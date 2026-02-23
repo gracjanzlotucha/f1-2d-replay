@@ -300,6 +300,36 @@ def main():
         except Exception as e:
             log.warning(f'Pos data error for {num}: {e}')
 
+    log.info('Extracting pit lane path from driver telemetry…')
+    pit_lane_path = []
+    try:
+        # Find a lap with a pit stop (has PitInTime)
+        pit_laps = laps_df[laps_df['PitInTime'].notna()].copy()
+        if not pit_laps.empty:
+            # Pick the first clean pit stop
+            pit_lap = pit_laps.iloc[0]
+            pit_driver = pit_lap['DriverNumber']
+            pit_in_t = float(pit_lap['PitInTime'].total_seconds())
+            pit_out_t = float(pit_lap['PitOutTime'].total_seconds()) if pd.notna(pit_lap.get('PitOutTime')) else pit_in_t + 30
+
+            # Get this driver's position data during the pit stop window
+            if pit_driver in session.pos_data:
+                pos = session.pos_data[pit_driver].copy()
+                pos = pos.dropna(subset=['X', 'Y'])
+                pos['t'] = pos['SessionTime'].dt.total_seconds()
+                # Include the full transition: a few seconds before pit-in to after pit-out
+                pit_pos = pos[(pos['t'] >= pit_in_t - 5) & (pos['t'] <= pit_out_t + 5)]
+                pit_pos = pit_pos.sort_values('t')
+
+                if not pit_pos.empty:
+                    pit_lane_path = [
+                        [round(float(row['X']), 1), round(float(row['Y']), 1)]
+                        for _, row in pit_pos.iterrows()
+                    ]
+                    log.info(f'  {len(pit_lane_path)} points from driver #{pit_driver} pit stop')
+    except Exception as e:
+        log.warning(f'Pit lane extraction failed: {e}')
+
     log.info('Processing lap data…')
     laps_list = []
     for _, lap in laps_df.iterrows():
@@ -351,6 +381,7 @@ def main():
         'drivers': drivers,
         'track': track,
         'circuit_info': circuit_info,
+        'pit_lane_path': pit_lane_path,
         'laps': laps_list,
         'insights': insights,
     }

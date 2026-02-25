@@ -279,7 +279,7 @@ html, body {
 
 .driver-row {
   display: grid;
-  grid-template-columns: 36px 1fr auto 44px;
+  grid-template-columns: 36px auto 44px 1fr 44px;
   align-items: center;
   background: #16171d;
   cursor: pointer;
@@ -330,6 +330,17 @@ html, body {
   font-size: 14px; font-weight: 600;
   color: #eaecf0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Team logo column */
+.dr-team-logo {
+  display: flex; align-items: center; justify-content: center;
+  padding: 10px 12px;
+}
+.dr-team-logo img {
+  width: 20px; height: 20px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 /* Gap column */

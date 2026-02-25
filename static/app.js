@@ -1143,8 +1143,10 @@ function renderStandings() {
     // Driver photo
     const photoSrc = `assets/drivers/${driver.abbr}.png`;
 
-    // Team color bar
+    // Team color bar + logo
     const teamColor = driver.color || '#555';
+    const teamSlug = TEAM_LOGO_MAP[driver.team] || '';
+    const teamLogoSrc = teamSlug ? `assets/teams/${teamSlug}.svg` : '';
 
     const row = document.createElement('div');
     row.className = 'driver-row' + (isRetired ? ' retired' : '') + (num === G.followDriver ? ' following' : '');
@@ -1158,6 +1160,9 @@ function renderStandings() {
       <div class="dr-driver">
         <div class="dr-photo" style="background-color:${teamColor}; background-image:url('${photoSrc}')"></div>
         <span class="dr-abbr">${driver.abbr}</span>
+      </div>
+      <div class="dr-team-logo">
+        ${teamLogoSrc ? `<img src="${teamLogoSrc}" alt="${driver.team}" />` : ''}
       </div>
       <div class="dr-gap">${gapHtml}</div>
       <div class="dr-tyre">

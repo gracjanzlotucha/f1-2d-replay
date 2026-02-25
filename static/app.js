@@ -1125,14 +1125,14 @@ function renderStandings() {
     if (isRetired) {
       gapHtml = statusHtml;
     } else if (idx === 0) {
-      gapHtml = meta.lap_time ? fmtLapTime(meta.lap_time) : 'Leader';
+      gapHtml = 'Leader';
     } else {
       const myTime = meta.lap_time;
       if (leaderLapTime && myTime) {
         const delta = myTime - leaderLapTime;
-        gapHtml = delta > 0 ? `+${delta.toFixed(3)}` : fmtLapTime(myTime);
+        gapHtml = delta > 0 ? `+${delta.toFixed(3)}` : '+0.000';
       } else {
-        gapHtml = `+${idx} LAP${idx > 1 ? 'S' : ''}`;
+        gapHtml = '—';
       }
     }
 

@@ -1484,15 +1484,19 @@ function moveSegIndicator(tab) {
 }
 
 function bindMobileTabs() {
-  const tabs            = document.querySelectorAll('.mobile-tab');
+  const mobileSeg       = document.querySelector('.mobile-seg');
+  if (!mobileSeg) return;
+  const tabs            = mobileSeg.querySelectorAll('.seg-tab');
   const standingsPanel  = document.querySelector('.standings-panel');
   const insightsPanel   = document.querySelector('.insights-panel');
   const insightsContent = document.getElementById('race-insights-content');
   const eventsContent   = document.getElementById('events-content');
   const trackContent    = document.getElementById('track-content');
 
-  function activateTab(panelName) {
-    tabs.forEach(t => t.classList.toggle('active', t.dataset.panel === panelName));
+  function activateTab(tab) {
+    const panelName = tab.dataset.panel;
+    tabs.forEach(t => t.classList.toggle('active', t === tab));
+    moveSegIndicator(tab);
 
     // Top-level panel visibility
     standingsPanel.classList.toggle('mobile-active', panelName === 'standings');
@@ -1506,9 +1510,11 @@ function bindMobileTabs() {
     }
   }
 
-  tabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab.dataset.panel)));
+  tabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab)));
 
-  activateTab('standings'); // default
+  // Init indicator on default active tab
+  const activeTab = mobileSeg.querySelector('.seg-tab.active');
+  if (activeTab) requestAnimationFrame(() => moveSegIndicator(activeTab));
 }
 
 function bindGpDropdown() {

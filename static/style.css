@@ -124,6 +124,7 @@ html, body {
   white-space: nowrap;
 }
 .race-select-chevron {
+  width: 12px; height: 7px;
   flex-shrink: 0;
   transition: transform .2s ease;
 }
@@ -698,7 +699,7 @@ html, body {
   .header-logo-wrap svg { width: 24px; height: 21px; }
   .header-content { padding: 8px 12px; }
   .race-select-label { font-size: 16px; line-height: 20px; }
-  .race-select-chevron { width: 20px; height: 20px; }
+  .race-select-chevron { width: 9px; height: 5px; }
   .hdr-btn span { display: none; }
   .hdr-btn { padding: 8px; border-radius: 8px; }
 

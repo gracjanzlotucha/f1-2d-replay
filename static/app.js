@@ -1236,8 +1236,7 @@ const RACE_INSIGHTS = [
     body: "The rookie pitted from P4 on only lap 2, switching to Hard tyres in wet conditions — an experiment that unravelled over the race. Four stops and P16 at the flag.",
     lap: 2,
     t: 236,
-    drivers: ['87'],
-    teamColor: '#27f4d2',
+    drivers: ['12'],
   },
 ];
 

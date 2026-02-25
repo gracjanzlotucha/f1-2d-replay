@@ -123,6 +123,7 @@
       <button class="mobile-tab active" data-panel="standings">STANDINGS</button>
       <button class="mobile-tab" data-panel="insights">INSIGHTS</button>
       <button class="mobile-tab" data-panel="events">EVENTS</button>
+      <button class="mobile-tab" data-panel="track">TRACK</button>
     </div>
 
     <!-- CENTER: TRACK CANVAS -->
@@ -141,8 +142,11 @@
     <!-- RIGHT: INSIGHTS / EVENTS -->
     <aside class="insights-panel">
       <div class="panel-tab-bar">
-        <button class="panel-tab active" id="tab-insights" data-tab="insights">INSIGHTS</button>
-        <button class="panel-tab" id="tab-events" data-tab="events">EVENTS</button>
+        <div class="seg-control">
+          <button class="seg-tab active" data-tab="insights">Insights</button>
+          <button class="seg-tab" data-tab="events">Events</button>
+          <button class="seg-tab" data-tab="track">Track</button>
+        </div>
       </div>
 
       <!-- Curated race insights -->
@@ -151,6 +155,11 @@
       <!-- Lap-by-lap events (previously "insights") -->
       <div class="insights-content hidden" id="events-content">
         <div class="insights-empty">Events will appear as the race progresses</div>
+      </div>
+
+      <!-- Track info placeholder -->
+      <div class="insights-content hidden" id="track-content">
+        <div class="insights-empty">Track information coming soon</div>
       </div>
     </aside>
 

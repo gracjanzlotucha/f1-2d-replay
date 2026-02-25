@@ -433,89 +433,117 @@ html, body {
 .tooltip-team   { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
 .tooltip-pos    { font-size: 11px; color: var(--text-dimmer); margin-top: 2px; }
 
-/* ─── PANEL TAB BAR (inside right sidebar) ───────────────────────────────── */
+/* ─── SEGMENTED CONTROL TAB BAR (inside right sidebar) ───────────────────── */
 .panel-tab-bar {
   display: flex;
-  border-bottom: 1px solid var(--border);
+  padding: 8px;
   flex-shrink: 0;
+  background: #16171d;
 }
-.panel-tab {
+.seg-control {
+  display: flex;
+  width: 100%;
+  background: #0d0e12;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+.seg-tab {
   flex: 1;
-  background: none; border: none; outline: none;
-  padding: 11px 0;
-  font-size: 10px; font-weight: 700; letter-spacing: .12em;
-  color: var(--text-dimmer);
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 0;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #838aa5;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color .15s, border-color .15s;
-  margin-bottom: -1px;
+  transition: background .15s, color .15s, box-shadow .15s;
 }
-.panel-tab:hover { color: var(--text-dim); }
-.panel-tab.active {
-  color: var(--red);
-  border-bottom-color: var(--red);
+.seg-tab:hover { color: #eaecf0; }
+.seg-tab.active {
+  background: #272a35;
+  color: #eaecf0;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
 }
 
 /* ─── INSIGHTS PANEL ─────────────────────────────────────────────────────── */
 .insights-content {
-  flex: 1; overflow-y: auto; padding: 10px 0;
+  flex: 1; overflow-y: auto;
 }
 .insights-content::-webkit-scrollbar { width: 4px; }
 .insights-content::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 99px; }
 
 .insights-empty {
   padding: 24px 16px;
-  color: var(--text-dimmer);
+  color: #838aa5;
+  font-family: 'Geist', 'Inter', sans-serif;
   font-size: 12px; text-align: center;
   line-height: 1.6;
 }
 
 /* ─── RACE INSIGHT STORY CARDS ───────────────────────────────────────────── */
+#race-insights-content {
+  display: flex; flex-direction: column; gap: 1px;
+  background: #0d0e12;
+}
 .race-insight-card {
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 12px;
+  background: #16171d;
   cursor: pointer;
   transition: background .15s;
   position: relative;
 }
-.race-insight-card:hover { background: var(--bg-3); }
-.race-insight-card:last-child { border-bottom: none; }
+.race-insight-card:hover { background: #1e2029; }
 
 .ric-header {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; justify-content: space-between;
 }
-.ric-icon {
-  font-size: 17px; line-height: 1; flex-shrink: 0;
+.ric-drivers {
+  display: flex; align-items: center;
 }
-.ric-title {
-  font-size: 12px; font-weight: 700;
-  line-height: 1.3; flex: 1;
+.ric-driver-photo {
+  width: 32px; height: 32px;
+  border-radius: 9999px;
+  overflow: hidden; flex-shrink: 0;
+  border: 2px solid #16171d;
+}
+.ric-driver-photo:not(:first-child) {
+  margin-left: -8px;
+}
+.ric-driver-photo img {
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center top;
+  display: block;
+}
+.ric-tyre {
+  width: 24px; height: 24px;
+  flex-shrink: 0; margin-left: 8px;
 }
 .ric-lap {
-  font-size: 9px; font-weight: 700; letter-spacing: .1em;
-  color: var(--text-dimmer);
-  background: var(--bg-4);
-  padding: 2px 6px; border-radius: 3px;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 12px; font-weight: 500;
+  color: #838aa5;
+  background: #272a35;
+  padding: 4px 8px; border-radius: 9999px;
   flex-shrink: 0; white-space: nowrap;
 }
-.ric-body {
-  font-size: 11px; color: var(--text-dim);
-  line-height: 1.5;
-  padding-left: 25px;
+.ric-title {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 14px; font-weight: 500;
+  color: #eaecf0; line-height: 1.3;
 }
-.ric-stat {
-  display: inline-block;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; font-weight: 600;
-  color: var(--text);
+.ric-body {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 12px; font-weight: 400;
+  color: #838aa5; line-height: 16px;
 }
 .ric-seek-hint {
   display: flex; align-items: center; gap: 4px;
-  padding-left: 25px;
-  font-size: 10px; color: var(--red);
-  opacity: 0;
-  transition: opacity .15s;
+  font-size: 10px; color: #BFFF4A;
+  opacity: 0; transition: opacity .15s;
 }
 .race-insight-card:hover .ric-seek-hint { opacity: 1; }
 

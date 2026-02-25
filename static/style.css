@@ -242,7 +242,6 @@ html, body {
   border-right: 1px solid #0d0e12;
   display: flex; flex-direction: column;
   overflow: hidden;
-  border-radius: 12px;
 }
 .insights-panel {
   border-right: none;
@@ -279,7 +278,7 @@ html, body {
 
 .driver-row {
   display: grid;
-  grid-template-columns: 36px auto 44px 1fr 44px;
+  grid-template-columns: 36px 1fr 44px auto 44px;
   align-items: center;
   background: #16171d;
   cursor: pointer;
@@ -783,7 +782,6 @@ html, body {
   .insights-panel {
     border-right: none; border-left: none;
     border-top: 1px solid #0d0e12;
-    border-radius: 0;
     display: none;
     height: auto;
   }

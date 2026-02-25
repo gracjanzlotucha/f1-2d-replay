@@ -36,7 +36,12 @@
       "mcp__figma-desktop__get_screenshot",
       "mcp__figma-desktop__get_metadata",
       "mcp__figma-desktop__get_variable_defs",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "Bash(grep -o 'data-name=\\\\\\\\\"\"[^\"\"]*\\\\\\\\\"\"' \"C:\\\\Users\\\\Gracjan\\\\.claude\\\\projects\\\\c--Users-Gracjan-Desktop-f1-2d-replay\\\\c1252b2d-ebea-436b-92c7-c3b13d669837\\\\tool-results\\\\mcp-figma-desktop-get_design_context-1772015271123.txt\")",
+      "Bash(perl -ne 'print \"\"$1 | $2\\\\n\"\" while /id=\"\"\\([^\"\"]+\\)\"\"\\\\s+name=\"\"\\([^\"\"]+\\)\"\"/g' \"C:\\\\Users\\\\Gracjan\\\\.claude\\\\projects\\\\c--Users-Gracjan-Desktop-f1-2d-replay\\\\c1252b2d-ebea-436b-92c7-c3b13d669837\\\\tool-results\\\\mcp-figma-desktop-get_metadata-1772015631996.txt\")",
+      "Bash(perl -ne 'while \\(/id=\"\"\\([^\"\"]+\\)\"\"/g\\) { print \"\"$1\\\\n\"\" }' \"C:\\\\Users\\\\Gracjan\\\\.claude\\\\projects\\\\c--Users-Gracjan-Desktop-f1-2d-replay\\\\c1252b2d-ebea-436b-92c7-c3b13d669837\\\\tool-results\\\\mcp-figma-desktop-get_design_context-1772015712838.txt\")",
+      "Bash(perl -ne 'print \"\"$_\\\\n\"\" if /y=\"\"[89]\\\\d\\\\d\\\\d\"\" width=\"\"\\\\d+\\\\\"\"/' \"C:\\\\Users\\\\Gracjan\\\\.claude\\\\projects\\\\c--Users-Gracjan-Desktop-f1-2d-replay\\\\c1252b2d-ebea-436b-92c7-c3b13d669837\\\\tool-results\\\\mcp-figma-desktop-get_metadata-1772015631996.txt\")",
+      "Bash(tr '>' '\\\\n')"
     ]
   }
 }

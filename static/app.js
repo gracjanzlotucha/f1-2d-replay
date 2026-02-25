@@ -14,6 +14,24 @@ const TIRE_COLORS = {
   INTERMEDIATE: '#39B54A', WET: '#0067FF', UNKNOWN: '#555555', nan: '#555555',
 };
 
+const TEAM_LOGO_MAP = {
+  'Red Bull Racing': 'red-bull',
+  'McLaren': 'mclaren',
+  'Ferrari': 'ferrari',
+  'Mercedes': 'mercedes',
+  'Aston Martin': 'aston-martin',
+  'Alpine': 'alpine',
+  'Haas F1 Team': 'haas',
+  'Racing Bulls': 'racing-bulls',
+  'Williams': 'williams',
+  'Kick Sauber': 'kick-sauber',
+};
+
+const TYRE_SVG_MAP = {
+  SOFT: 'soft', MEDIUM: 'medium', HARD: 'hard',
+  INTERMEDIATE: 'intermediate', WET: 'wet',
+};
+
 const TRAIL_LENGTH = 28;   // How many past positions to show as trail
 const DRIVER_RADIUS = 9;   // Car marker radius on canvas
 const PADDING_FRAC  = 0.08; // Canvas padding as fraction
@@ -175,6 +193,7 @@ async function loadAllData() {
   }
 
   document.getElementById('hdr-lap-total').textContent = G.totalLaps;
+  document.getElementById('standings-lap-total').textContent = G.totalLaps;
 }
 
 function setupDerivedData() {
@@ -744,7 +763,7 @@ function updateCurrentLap() {
     G.currentLap = lap;
     renderStandings();
     renderEvents(lap);
-    document.getElementById('standings-lap-label').textContent = `LAP ${lap}`;
+    document.getElementById('standings-lap-cur').textContent = lap;
     document.getElementById('hdr-lap-cur').textContent = lap;
 
     // Track status badge
@@ -1074,6 +1093,9 @@ function renderStandings() {
   const list   = document.getElementById('standings-list');
   list.innerHTML = '';
 
+  // Update lap counter in header
+  document.getElementById('standings-lap-cur').textContent = G.currentLap || '—';
+
   // Compute gaps — use lap time as delta if available
   const leaderLapTime = posAtT[G.driverOrder[0]]?.lap_time;
 
@@ -1084,67 +1106,62 @@ function renderStandings() {
     const ds      = G.driverStatus[num] || {};
     const pos     = meta.pos || (idx + 1);
     const compound = (meta.compound || 'UNKNOWN').toUpperCase();
-    const tireColor = TIRE_COLORS[compound] || '#555';
-    const tyreLife  = meta.tyre_life ?? '—';
 
-    // Status badge (DNS / DNF / RET / PIT)
-    let statusBadge = '';
+    // Status (DNS / DNF)
     let isRetired = false;
+    let statusHtml = '';
     if (ds.status === 'dns') {
-      statusBadge = '<span class="dr-status-badge dns">DNS</span>';
+      statusHtml = '<span class="dr-status-badge dns">DNS</span>';
       isRetired = true;
     } else if (ds.status === 'dnf') {
-      // Show DNF only after the retirement lap
       if (ds.retirementLap != null && G.currentLap > ds.retirementLap) {
-        statusBadge = '<span class="dr-status-badge dnf">DNF</span>';
+        statusHtml = '<span class="dr-status-badge dnf">DNF</span>';
         isRetired = true;
       }
     }
 
-    // Pit lane start indicator (only on lap 1)
-    let pitStartLabel = '';
-    if (ds.pitStart && G.currentLap <= 1) {
-      pitStartLabel = '<span class="dr-pit-start">PIT START</span>';
-    }
-
     // Gap to leader
-    let gapStr = '';
+    let gapHtml = '';
     if (isRetired) {
-      gapStr = ds.status === 'dns' ? '—' : `LAP ${ds.retirementLap}`;
+      gapHtml = statusHtml;
     } else if (idx === 0) {
-      gapStr = meta.lap_time ? fmtLapTime(meta.lap_time) : 'LEADER';
+      gapHtml = meta.lap_time ? fmtLapTime(meta.lap_time) : 'Leader';
     } else {
-      const myTime  = meta.lap_time;
+      const myTime = meta.lap_time;
       if (leaderLapTime && myTime) {
         const delta = myTime - leaderLapTime;
-        gapStr = delta > 0 ? `+${delta.toFixed(3)}` : fmtLapTime(myTime);
+        gapHtml = delta > 0 ? `+${delta.toFixed(3)}` : fmtLapTime(myTime);
       } else {
-        gapStr = `+${idx} LAP${idx > 1 ? 'S' : ''}`;
+        gapHtml = `+${idx} LAP${idx > 1 ? 'S' : ''}`;
       }
     }
+
+    // Tyre SVG
+    const tyreSvg = TYRE_SVG_MAP[compound] || 'soft';
+    const tyreImgSrc = `assets/tyres/${tyreSvg}.svg`;
+
+    // Driver photo
+    const photoSrc = `assets/drivers/${driver.abbr}.png`;
+
+    // Team color bar
+    const teamColor = driver.color || '#555';
 
     const row = document.createElement('div');
     row.className = 'driver-row' + (isRetired ? ' retired' : '') + (num === G.followDriver ? ' following' : '');
     row.dataset.driver = num;
 
-    const posClass = pos === 1 ? 'dr-pos p1' : pos === 2 ? 'dr-pos p2' : pos === 3 ? 'dr-pos p3' : 'dr-pos';
-
     row.innerHTML = `
-      <div class="${posClass}">${pos}</div>
-      <div class="dr-color-bar" style="background:${driver.color}"></div>
-      <div class="dr-number-badge" style="background:${driver.color}; color:${isLightColor(driver.color) ? '#000' : '#fff'}">
-        ${driver.number}
+      <div class="dr-pos">
+        ${pos}
+        <div class="dr-color-bar" style="background:${teamColor}"></div>
       </div>
-      <div class="dr-info">
-        <div class="dr-abbr">${driver.abbr}${statusBadge}${pitStartLabel}</div>
-        <div class="dr-team">${driver.team}</div>
+      <div class="dr-driver">
+        <div class="dr-photo" style="background-color:${teamColor}; background-image:url('${photoSrc}')"></div>
+        <span class="dr-abbr">${driver.abbr}</span>
       </div>
-      <div class="dr-right">
-        <div class="dr-gap">${gapStr}</div>
-        <div class="dr-tire">
-          <div class="tire-dot" style="background:${tireColor}"></div>
-          <span class="tire-life">${tyreLife}L</span>
-        </div>
+      <div class="dr-gap">${gapHtml}</div>
+      <div class="dr-tyre">
+        <img src="${tyreImgSrc}" alt="${compound}" />
       </div>
     `;
 

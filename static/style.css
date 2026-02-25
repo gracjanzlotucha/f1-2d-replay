@@ -238,129 +238,145 @@ html, body {
 
 /* ─── PANELS ─────────────────────────────────────────────────────────────── */
 .standings-panel, .insights-panel {
-  background: var(--bg-2);
-  border-right: 1px solid var(--border);
+  background: #16171d;
+  border-right: 1px solid #0d0e12;
   display: flex; flex-direction: column;
   overflow: hidden;
+  border-radius: 12px;
 }
 .insights-panel {
   border-right: none;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid #0d0e12;
 }
 .panel-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px 10px;
-  border-bottom: 1px solid var(--border);
+  padding: 10px 12px;
   flex-shrink: 0;
+  background: #16171d;
 }
 .panel-title {
-  font-size: 10px; font-weight: 700; letter-spacing: .14em;
-  color: var(--text-dim);
+  font-family: 'Clash Display', sans-serif;
+  font-size: 16px; font-weight: 600;
+  color: #eaecf0;
 }
 .panel-subtitle {
-  font-size: 10px; font-weight: 600; letter-spacing: .08em;
-  color: var(--red); opacity: .8;
+  font-family: 'Clash Display', sans-serif;
+  font-size: 16px; font-weight: 600;
+  color: #eaecf0;
+}
+.panel-subtitle-dim {
+  color: #838aa5;
 }
 
 /* ─── STANDINGS LIST ─────────────────────────────────────────────────────── */
 .standings-list {
   overflow-y: auto; flex: 1;
-  padding: 4px 0;
+  background: #0d0e12;
 }
 .standings-list::-webkit-scrollbar { width: 4px; }
 .standings-list::-webkit-scrollbar-track { background: transparent; }
-.standings-list::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 99px; }
+.standings-list::-webkit-scrollbar-thumb { background: #272a35; border-radius: 99px; }
 
 .driver-row {
   display: grid;
-  grid-template-columns: 28px 6px 36px 1fr auto;
+  grid-template-columns: 36px 1fr auto 44px;
   align-items: center;
-  gap: 8px;
-  padding: 7px 14px 7px 10px;
-  border-bottom: 1px solid var(--border);
+  background: #16171d;
   cursor: pointer;
   transition: background .15s;
+  margin-bottom: 1px;
+  position: relative;
 }
-.driver-row:hover { background: var(--bg-3); }
-.driver-row.highlighted { background: var(--bg-4); }
-.driver-row.following { background: var(--bg-3); box-shadow: inset 3px 0 0 0 rgba(255,255,255,0.5); }
+.driver-row:hover { background: #1e2029; }
+.driver-row.highlighted { background: #272a35; }
+.driver-row.following { background: #272a35; }
 
+/* Position column */
 .dr-pos {
-  font-size: 15px; font-weight: 800;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--text-dim); text-align: center;
+  font-family: 'Clash Display', sans-serif;
+  font-size: 14px; font-weight: 600;
+  color: #eaecf0;
+  text-align: center;
+  padding: 10px 8px;
+  position: relative;
 }
-.dr-pos.p1 { color: #ffd700; }
-.dr-pos.p2 { color: #c0c0c0; }
-.dr-pos.p3 { color: #cd7f32; }
 
+/* Team color bar (left edge of position cell) */
 .dr-color-bar {
-  width: 4px; height: 32px;
-  border-radius: 2px;
-  flex-shrink: 0;
+  position: absolute;
+  left: 0; top: 10px;
+  width: 2px; height: 20px;
+  border-radius: 0 2px 2px 0;
 }
 
-.dr-number-badge {
-  display: flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px;
-  border-radius: 6px;
-  font-size: 12px; font-weight: 800;
-  font-family: 'JetBrains Mono', monospace;
-  color: #000;
-  flex-shrink: 0;
+/* Driver column: photo + abbreviation */
+.dr-driver {
+  display: flex; align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  overflow: hidden;
 }
-
-.dr-info { min-width: 0; }
+.dr-photo {
+  width: 24px; height: 24px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  object-fit: cover;
+  background-size: cover;
+  background-position: center top;
+  overflow: hidden;
+}
 .dr-abbr {
-  font-size: 13px; font-weight: 700; letter-spacing: .04em;
+  font-family: 'Clash Display', sans-serif;
+  font-size: 14px; font-weight: 600;
+  color: #eaecf0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.dr-team {
-  font-size: 10px; color: var(--text-dimmer);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin-top: 2px;
 }
 
-.dr-right { text-align: right; }
+/* Gap column */
 .dr-gap {
-  font-size: 11px; font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--text-dim);
-}
-.dr-tire {
-  display: flex; align-items: center; justify-content: flex-end;
-  gap: 3px; margin-top: 3px;
-}
-.tire-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  flex-shrink: 0;
-}
-.tire-life {
-  font-size: 10px; color: var(--text-dimmer);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  color: #eaecf0;
+  text-align: right;
+  padding: 10px 12px;
+  white-space: nowrap;
 }
 
-/* ─── DRIVER STATUS BADGES ───────────────────────────────────────────────── */
+/* DNF/DNS badges in gap column */
 .dr-status-badge {
-  display: inline-block;
-  font-size: 9px; font-weight: 700; letter-spacing: .06em;
-  padding: 1px 5px; border-radius: 3px;
-  margin-left: 6px; vertical-align: middle;
-}
-.dr-status-badge.dns {
-  background: rgba(136,136,136,.25); color: #888;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 10px; font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 9999px;
 }
 .dr-status-badge.dnf {
-  background: rgba(232,0,45,.2); color: #E8002D;
+  background: linear-gradient(90deg, rgba(224,44,89,0.15) 0%, rgba(224,44,89,0.15) 100%), #0d0e12;
+  color: #e02c59;
 }
+.dr-status-badge.dns {
+  background: #272a35;
+  color: #838aa5;
+}
+
+/* Tyre column */
+.dr-tyre {
+  display: flex; align-items: center; justify-content: center;
+  padding: 10px 12px;
+}
+.dr-tyre img {
+  width: 20px; height: 20px;
+  flex-shrink: 0;
+}
+
 .dr-pit-start {
   display: inline-block;
-  font-size: 8px; font-weight: 700; letter-spacing: .06em;
-  padding: 1px 4px; border-radius: 3px;
-  margin-left: 5px; vertical-align: middle;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 10px; font-weight: 500;
+  padding: 2px 6px; border-radius: 9999px;
   background: rgba(255,215,0,.18); color: #ffd700;
 }
-.driver-row.retired { opacity: 0.5; }
+.driver-row.retired { opacity: 0.45; }
 
 /* ─── TRACK SECTION ──────────────────────────────────────────────────────── */
 .track-section {
@@ -755,7 +771,8 @@ html, body {
   .standings-panel,
   .insights-panel {
     border-right: none; border-left: none;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid #0d0e12;
+    border-radius: 0;
     display: none;
     height: auto;
   }

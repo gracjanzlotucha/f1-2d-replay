@@ -743,7 +743,7 @@ html, body {
   .hdr-btn { padding: 8px; border-radius: 8px; }
 
   /* Vertical flex layout — visual order: track → controls → tab-bar → panel */
-  .main-grid { display: flex; flex-direction: column; overflow-x: hidden; overflow-y: visible; }
+  .main-grid { display: flex; flex-direction: column; }
 
   .track-section   { order: 1; }
   .controls-bar    { order: 2; }

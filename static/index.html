@@ -137,6 +137,32 @@
           <div class="tooltip-pos"></div>
         </div>
       </div>
+
+      <!-- Floating player -->
+      <div class="player" id="player">
+        <div class="player-controls">
+          <button class="player-play" id="btn-play" title="Play / Pause">
+            <svg class="player-icon-play" viewBox="0 0 20 20" fill="none"><path d="M7.703 1.973C6.178.986 4.167 2.08 4.167 3.897v12.206c0 1.816 2.012 2.91 3.536 1.924l9.432-5.848c1.396-.903 1.396-2.945 0-3.848L7.703 1.973z" fill="currentColor"/></svg>
+            <svg class="player-icon-pause hidden" viewBox="0 0 20 20" fill="none"><rect x="3.5" y="2" width="4.5" height="16" rx="1.5" fill="currentColor"/><rect x="12" y="2" width="4.5" height="16" rx="1.5" fill="currentColor"/></svg>
+          </button>
+          <div class="player-nav">
+            <button class="player-nav-btn" id="btn-prev-lap" title="Previous lap">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M3.333 2.667a.667.667 0 01.667.667v9.333a.667.667 0 01-1.333 0V3.334a.667.667 0 01.666-.667z" fill="currentColor"/><path d="M11.279 2.89c.877-.585 2.054.042 2.054 1.098v8.024c0 1.056-1.177 1.683-2.054 1.098L5.255 9.1c-.785-.523-.785-1.676 0-2.199l6.024-4.01z" fill="currentColor"/></svg>
+            </button>
+            <button class="player-nav-btn" id="btn-next-lap" title="Next lap">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2.667 3.989c0-1.056 1.177-1.683 2.054-1.099l6.024 4.011c.785.523.785 1.676 0 2.199l-6.024 4.01c-.877.585-2.054-.041-2.054-1.098V3.989z" fill="currentColor"/><path d="M12.667 2.667a.667.667 0 01.666.667v9.333a.667.667 0 01-1.333 0V3.334a.667.667 0 01.667-.667z" fill="currentColor"/></svg>
+            </button>
+          </div>
+        </div>
+        <span class="player-time" id="player-time">0:00:00 / 0:00:00</span>
+        <div class="player-speed" id="player-speed">
+          <div class="seg-indicator"></div>
+          <button class="seg-tab active" data-speed="1">x1</button>
+          <button class="seg-tab" data-speed="2">x2</button>
+          <button class="seg-tab" data-speed="4">x4</button>
+          <button class="seg-tab" data-speed="8">x8</button>
+        </div>
+      </div>
     </section>
 
     <!-- RIGHT: INSIGHTS / EVENTS -->
@@ -164,52 +190,14 @@
       </div>
     </aside>
 
-    <!-- BOTTOM: TIMELINE / CONTROLS -->
-    <footer class="controls-bar">
-
-      <!-- Playback buttons -->
-      <div class="ctrl-group ctrl-buttons">
-        <button class="ctrl-btn" id="btn-prev-lap" title="Previous lap">⏮</button>
-        <button class="ctrl-btn ctrl-btn-primary" id="btn-play" title="Play / Pause">▶</button>
-        <button class="ctrl-btn" id="btn-next-lap" title="Next lap">⏭</button>
+    <!-- BOTTOM: TIMELINE & EVENTS -->
+    <div class="timeline-bar">
+      <div class="tl-track" id="tl-track">
+        <div class="tl-progress" id="tl-progress"></div>
+        <div class="tl-laps" id="tl-laps"></div>
       </div>
-
-      <!-- Timeline -->
-      <div class="ctrl-group ctrl-timeline">
-        <span id="ctrl-time-cur" class="ctrl-time">0:00</span>
-        <div class="timeline-wrap">
-          <input type="range" id="timeline" min="0" max="1000" value="0" class="timeline-slider" />
-          <div class="timeline-lap-markers" id="timeline-lap-markers"></div>
-        </div>
-        <span id="ctrl-time-total" class="ctrl-time">0:00</span>
-      </div>
-
-      <!-- Speed + options -->
-      <div class="ctrl-group ctrl-options">
-        <div class="speed-selector">
-          <span class="speed-label">SPEED</span>
-          <div class="speed-btns">
-            <button class="speed-btn" data-speed="0.5">0.5×</button>
-            <button class="speed-btn speed-active" data-speed="1">1×</button>
-            <button class="speed-btn" data-speed="2">2×</button>
-            <button class="speed-btn" data-speed="4">4×</button>
-            <button class="speed-btn" data-speed="8">8×</button>
-            <button class="speed-btn" data-speed="16">16×</button>
-          </div>
-        </div>
-        <label class="toggle-label">
-          <input type="checkbox" id="toggle-trails" checked />
-          <span class="toggle-track"></span>
-          <span>Trails</span>
-        </label>
-        <label class="toggle-label">
-          <input type="checkbox" id="toggle-labels" checked />
-          <span class="toggle-track"></span>
-          <span>Labels</span>
-        </label>
-      </div>
-
-    </footer>
+      <div class="tl-events" id="tl-events"></div>
+    </div>
 
   </main>
 

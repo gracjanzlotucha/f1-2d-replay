@@ -145,6 +145,7 @@ async function init() {
   setupZoomPan();
   bindControls();
   buildLapMarkers();
+  buildEventMarkers();
   renderStandings();
   renderRaceInsights();
   renderEvents(1);
@@ -312,7 +313,7 @@ function setupDerivedData() {
   // ── Init trails ─────────────────────────────────────────────────────────
   for (const num in G.drivers) G.trails[num] = [];
 
-  document.getElementById('ctrl-time-total').textContent = fmtRaceTime(G.maxT);
+  // Total time is shown in the player-time element via updateTimelineUI()
 }
 
 function computeTrackBounds() {
@@ -1372,47 +1373,70 @@ function bindControls() {
   document.getElementById('btn-prev-lap').addEventListener('click', () => jumpLap(-1));
   document.getElementById('btn-next-lap').addEventListener('click', () => jumpLap(+1));
 
-  // Timeline scrubber
-  const slider = document.getElementById('timeline');
-  slider.addEventListener('input', () => {
-    G.currentT = (slider.value / 1000) * G.maxT;
-    G.trails = {};  // reset trails on manual seek
-    for (const num in G.drivers) G.trails[num] = [];
-  });
+  // Timeline click/drag
+  const tlTrack = document.getElementById('tl-track');
+  let tlDragging = false;
 
-  // Speed buttons
-  document.querySelectorAll('.speed-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      G.speed = parseFloat(btn.dataset.speed);
-      document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('speed-active'));
-      btn.classList.add('speed-active');
+  function tlSeekFromEvent(e) {
+    const rect = tlTrack.getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    seekToT(frac * G.maxT);
+  }
+
+  tlTrack.addEventListener('mousedown', (e) => {
+    tlDragging = true;
+    tlSeekFromEvent(e);
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (tlDragging) tlSeekFromEvent(e);
+  });
+  document.addEventListener('mouseup', () => { tlDragging = false; });
+
+  // Touch support for timeline
+  tlTrack.addEventListener('touchstart', (e) => {
+    tlDragging = true;
+    tlSeekFromEvent(e.touches[0]);
+    e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('touchmove', (e) => {
+    if (tlDragging) tlSeekFromEvent(e.touches[0]);
+  });
+  document.addEventListener('touchend', () => { tlDragging = false; });
+
+  // Speed segmented control
+  const speedContainer = document.getElementById('player-speed');
+  speedContainer.querySelectorAll('.seg-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      speedContainer.querySelectorAll('.seg-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      G.speed = parseFloat(tab.dataset.speed);
+      moveSegIndicator(tab);
     });
   });
-
-  // Toggles
-  document.getElementById('toggle-trails').addEventListener('change', e => {
-    G.showTrails = e.target.checked;
-  });
-  document.getElementById('toggle-labels').addEventListener('change', e => {
-    G.showLabels = e.target.checked;
-  });
+  // Init speed indicator
+  const activeSpeedTab = speedContainer.querySelector('.seg-tab.active');
+  if (activeSpeedTab) requestAnimationFrame(() => moveSegIndicator(activeSpeedTab));
 
   // Right sidebar tab switcher (Insights / Events / Track)
-  document.querySelectorAll('.seg-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.seg-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      moveSegIndicator(tab);
-      const which = tab.dataset.tab;
-      document.getElementById('race-insights-content').classList.toggle('hidden', which !== 'insights');
-      document.getElementById('events-content').classList.toggle('hidden', which !== 'events');
-      document.getElementById('track-content').classList.toggle('hidden', which !== 'track');
+  const panelTabBar = document.querySelector('.panel-tab-bar');
+  if (panelTabBar) {
+    panelTabBar.querySelectorAll('.seg-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        panelTabBar.querySelectorAll('.seg-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        moveSegIndicator(tab);
+        const which = tab.dataset.tab;
+        document.getElementById('race-insights-content').classList.toggle('hidden', which !== 'insights');
+        document.getElementById('events-content').classList.toggle('hidden', which !== 'events');
+        document.getElementById('track-content').classList.toggle('hidden', which !== 'track');
+      });
     });
-  });
 
-  // Initialize segmented control indicator
-  const activeSegTab = document.querySelector('.seg-tab.active');
-  if (activeSegTab) moveSegIndicator(activeSegTab);
+    // Initialize sidebar segmented control indicator
+    const activeSegTab = panelTabBar.querySelector('.seg-tab.active');
+    if (activeSegTab) requestAnimationFrame(() => moveSegIndicator(activeSegTab));
+  }
 
   // Standings row click → follow driver on track
   document.getElementById('standings-list').addEventListener('click', (e) => {
@@ -1532,7 +1556,9 @@ function togglePlay() {
 }
 
 function updatePlayButton() {
-  document.getElementById('btn-play').textContent = G.playing ? '⏸' : '▶';
+  const btn = document.getElementById('btn-play');
+  btn.querySelector('.player-icon-play').classList.toggle('hidden', G.playing);
+  btn.querySelector('.player-icon-pause').classList.toggle('hidden', !G.playing);
 }
 
 function seekToT(t) {
@@ -1548,23 +1574,78 @@ function jumpLap(delta) {
 }
 
 function updateTimelineUI() {
-  const frac = G.maxT > 0 ? G.currentT / G.maxT : 0;
-  document.getElementById('timeline').value = Math.round(frac * 1000);
-  document.getElementById('ctrl-time-cur').textContent  = fmtRaceTime(G.currentT);
-  document.getElementById('hdr-race-time').textContent  = fmtRaceTime(G.currentT);
+  const pct = G.maxT > 0 ? (G.currentT / G.maxT) * 100 : 0;
+  document.getElementById('tl-progress').style.width = pct + '%';
+  document.getElementById('player-time').textContent = fmtRaceTime(G.currentT) + ' / ' + fmtRaceTime(G.maxT);
+  document.getElementById('hdr-race-time').textContent = fmtRaceTime(G.currentT);
 }
 
 function buildLapMarkers() {
-  const container = document.getElementById('timeline-lap-markers');
+  const container = document.getElementById('tl-laps');
   container.innerHTML = '';
   for (const { lap, t } of G.lapStartTimes) {
     if (lap === 1) continue;
     const frac = G.maxT > 0 ? t / G.maxT : 0;
     const marker = document.createElement('div');
-    marker.className = 'lap-marker';
+    marker.className = 'tl-lap-marker';
     marker.style.left = (frac * 100) + '%';
-    marker.title = `Lap ${lap}`;
     container.appendChild(marker);
+  }
+}
+
+function buildEventMarkers() {
+  const container = document.getElementById('tl-events');
+  container.innerHTML = '';
+
+  // Gather dominant track_status per lap
+  const lapStatus = {};
+  for (const lap of G.laps) {
+    const ts = String(lap.track_status || '');
+    const ln = lap.lap;
+    if (!ln || ts === '1') continue;
+    // Classify: SC if any digit is 4, VSC if any digit is 6 or 7, Yellow if any digit is 2
+    const hasSC = ts.includes('4');
+    const hasVSC = ts.includes('6') || ts.includes('7');
+    const hasYellow = ts.includes('2');
+    if (hasSC) lapStatus[ln] = lapStatus[ln] || 'sc';
+    else if (hasVSC && !lapStatus[ln]) lapStatus[ln] = 'vsc';
+    else if (hasYellow && !lapStatus[ln]) lapStatus[ln] = 'yellow';
+  }
+
+  // Group consecutive laps with same status into ranges
+  const ranges = [];
+  let current = null;
+  for (const entry of G.lapStartTimes) {
+    const status = lapStatus[entry.lap];
+    if (status) {
+      if (current && current.status === status && entry.lap === current.endLap + 1) {
+        current.endLap = entry.lap;
+      } else {
+        if (current) ranges.push(current);
+        current = { status, startLap: entry.lap, endLap: entry.lap, startT: entry.t };
+      }
+    } else {
+      if (current) { ranges.push(current); current = null; }
+    }
+  }
+  if (current) ranges.push(current);
+
+  // Render
+  for (const range of ranges) {
+    // End time = start of next lap after range, or maxT
+    const nextLap = G.lapStartTimes.find(e => e.lap === range.endLap + 1);
+    const endT = nextLap ? nextLap.t : G.maxT;
+    const leftPct = (range.startT / G.maxT) * 100;
+    const widthPct = ((endT - range.startT) / G.maxT) * 100;
+
+    const el = document.createElement('div');
+    el.className = 'tl-event';
+    if (range.status === 'sc') el.classList.add('tl-event-sc');
+    else if (range.status === 'vsc') el.classList.add('tl-event-red');
+    else el.classList.add('tl-event-sc'); // yellow → same yellow stripe as SC
+    el.style.left = leftPct + '%';
+    el.style.width = widthPct + '%';
+    container.appendChild(el);
   }
 }
 

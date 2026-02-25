@@ -1378,6 +1378,18 @@ function bindControls() {
 
   // Mobile tab switcher
   bindMobileTabs();
+
+  // Header: Grand Prix dropdown
+  bindGpDropdown();
+
+  // Header: Share button
+  document.getElementById('btn-share').addEventListener('click', () => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      showShareToast('Link copied to clipboard');
+    }).catch(() => {
+      showShareToast('Could not copy link');
+    });
+  });
 }
 
 function bindMobileTabs() {
@@ -1404,6 +1416,44 @@ function bindMobileTabs() {
   tabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab.dataset.panel)));
 
   activateTab('standings'); // default
+}
+
+function bindGpDropdown() {
+  const select = document.getElementById('race-select');
+  const dropdown = document.getElementById('gp-dropdown');
+
+  select.addEventListener('click', (e) => {
+    if (e.target.closest('.gp-dropdown')) return;
+    select.classList.toggle('open');
+    dropdown.classList.toggle('hidden');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!select.contains(e.target)) {
+      select.classList.remove('open');
+      dropdown.classList.add('hidden');
+    }
+  });
+
+  dropdown.querySelectorAll('.gp-dropdown-item').forEach(item => {
+    item.addEventListener('click', () => {
+      // Only British GP is available — close dropdown without navigating
+      select.classList.remove('open');
+      dropdown.classList.add('hidden');
+    });
+  });
+}
+
+function showShareToast(msg) {
+  let toast = document.querySelector('.share-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.className = 'share-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
 }
 
 function togglePlay() {

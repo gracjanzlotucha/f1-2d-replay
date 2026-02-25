@@ -29,7 +29,12 @@
       "Bash(node --version:*)",
       "Bash(git checkout:*)",
       "WebFetch(domain:docs.fastf1.dev)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(claude mcp list)",
+      "mcp__figma-desktop__get_design_context",
+      "mcp__figma-desktop__get_screenshot",
+      "mcp__figma-desktop__get_metadata"
     ]
   }
 }

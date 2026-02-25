@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -33,36 +34,74 @@
 
   <!-- HEADER -->
   <header class="header">
-    <div class="header-left">
-      <div class="f1-badge">
-        <svg width="32" height="28" viewBox="0 0 32 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.3067 3.63262C16.9522 5.5664 15.0771 7.11272 13.118 7.08724L12.904 8.25529C14.8629 8.28128 16.1636 9.86942 15.8095 11.8031L16.9918 11.8186C17.3464 9.88484 19.2223 8.33836 21.1815 8.36403L21.3956 7.19599C19.4363 7.17018 18.1348 5.58206 18.4891 3.64815L19.1308 0.145953L29.0355 0.27607C30.9949 0.301823 32.2962 1.89083 31.9418 3.82488L30.4446 11.9954L30.4006 12.1819C30.1376 13.1005 29.2186 13.8082 28.2617 13.7957L26.858 13.7772L26.6441 14.9443L28.1223 14.9637C29.0407 14.976 29.6696 15.675 29.5985 16.5591L29.5755 16.7381L28.1451 24.5441C27.7907 26.4781 25.9146 28.0254 23.9552 27.9997L14.0505 27.8696L14.6923 24.3674C15.0469 22.4335 16.9227 20.887 18.882 20.9128L19.096 19.7447C17.1368 19.719 15.8354 18.1307 16.1895 16.1969L15.0072 16.1813C14.6526 18.1152 12.7768 19.6617 10.8175 19.636L10.6035 20.804C12.5627 20.8297 13.8642 22.4179 13.5099 24.3518L12.8682 27.854L2.9645 27.7239C1.0051 27.6982 -0.296229 26.1092 0.0581828 24.1751L1.46186 16.5152L1.50345 16.3364C1.75595 15.4545 2.63819 14.7753 3.55678 14.7874L5.03499 14.8068L5.24885 13.6397L3.77065 13.6203C2.79101 13.6074 2.1404 12.8128 2.31749 11.8459L3.85494 3.4559C4.20935 1.52185 6.0854 -0.025424 8.04479 0.000316565L17.9485 0.130421L17.3067 3.63262Z" fill="#BFFF4A"/>
-        </svg>
-      </div>
-      <div class="race-info">
-        <span class="race-name">British Grand Prix</span>
-        <span class="race-circuit">Silverstone Circuit · 2025</span>
+    <div class="header-logo-wrap">
+      <svg width="32" height="28" viewBox="0 0 32 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.3067 3.63262C16.9522 5.5664 15.0771 7.11272 13.118 7.08724L12.904 8.25529C14.8629 8.28128 16.1636 9.86942 15.8095 11.8031L16.9918 11.8186C17.3464 9.88484 19.2223 8.33836 21.1815 8.36403L21.3956 7.19599C19.4363 7.17018 18.1348 5.58206 18.4891 3.64815L19.1308 0.145953L29.0355 0.27607C30.9949 0.301823 32.2962 1.89083 31.9418 3.82488L30.4446 11.9954L30.4006 12.1819C30.1376 13.1005 29.2186 13.8082 28.2617 13.7957L26.858 13.7772L26.6441 14.9443L28.1223 14.9637C29.0407 14.976 29.6696 15.675 29.5985 16.5591L29.5755 16.7381L28.1451 24.5441C27.7907 26.4781 25.9146 28.0254 23.9552 27.9997L14.0505 27.8696L14.6923 24.3674C15.0469 22.4335 16.9227 20.887 18.882 20.9128L19.096 19.7447C17.1368 19.719 15.8354 18.1307 16.1895 16.1969L15.0072 16.1813C14.6526 18.1152 12.7768 19.6617 10.8175 19.636L10.6035 20.804C12.5627 20.8297 13.8642 22.4179 13.5099 24.3518L12.8682 27.854L2.9645 27.7239C1.0051 27.6982 -0.296229 26.1092 0.0581828 24.1751L1.46186 16.5152L1.50345 16.3364C1.75595 15.4545 2.63819 14.7753 3.55678 14.7874L5.03499 14.8068L5.24885 13.6397L3.77065 13.6203C2.79101 13.6074 2.1404 12.8128 2.31749 11.8459L3.85494 3.4559C4.20935 1.52185 6.0854 -0.025424 8.04479 0.000316565L17.9485 0.130421L17.3067 3.63262Z" fill="#BFFF4A"/>
+      </svg>
+    </div>
+    <div class="header-content">
+      <div class="header-inner">
+        <div class="race-select" id="race-select">
+          <span class="race-select-label">British Grand Prix 2025</span>
+          <svg class="race-select-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6.5 9L12 14.5L17.5 9" stroke="#eaecf0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <!-- Grand Prix dropdown -->
+          <div class="gp-dropdown hidden" id="gp-dropdown">
+            <div class="gp-dropdown-title">2025 SEASON</div>
+            <button class="gp-dropdown-item" data-gp="australian">Australian Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="chinese">Chinese Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="japanese">Japanese Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="bahrain">Bahrain Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="saudi-arabian">Saudi Arabian Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="miami">Miami Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="emilia-romagna">Emilia Romagna Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="monaco">Monaco Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="spanish">Spanish Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="canadian">Canadian Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="austrian">Austrian Grand Prix</button>
+            <button class="gp-dropdown-item active" data-gp="british">British Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="belgian">Belgian Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="hungarian">Hungarian Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="dutch">Dutch Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="italian">Italian Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="azerbaijan">Azerbaijan Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="singapore">Singapore Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="united-states">United States Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="mexico-city">Mexico City Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="sao-paulo">S&#227;o Paulo Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="las-vegas">Las Vegas Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="qatar">Qatar Grand Prix</button>
+            <button class="gp-dropdown-item" data-gp="abu-dhabi">Abu Dhabi Grand Prix</button>
+          </div>
+        </div>
+        <div class="header-buttons">
+          <button class="hdr-btn" id="btn-share">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6.66667 8.66667C6.95297 9.04942 7.31825 9.36612 7.73771 9.59529C8.15717 9.82446 8.62098 9.96074 9.09778 9.99489C9.57457 10.029 10.0531 9.96024 10.5009 9.79319C10.9487 9.62613 11.3554 9.36471 11.6933 9.02667L13.6933 7.02667C14.3005 6.39799 14.6365 5.55598 14.6289 4.68199C14.6213 3.808 14.2708 2.97196 13.6527 2.35394C13.0347 1.73591 12.1987 1.38535 11.3247 1.37775C10.4507 1.37016 9.60869 1.70614 8.98 2.31333L7.83333 3.45333" stroke="#eaecf0" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9.33334 7.33333C9.04704 6.95058 8.68176 6.63388 8.2623 6.40471C7.84284 6.17554 7.37903 6.03926 6.90223 6.00511C6.42544 5.97097 5.94692 6.03976 5.49911 6.20681C5.0513 6.37387 4.6446 6.6353 4.30668 6.97333L2.30668 8.97333C1.69948 9.60201 1.36351 10.444 1.37111 11.318C1.3787 12.192 1.72926 13.028 2.34729 13.6461C2.96531 14.2641 3.80135 14.6147 4.67534 14.6222C5.54933 14.6298 6.39135 14.2939 7.02001 13.6867L8.16001 12.5467" stroke="#eaecf0" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Share</span>
+          </button>
+          <button class="hdr-btn" id="btn-settings">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 10C9.10457 10 10 9.10457 10 8C10 6.89543 9.10457 6 8 6C6.89543 6 6 6.89543 6 8C6 9.10457 6.89543 10 8 10Z" stroke="#eaecf0" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12.9333 10C12.8445 10.2012 12.818 10.4236 12.8573 10.6393C12.8965 10.855 12.9996 11.0537 13.1533 11.2133L13.1933 11.2533C13.3174 11.3772 13.4159 11.5242 13.4833 11.6856C13.5507 11.847 13.5855 12.0197 13.5858 12.1942C13.586 12.3687 13.5516 12.5415 13.4846 12.7031C13.4176 12.8647 13.3194 13.0119 13.1956 13.1362C13.0717 13.2604 12.9248 13.359 12.7634 13.4264C12.602 13.4938 12.4293 13.5287 12.2548 13.529C12.0803 13.5292 11.9075 13.4948 11.7459 13.4278C11.5843 13.3609 11.4371 13.2627 11.3133 13.1389L11.2733 13.0989C11.1138 12.9452 10.915 12.8421 10.6993 12.8028C10.4836 12.7636 10.2612 12.7901 10.06 12.8789C9.86287 12.9637 9.69508 13.1047 9.57747 13.2841C9.45986 13.4634 9.39758 13.6731 9.39833 13.8878V14.0C9.39833 14.3536 9.25787 14.6928 9.0078 14.9428C8.75775 15.1929 8.4186 15.3333 8.065 15.3333C7.7114 15.3333 7.37225 15.1929 7.1222 14.9428C6.87215 14.6928 6.73167 14.3536 6.73167 14V13.9445C6.72574 13.7237 6.65374 13.5101 6.52478 13.3313C6.39583 13.1525 6.21598 13.0166 6.00833 12.9411C5.80717 12.8524 5.58477 12.8259 5.36907 12.8651C5.15337 12.9044 4.95458 13.0074 4.795 13.1611L4.755 13.2011C4.63117 13.325 4.48404 13.4235 4.32244 13.491C4.16083 13.5584 3.98804 13.5933 3.8135 13.5936C3.63897 13.5938 3.46609 13.5594 3.30433 13.4924C3.14257 13.4254 2.99521 13.3273 2.87111 13.2034C2.74701 13.0795 2.6487 12.9323 2.58143 12.7707C2.51415 12.609 2.47945 12.4361 2.47962 12.2616C2.47979 12.087 2.51483 11.9142 2.58243 11.7527C2.65002 11.5912 2.74863 11.4443 2.87278 11.3205L2.91278 11.2805C3.06648 11.121 3.16957 10.9222 3.20883 10.7065C3.24808 10.4908 3.22157 10.2684 3.13278 10.0672C3.04796 9.87002 2.90698 9.70224 2.72762 9.58463C2.54826 9.46702 2.33863 9.40473 2.12389 9.40549H2C1.6464 9.40549 1.30725 9.26501 1.0572 9.01496C0.807155 8.76491 0.666672 8.42576 0.666672 8.07216C0.666672 7.71856 0.807155 7.37941 1.0572 7.12936C1.30725 6.87931 1.6464 6.73883 2 6.73883H2.05556C2.27637 6.73289 2.49005 6.66089 2.66878 6.53194C2.84752 6.40298 2.98345 6.22313 3.05889 6.01549C3.14768 5.81433 3.17418 5.59193 3.13493 5.37623C3.09568 5.16053 2.99258 4.96173 2.83889 4.80216L2.79889 4.76216C2.67474 4.63832 2.57613 4.49119 2.50853 4.32959C2.44093 4.16798 2.4059 3.99511 2.40573 3.82057C2.40556 3.64603 2.44027 3.47307 2.50753 3.31131C2.5748 3.14955 2.67312 3.0022 2.79722 2.87809C2.92132 2.75399 3.06868 2.65568 3.23044 2.58841C3.3922 2.52114 3.56516 2.48643 3.73969 2.4866C3.91423 2.48677 4.0871 2.52181 4.24871 2.58941C4.41032 2.65701 4.55744 2.75561 4.68128 2.87977L4.72128 2.91977C4.88085 3.07347 5.07965 3.17657 5.29535 3.21583C5.51105 3.25508 5.73345 3.22857 5.93461 3.13977H6.00055C6.19775 3.05496 6.36554 2.91398 6.48315 2.73462C6.60076 2.55526 6.66305 2.34563 6.66228 2.13089V2.00000C6.66228 1.6464 6.80276 1.30726 7.05281 1.05721C7.30287 0.807153 7.64202 0.666672 7.99562 0.666672C8.34922 0.666672 8.68837 0.807153 8.93842 1.05721C9.18847 1.30726 9.32895 1.6464 9.32895 2.00000V2.05556C9.32972 2.2703 9.392 2.47993 9.50961 2.65929C9.62722 2.83865 9.79501 2.97963 9.99222 3.06444C10.1934 3.15324 10.4158 3.17975 10.6315 3.14049C10.8472 3.10124 11.046 2.99814 11.2056 2.84444L11.2456 2.80444C11.3694 2.68029 11.5165 2.58168 11.6781 2.51408C11.8397 2.44648 12.0126 2.41145 12.1871 2.41128C12.3617 2.41111 12.5346 2.44581 12.6963 2.51308C12.8581 2.58035 13.0054 2.67867 13.1296 2.80277C13.2537 2.92688 13.352 3.07423 13.4192 3.23599C13.4865 3.39775 13.5212 3.57072 13.5211 3.74525C13.5209 3.91979 13.4858 4.09267 13.4182 4.25427C13.3506 4.41588 13.252 4.56301 13.1278 4.68684L13.0878 4.72684C12.9341 4.88642 12.8311 5.08522 12.7918 5.30092C12.7526 5.51662 12.779 5.73902 12.8678 5.94017V6.00611C12.9526 6.20331 13.0936 6.3711 13.273 6.48871C13.4523 6.60632 13.662 6.66861 13.8767 6.66784H14C14.3536 6.66784 14.6928 6.80832 14.9428 7.05837C15.1929 7.30842 15.3333 7.64757 15.3333 8.00117C15.3333 8.35477 15.1929 8.69392 14.9428 8.94397C14.6928 9.19402 14.3536 9.3345 14 9.3345H13.9445C13.7297 9.33527 13.5201 9.39755 13.3407 9.51516C13.1614 9.63278 13.0204 9.80056 12.9356 9.99777L12.9333 10Z" stroke="#eaecf0" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Settings</span>
+          </button>
+        </div>
       </div>
     </div>
-    <div class="header-center">
-      <div class="lap-counter">
-        <span class="lap-label">LAP</span>
-        <span id="hdr-lap-cur" class="lap-num">—</span>
-        <span class="lap-sep">/</span>
-        <span id="hdr-lap-total" class="lap-total">—</span>
-      </div>
+    <!-- Hidden elements for JS compatibility -->
+    <div class="hidden">
+      <span id="hdr-lap-cur">—</span>
+      <span id="hdr-lap-total">—</span>
       <div id="hdr-status-badge" class="status-badge status-green">RACE</div>
-    </div>
-    <div class="header-right">
-      <div class="weather-box" id="weather-box">
-        <span class="weather-item" id="weather-air">— °C</span>
-        <span class="weather-dot">·</span>
-        <span class="weather-item" id="weather-track">— °C Track</span>
-      </div>
-      <div class="race-time-box">
-        <span class="race-time-label">RACE TIME</span>
-        <span id="hdr-race-time" class="race-time-val">0:00:00</span>
-      </div>
+      <span id="weather-air">— °C</span>
+      <span id="weather-track">— °C Track</span>
+      <span id="hdr-race-time">0:00:00</span>
+      <div id="weather-box"></div>
     </div>
   </header>
 

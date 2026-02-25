@@ -278,7 +278,7 @@ html, body {
 
 .driver-row {
   display: grid;
-  grid-template-columns: 36px 1fr 44px auto 44px;
+  grid-template-columns: 36px 1fr 44px 68px 44px;
   align-items: center;
   background: #16171d;
   cursor: pointer;
@@ -330,7 +330,7 @@ html, body {
   font-family: 'Clash Display', sans-serif;
   font-size: 14px; font-weight: 600;
   color: #eaecf0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Team logo column */

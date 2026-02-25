@@ -23,7 +23,7 @@
   --radius-lg:   14px;
   --header-h:    60px;
   --footer-h:    76px;
-  --side-w:      260px;
+  --side-w:      280px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

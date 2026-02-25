@@ -357,6 +357,13 @@ html, body {
   padding: 10px 12px;
   white-space: nowrap;
 }
+.dr-gap:has(.dr-status-badge),
+.dr-gap:has(.dr-gap-label) {
+  text-align: center;
+}
+.dr-gap-label {
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+}
 
 /* DNF/DNS badges in gap column */
 .dr-status-badge {
@@ -790,7 +797,19 @@ html, body {
     border-top: 1px solid #0d0e12;
     display: none;
     height: auto;
+    width: 100%;
   }
+
+  .driver-row {
+    grid-template-columns: 28px 1fr 36px 60px 36px;
+  }
+  .dr-pos { padding: 8px 4px; font-size: 13px; }
+  .dr-driver { padding: 8px; gap: 6px; }
+  .dr-gap { padding: 8px; font-size: 11px; }
+  .dr-team-logo { padding: 8px; }
+  .dr-team-logo img { width: 18px; height: 18px; }
+  .dr-tyre { padding: 8px; }
+  .dr-tyre img { width: 18px; height: 18px; }
   /* .mobile-active overrides display:none above AND the 900px rule */
   .standings-panel.mobile-active,
   .insights-panel.mobile-active { display: flex; }

@@ -1132,14 +1132,14 @@ function renderStandings() {
     } else if (ds.pitStart && G.currentLap <= 1) {
       gapHtml = statusHtml;
     } else if (idx === 0) {
-      gapHtml = 'Leader';
+      gapHtml = '<span class="dr-gap-label">Leader</span>';
     } else {
       const myTime = meta.lap_time;
       if (leaderLapTime && myTime) {
         const delta = myTime - leaderLapTime;
         gapHtml = delta > 0 ? `+${delta.toFixed(3)}` : '+0.000';
       } else {
-        gapHtml = '—';
+        gapHtml = '<span class="dr-gap-label">—</span>';
       }
     }
 

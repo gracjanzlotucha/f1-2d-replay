@@ -1243,6 +1243,8 @@ const RACE_INSIGHTS = [
 
 const WEATHER_SVG = '<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.917 1.667c-2.992 0-5.417 2.425-5.417 5.416 0 2.992 2.425 5.417 5.417 5.417h5.416c2.301 0 4.167-1.866 4.167-4.167s-1.866-4.166-4.167-4.166c-.19 0-.378.012-.562.037a.356.356 0 01-.355-.137C11.446 2.621 9.793 1.667 7.917 1.667z" fill="#47C8FF"/><path d="M6.162 15.373a.833.833 0 00-1.49-.746l-.834 1.667a.833.833 0 001.49.746l.834-1.667zM10.329 15.373a.833.833 0 00-1.49-.746l-.834 1.667a.833.833 0 001.49.746l.834-1.667zM14.495 15.373a.833.833 0 00-1.49-.746l-.834 1.667a.833.833 0 001.49.746l.834-1.667z" fill="#47C8FF"/></svg>';
 
+const PLAY_SVG = '<svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.622 1.184C3.707.592 2.5 1.249 2.5 2.338v7.324c0 1.09 1.207 1.746 2.122 1.154l5.66-3.662c.837-.542.837-1.767 0-2.308L4.622 1.184z" fill="currentColor"/></svg>';
+
 function renderRaceInsights() {
   const container = document.getElementById('race-insights-content');
   let html = '';
@@ -1282,13 +1284,15 @@ function renderRaceInsights() {
       <div class="race-insight-card" data-t="${ins.t}">
         <div class="ric-header">
           <div class="ric-drivers${overlapClass}">${itemsHtml}</div>
-          <span class="ric-lap">Lap ${ins.lap}</span>
+          <span class="ric-lap">
+            <span class="ric-lap-text">Lap ${ins.lap}</span>
+            <span class="ric-lap-play">${PLAY_SVG} Play</span>
+          </span>
         </div>
         <div class="ric-details">
           <div class="ric-title">${ins.title}</div>
           <div class="ric-body">${ins.body}</div>
         </div>
-        <div class="ric-seek-hint">▶ Jump to this moment</div>
       </div>
     `;
   }

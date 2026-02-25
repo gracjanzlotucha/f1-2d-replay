@@ -798,18 +798,15 @@ html, body {
     display: none;
     height: auto;
     width: 100%;
+    overflow-x: hidden;
   }
 
   .driver-row {
     grid-template-columns: 28px 1fr 36px 60px 36px;
   }
+  .dr-driver { min-width: 0; }
   .dr-pos { padding: 8px 4px; font-size: 13px; }
-  .dr-driver { padding: 8px; gap: 6px; }
   .dr-gap { padding: 8px; font-size: 11px; }
-  .dr-team-logo { padding: 8px; }
-  .dr-team-logo img { width: 18px; height: 18px; }
-  .dr-tyre { padding: 8px; }
-  .dr-tyre img { width: 18px; height: 18px; }
   /* .mobile-active overrides display:none above AND the 900px rule */
   .standings-panel.mobile-active,
   .insights-panel.mobile-active { display: flex; }

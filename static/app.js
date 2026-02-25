@@ -1240,7 +1240,7 @@ const RACE_INSIGHTS = [
   },
 ];
 
-const WEATHER_SVG = '<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.5 11a3.5 3.5 0 00-3.08-3.47 5 5 0 00-9.17 1.72A3 3 0 004 15.5h11a3.5 3.5 0 00.5-4.5z" stroke="#47C8FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 17.5l.5-1.5M10 17.5l.5-1.5M13 17.5l.5-1.5" stroke="#47C8FF" stroke-width="1.5" stroke-linecap="round"/></svg>';
+const WEATHER_SVG = '<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.917 1.667c-2.992 0-5.417 2.425-5.417 5.416 0 2.992 2.425 5.417 5.417 5.417h5.416c2.301 0 4.167-1.866 4.167-4.167s-1.866-4.166-4.167-4.166c-.19 0-.378.012-.562.037a.356.356 0 01-.355-.137C11.446 2.621 9.793 1.667 7.917 1.667z" fill="#47C8FF"/><path d="M6.162 15.373a.833.833 0 00-1.49-.746l-.834 1.667a.833.833 0 001.49.746l.834-1.667zM10.329 15.373a.833.833 0 00-1.49-.746l-.834 1.667a.833.833 0 001.49.746l.834-1.667zM14.495 15.373a.833.833 0 00-1.49-.746l-.834 1.667a.833.833 0 001.49.746l.834-1.667z" fill="#47C8FF"/></svg>';
 
 function renderRaceInsights() {
   const container = document.getElementById('race-insights-content');

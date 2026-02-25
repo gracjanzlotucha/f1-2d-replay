@@ -881,7 +881,7 @@ html, body {
 
   /* Allow full-page scroll so panel content is never clipped */
   html, body { overflow-y: auto; overflow-x: hidden; }
-  #app { height: auto; min-height: 100dvh; overflow: visible; grid-template-rows: auto auto; }
+  #app { height: auto; min-height: 100dvh; overflow: visible; grid-template-rows: auto 1fr; }
 
   /* Compact header */
   .header { height: auto; }

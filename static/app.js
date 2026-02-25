@@ -1512,9 +1512,9 @@ function bindMobileTabs() {
 
   tabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab)));
 
-  // Init indicator on default active tab
+  // Init: activate the default tab so the panel gets mobile-active class
   const activeTab = mobileSeg.querySelector('.seg-tab.active');
-  if (activeTab) requestAnimationFrame(() => moveSegIndicator(activeTab));
+  if (activeTab) requestAnimationFrame(() => activateTab(activeTab));
 }
 
 function bindGpDropdown() {

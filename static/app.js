@@ -1120,9 +1120,16 @@ function renderStandings() {
       }
     }
 
+    // Pit lane start (show as DNS-style badge on lap 1)
+    if (ds.pitStart && G.currentLap <= 1) {
+      statusHtml = '<span class="dr-status-badge dns">PIT</span>';
+    }
+
     // Gap to leader
     let gapHtml = '';
     if (isRetired) {
+      gapHtml = statusHtml;
+    } else if (ds.pitStart && G.currentLap <= 1) {
       gapHtml = statusHtml;
     } else if (idx === 0) {
       gapHtml = 'Leader';

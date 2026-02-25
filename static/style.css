@@ -583,14 +583,18 @@ html, body {
 .ric-lap-icon svg {
   width: 12px; height: 12px; flex-shrink: 0;
 }
-.ric-lap-labels {
-  display: grid;
+.ric-lap-text, .ric-lap-play {
+  display: inline-block;
+  overflow: hidden; white-space: nowrap;
 }
-.ric-lap-labels > span {
-  grid-area: 1 / 1;
-  transition: opacity .18s ease;
+.ric-lap-text {
+  max-width: 40px; opacity: 1;
+  transition: max-width .2s ease, opacity .15s ease;
 }
-.ric-lap-labels .ric-lap-play { opacity: 0; }
+.ric-lap-play {
+  max-width: 0; opacity: 0;
+  transition: max-width .2s ease, opacity .15s ease;
+}
 .race-insight-card:hover .ric-lap {
   background: #BFFF4A; color: #0d0e12;
   gap: 4px;
@@ -598,8 +602,12 @@ html, body {
 .race-insight-card:hover .ric-lap-icon {
   width: 12px; opacity: 1;
 }
-.race-insight-card:hover .ric-lap-labels .ric-lap-text { opacity: 0; }
-.race-insight-card:hover .ric-lap-labels .ric-lap-play { opacity: 1; }
+.race-insight-card:hover .ric-lap-text {
+  max-width: 0; opacity: 0;
+}
+.race-insight-card:hover .ric-lap-play {
+  max-width: 28px; opacity: 1;
+}
 .ric-details {
   display: flex; flex-direction: column; gap: 6px;
 }

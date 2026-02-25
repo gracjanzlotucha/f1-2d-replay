@@ -1286,10 +1286,8 @@ function renderRaceInsights() {
           <div class="ric-drivers${overlapClass}">${itemsHtml}</div>
           <span class="ric-lap">
             <span class="ric-lap-icon">${PLAY_SVG}</span>
-            <span class="ric-lap-labels">
-              <span class="ric-lap-text">Lap ${ins.lap}</span>
-              <span class="ric-lap-play">Play</span>
-            </span>
+            <span class="ric-lap-text">Lap ${ins.lap}</span>
+            <span class="ric-lap-play">Play</span>
           </span>
         </div>
         <div class="ric-details">

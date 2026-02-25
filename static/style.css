@@ -759,6 +759,7 @@ html, body {
 .timeline-bar {
   display: flex; flex-direction: column;
   height: 41px; flex-shrink: 0;
+  overflow: visible;
 }
 .tl-track {
   height: 24px;
@@ -786,37 +787,76 @@ html, body {
   height: 17px;
   background: #0d0e12;
   position: relative;
+  overflow: visible;
 }
 .tl-event {
   position: absolute; top: 0;
   height: 100%;
+  cursor: pointer;
 }
 .tl-event-sc {
-  background: repeating-linear-gradient(
-    -45deg,
-    rgba(253,199,0,.15),
-    rgba(253,199,0,.15) 2px,
-    transparent 2px,
-    transparent 5px
-  );
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(253,199,0,.45) 0px,
+      rgba(253,199,0,.45) 1.5px,
+      transparent 1.5px,
+      transparent 4px
+    ),
+    rgba(253,199,0,.1);
 }
-.tl-event-vsc {
-  background: repeating-linear-gradient(
-    -45deg,
-    rgba(253,199,0,.1),
-    rgba(253,199,0,.1) 2px,
-    transparent 2px,
-    transparent 5px
-  );
+.tl-event-yellow {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(253,199,0,.3) 0px,
+      rgba(253,199,0,.3) 1.5px,
+      transparent 1.5px,
+      transparent 4px
+    ),
+    rgba(253,199,0,.06);
 }
 .tl-event-red {
-  background: repeating-linear-gradient(
-    -45deg,
-    rgba(224,44,89,.15),
-    rgba(224,44,89,.15) 2px,
-    transparent 2px,
-    transparent 5px
-  );
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(224,44,89,.45) 0px,
+      rgba(224,44,89,.45) 1.5px,
+      transparent 1.5px,
+      transparent 4px
+    ),
+    rgba(224,44,89,.1);
+}
+/* Event tooltip */
+.tl-event-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px); left: 50%;
+  transform: translateX(-50%);
+  background: #16171d;
+  border: 1px solid #272a35;
+  border-radius: 8px;
+  padding: 6px 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+}
+.tl-event:hover .tl-event-tooltip {
+  opacity: 1;
+}
+.tl-event-tooltip-type {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 11px; font-weight: 600;
+  color: #eaecf0;
+  line-height: 14px;
+}
+.tl-event-tooltip-laps {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 10px; font-weight: 400;
+  color: #838aa5;
+  line-height: 14px;
 }
 
 /* ─── SCROLLBARS (global) ───────────────────────────────────────────────── */

@@ -1630,6 +1630,9 @@ function buildEventMarkers() {
   }
   if (current) ranges.push(current);
 
+  // Status labels for tooltips
+  const STATUS_LABELS = { sc: 'Safety Car', vsc: 'Virtual Safety Car', yellow: 'Yellow Flag' };
+
   // Render
   for (const range of ranges) {
     // End time = start of next lap after range, or maxT
@@ -1642,9 +1645,20 @@ function buildEventMarkers() {
     el.className = 'tl-event';
     if (range.status === 'sc') el.classList.add('tl-event-sc');
     else if (range.status === 'vsc') el.classList.add('tl-event-red');
-    else el.classList.add('tl-event-sc'); // yellow → same yellow stripe as SC
+    else el.classList.add('tl-event-yellow');
     el.style.left = leftPct + '%';
     el.style.width = widthPct + '%';
+
+    // Tooltip
+    const lapLabel = range.startLap === range.endLap
+      ? 'Lap ' + range.startLap
+      : 'Laps ' + range.startLap + '–' + range.endLap;
+    el.innerHTML =
+      '<div class="tl-event-tooltip">' +
+        '<div class="tl-event-tooltip-type">' + STATUS_LABELS[range.status] + '</div>' +
+        '<div class="tl-event-tooltip-laps">' + lapLabel + '</div>' +
+      '</div>';
+
     container.appendChild(el);
   }
 }

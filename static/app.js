@@ -1237,6 +1237,7 @@ const RACE_INSIGHTS = [
     lap: 2,
     t: 236,
     drivers: ['87'],
+    teamColor: '#27f4d2',
   },
 ];
 
@@ -1261,7 +1262,7 @@ function renderRaceInsights() {
       for (const num of ins.drivers) {
         const driver = G.drivers[num];
         if (!driver) continue;
-        const color = driver.color || '#555';
+        const color = ins.teamColor || driver.color || '#555';
         const photoSrc = `assets/drivers/${driver.abbr}.png`;
         itemsHtml += `<div class="ric-driver-photo" style="background-color:${color}"><img src="${photoSrc}" alt="${driver.abbr}" /></div>`;
         itemCount++;
@@ -1283,8 +1284,10 @@ function renderRaceInsights() {
           <div class="ric-drivers${overlapClass}">${itemsHtml}</div>
           <span class="ric-lap">Lap ${ins.lap}</span>
         </div>
-        <div class="ric-title">${ins.title}</div>
-        <div class="ric-body">${ins.body}</div>
+        <div class="ric-details">
+          <div class="ric-title">${ins.title}</div>
+          <div class="ric-body">${ins.body}</div>
+        </div>
         <div class="ric-seek-hint">▶ Jump to this moment</div>
       </div>
     `;

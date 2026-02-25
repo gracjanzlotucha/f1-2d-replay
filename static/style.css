@@ -245,7 +245,7 @@ html, body {
 }
 .insights-panel {
   border-right: none;
-  border-left: 1px solid #0d0e12;
+  border-left: 1px solid #272a35;
 }
 .panel-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -404,7 +404,7 @@ html, body {
 /* ─── TRACK SECTION ──────────────────────────────────────────────────────── */
 .track-section {
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg);
+  background: #0d0e12;
   overflow: hidden;
   position: relative;
 }
@@ -439,6 +439,7 @@ html, body {
   padding: 8px;
   flex-shrink: 0;
   background: #16171d;
+  border-bottom: 1px solid #0d0e12;
 }
 .seg-control {
   display: flex;
@@ -568,6 +569,9 @@ html, body {
   background: #272a35;
   padding: 4px 8px; border-radius: 9999px;
   flex-shrink: 0; white-space: nowrap;
+}
+.ric-details {
+  display: flex; flex-direction: column; gap: 6px;
 }
 .ric-title {
   font-family: 'Geist', 'Inter', sans-serif;
@@ -823,7 +827,7 @@ html, body {
     flex-shrink: 0;
     height: 58vw; min-height: 220px; max-height: 360px;
     position: sticky; top: 0; z-index: 11;
-    background: var(--bg);
+    background: #0d0e12;
   }
 
   /* Hide the nested desktop INSIGHTS/EVENTS tab bar — handled by mobile tabs */

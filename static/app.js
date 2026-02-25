@@ -1639,6 +1639,16 @@ function buildEventMarkers() {
   // Status labels for tooltips
   const STATUS_LABELS = { sc: 'Safety Car', vsc: 'Virtual Safety Car', yellow: 'Yellow Flag' };
 
+  // Shared tooltip element
+  let tooltip = document.getElementById('tl-event-tooltip');
+  if (!tooltip) {
+    tooltip = document.createElement('div');
+    tooltip.id = 'tl-event-tooltip';
+    tooltip.className = 'tl-event-tooltip';
+    tooltip.innerHTML = '<div class="tl-event-tooltip-type"></div><div class="tl-event-tooltip-laps"></div>';
+    document.body.appendChild(tooltip);
+  }
+
   // Render
   for (const range of ranges) {
     // End time = start of next lap after range, or maxT
@@ -1655,18 +1665,45 @@ function buildEventMarkers() {
     el.style.left = leftPct + '%';
     el.style.width = widthPct + '%';
 
-    // Tooltip
+    // Tooltip data
     const lapLabel = range.startLap === range.endLap
       ? 'Lap ' + range.startLap
       : 'Laps ' + range.startLap + '–' + range.endLap;
-    el.innerHTML =
-      '<div class="tl-event-tooltip">' +
-        '<div class="tl-event-tooltip-type">' + STATUS_LABELS[range.status] + '</div>' +
-        '<div class="tl-event-tooltip-laps">' + lapLabel + '</div>' +
-      '</div>';
+    el.dataset.eventType = STATUS_LABELS[range.status];
+    el.dataset.eventLaps = lapLabel;
+
+    el.addEventListener('mouseenter', () => {
+      tooltip.querySelector('.tl-event-tooltip-type').textContent = el.dataset.eventType;
+      tooltip.querySelector('.tl-event-tooltip-laps').textContent = el.dataset.eventLaps;
+      tooltip.classList.add('visible');
+      positionEventTooltip(el, tooltip);
+    });
+    el.addEventListener('mouseleave', () => {
+      tooltip.classList.remove('visible');
+    });
 
     container.appendChild(el);
   }
+}
+
+function positionEventTooltip(el, tooltip) {
+  const elRect = el.getBoundingClientRect();
+  // Measure tooltip
+  tooltip.style.left = '0px';
+  tooltip.style.top = '0px';
+  const tipW = tooltip.offsetWidth;
+  const tipH = tooltip.offsetHeight;
+  const vw = window.innerWidth;
+
+  // Center above the event element
+  let left = elRect.left + elRect.width / 2 - tipW / 2;
+  const top = elRect.top - tipH - 6;
+
+  // Clamp to viewport edges with 8px margin
+  left = Math.max(8, Math.min(left, vw - tipW - 8));
+
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = top + 'px';
 }
 
 function onCanvasHover(e) {

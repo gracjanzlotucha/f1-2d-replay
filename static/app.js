@@ -1158,7 +1158,7 @@ function renderStandings() {
         <div class="dr-color-bar" style="background:${teamColor}"></div>
       </div>
       <div class="dr-driver">
-        <div class="dr-photo" style="background-color:${teamColor}; background-image:url('${photoSrc}')"></div>
+        <div class="dr-photo" style="background-color:${teamColor}"><img src="${photoSrc}" alt="${driver.abbr}" /></div>
         <span class="dr-abbr">${driver.abbr}</span>
       </div>
       <div class="dr-team-logo">

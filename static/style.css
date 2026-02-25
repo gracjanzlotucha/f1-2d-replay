@@ -321,11 +321,13 @@ html, body {
   width: 24px; height: 24px;
   border-radius: 9999px;
   flex-shrink: 0;
-  background-size: cover;
-  background-position: center top;
   overflow: hidden;
-  image-rendering: auto;
-  transform: translateZ(0);
+}
+.dr-photo img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
 }
 .dr-abbr {
   font-family: 'Clash Display', sans-serif;

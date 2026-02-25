@@ -729,11 +729,11 @@ html, body {
 @media (max-width: 768px) {
 
   /* Allow full-page scroll so panel content is never clipped */
-  html, body { overflow-y: auto; }
+  html, body { overflow-y: auto; overflow-x: hidden; }
   #app { height: auto; min-height: 100dvh; overflow: visible; grid-template-rows: auto auto; }
 
   /* Compact header */
-  .header { height: auto; max-width: 100vw; }
+  .header { height: auto; }
   .header-logo-wrap { width: 48px; padding: 12px; }
   .header-logo-wrap svg { width: 24px; height: 21px; }
   .header-content { padding: 8px 12px; }
@@ -743,7 +743,7 @@ html, body {
   .hdr-btn { padding: 8px; border-radius: 8px; }
 
   /* Vertical flex layout — visual order: track → controls → tab-bar → panel */
-  .main-grid { display: flex; flex-direction: column; width: 100vw; }
+  .main-grid { display: flex; flex-direction: column; overflow: visible; }
 
   .track-section   { order: 1; }
   .controls-bar    { order: 2; }
@@ -802,7 +802,6 @@ html, body {
 
   .driver-row {
     grid-template-columns: 28px 1fr 36px 60px 36px;
-    max-width: 100vw;
   }
   .dr-pos { padding: 8px 4px; font-size: 13px; }
   .dr-driver { padding: 8px; gap: 6px; }

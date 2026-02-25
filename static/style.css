@@ -447,6 +447,18 @@ html, body {
   border-radius: 12px;
   padding: 4px;
   gap: 4px;
+  position: relative;
+}
+.seg-indicator {
+  position: absolute;
+  top: 4px;
+  height: calc(100% - 8px);
+  background: #272a35;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  transition: left .25s cubic-bezier(.4, 0, .2, 1), width .25s cubic-bezier(.4, 0, .2, 1);
+  z-index: 0;
+  pointer-events: none;
 }
 .seg-tab {
   flex: 1;
@@ -459,13 +471,13 @@ html, body {
   font-weight: 500;
   color: #838aa5;
   cursor: pointer;
-  transition: background .15s, color .15s, box-shadow .15s;
+  transition: color .15s;
+  position: relative;
+  z-index: 1;
 }
 .seg-tab:hover { color: #eaecf0; }
 .seg-tab.active {
-  background: #272a35;
   color: #eaecf0;
-  box-shadow: 0 1px 3px rgba(0,0,0,.3);
 }
 
 /* ─── INSIGHTS PANEL ─────────────────────────────────────────────────────── */
@@ -518,9 +530,37 @@ html, body {
   object-fit: cover; object-position: center top;
   display: block;
 }
+.ric-overlap {
+  padding-right: 8px;
+}
+.ric-overlap > * {
+  margin-right: -8px;
+  position: relative;
+}
+.ric-overlap > :first-child { z-index: 2; }
+.ric-overlap > :nth-child(n+2) { z-index: 1; }
+
 .ric-tyre {
-  width: 24px; height: 24px;
-  flex-shrink: 0; margin-left: 8px;
+  width: 32px; height: 32px;
+  border-radius: 9999px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.ric-tyre img {
+  width: 100%; height: 100%;
+  display: block;
+}
+
+.ric-weather-icon {
+  width: 32px; height: 32px;
+  border-radius: 9999px;
+  background: rgba(71, 200, 255, 0.15);
+  border: 2px solid #16171d;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ric-weather-icon svg {
+  width: 20px; height: 20px;
 }
 .ric-lap {
   font-family: 'Geist', 'Inter', sans-serif;

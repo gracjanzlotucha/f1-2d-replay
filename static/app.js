@@ -1200,7 +1200,6 @@ const RACE_INSIGHTS = [
     lap: 51,
     t: 5658,
     drivers: ['81'],
-    compound: 'MEDIUM',
   },
   {
     title: "Hulkenberg: P16 → P3 podium",
@@ -1223,6 +1222,7 @@ const RACE_INSIGHTS = [
     lap: 2,
     t: 128,
     drivers: [],
+    icon: 'weather',
   },
   {
     title: "Stroll's bold Soft gamble on lap 10",
@@ -1230,7 +1230,6 @@ const RACE_INSIGHTS = [
     lap: 10,
     t: 1173,
     drivers: ['18'],
-    compound: 'SOFT',
   },
   {
     title: "Antonelli's 4-stop nightmare",
@@ -1241,34 +1240,47 @@ const RACE_INSIGHTS = [
   },
 ];
 
+const WEATHER_SVG = '<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.5 11a3.5 3.5 0 00-3.08-3.47 5 5 0 00-9.17 1.72A3 3 0 004 15.5h11a3.5 3.5 0 00.5-4.5z" stroke="#47C8FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 17.5l.5-1.5M10 17.5l.5-1.5M13 17.5l.5-1.5" stroke="#47C8FF" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
 function renderRaceInsights() {
   const container = document.getElementById('race-insights-content');
   let html = '';
 
   for (const ins of RACE_INSIGHTS) {
-    // Build driver photos
-    let driversHtml = '';
+    let itemsHtml = '';
+    let itemCount = 0;
+
+    // Weather icon (for non-driver insights)
+    if (ins.icon === 'weather') {
+      itemsHtml += `<div class="ric-weather-icon">${WEATHER_SVG}</div>`;
+      itemCount++;
+    }
+
+    // Driver photos
     if (ins.drivers && ins.drivers.length > 0) {
       for (const num of ins.drivers) {
         const driver = G.drivers[num];
         if (!driver) continue;
         const color = driver.color || '#555';
         const photoSrc = `assets/drivers/${driver.abbr}.png`;
-        driversHtml += `<div class="ric-driver-photo" style="background-color:${color}"><img src="${photoSrc}" alt="${driver.abbr}" /></div>`;
+        itemsHtml += `<div class="ric-driver-photo" style="background-color:${color}"><img src="${photoSrc}" alt="${driver.abbr}" /></div>`;
+        itemCount++;
       }
     }
 
-    // Tyre icon if compound specified
-    let tyreHtml = '';
+    // Tyre compound icon (same size as driver photo, overlapping)
     if (ins.compound) {
       const tyreSvg = TYRE_SVG_MAP[ins.compound] || 'soft';
-      tyreHtml = `<img class="ric-tyre" src="assets/tyres/${tyreSvg}.svg" alt="${ins.compound}" />`;
+      itemsHtml += `<div class="ric-tyre"><img src="assets/tyres/${tyreSvg}.svg" alt="${ins.compound}" /></div>`;
+      itemCount++;
     }
+
+    const overlapClass = itemCount > 1 ? ' ric-overlap' : '';
 
     html += `
       <div class="race-insight-card" data-t="${ins.t}">
         <div class="ric-header">
-          <div class="ric-drivers">${driversHtml}${tyreHtml}</div>
+          <div class="ric-drivers${overlapClass}">${itemsHtml}</div>
           <span class="ric-lap">Lap ${ins.lap}</span>
         </div>
         <div class="ric-title">${ins.title}</div>
@@ -1383,12 +1395,17 @@ function bindControls() {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.seg-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
+      moveSegIndicator(tab);
       const which = tab.dataset.tab;
       document.getElementById('race-insights-content').classList.toggle('hidden', which !== 'insights');
       document.getElementById('events-content').classList.toggle('hidden', which !== 'events');
       document.getElementById('track-content').classList.toggle('hidden', which !== 'track');
     });
   });
+
+  // Initialize segmented control indicator
+  const activeSegTab = document.querySelector('.seg-tab.active');
+  if (activeSegTab) moveSegIndicator(activeSegTab);
 
   // Standings row click → follow driver on track
   document.getElementById('standings-list').addEventListener('click', (e) => {
@@ -1426,6 +1443,13 @@ function bindControls() {
       showShareToast('Could not copy link');
     });
   });
+}
+
+function moveSegIndicator(tab) {
+  const indicator = tab.closest('.seg-control').querySelector('.seg-indicator');
+  if (!indicator) return;
+  indicator.style.left = tab.offsetLeft + 'px';
+  indicator.style.width = tab.offsetWidth + 'px';
 }
 
 function bindMobileTabs() {

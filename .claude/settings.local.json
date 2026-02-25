@@ -42,7 +42,8 @@
       "Bash(perl -ne 'while \\(/id=\"\"\\([^\"\"]+\\)\"\"/g\\) { print \"\"$1\\\\n\"\" }' \"C:\\\\Users\\\\Gracjan\\\\.claude\\\\projects\\\\c--Users-Gracjan-Desktop-f1-2d-replay\\\\c1252b2d-ebea-436b-92c7-c3b13d669837\\\\tool-results\\\\mcp-figma-desktop-get_design_context-1772015712838.txt\")",
       "Bash(perl -ne 'print \"\"$_\\\\n\"\" if /y=\"\"[89]\\\\d\\\\d\\\\d\"\" width=\"\"\\\\d+\\\\\"\"/' \"C:\\\\Users\\\\Gracjan\\\\.claude\\\\projects\\\\c--Users-Gracjan-Desktop-f1-2d-replay\\\\c1252b2d-ebea-436b-92c7-c3b13d669837\\\\tool-results\\\\mcp-figma-desktop-get_metadata-1772015631996.txt\")",
       "Bash(tr '>' '\\\\n')",
-      "Bash(identify /tmp/figma_ant.png)"
+      "Bash(identify /tmp/figma_ant.png)",
+      "WebFetch(domain:css-tricks.com)"
     ]
   }
 }

@@ -91,7 +91,7 @@ html, body {
 /* ─── HEADER ─────────────────────────────────────────────────────────────── */
 .header {
   display: flex; align-items: stretch;
-  background: var(--bg);
+  background: #0d0e12;
   border-bottom: 1px solid #272a35;
   height: var(--header-h);
   flex-shrink: 0;
@@ -140,8 +140,9 @@ html, body {
   border: none; border-radius: 12px;
   padding: 8px 12px;
   color: #eaecf0;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Geist', 'Inter', sans-serif;
   font-size: 12px; font-weight: 600;
+  line-height: 20px;
   cursor: pointer;
   transition: background .15s;
   white-space: nowrap;

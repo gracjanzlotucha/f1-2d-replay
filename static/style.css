@@ -252,6 +252,7 @@ html, body {
   padding: 10px 12px;
   flex-shrink: 0;
   background: #16171d;
+  border-bottom: 1px solid #0d0e12;
 }
 .panel-title {
   font-family: 'Clash Display', sans-serif;

@@ -83,12 +83,6 @@
             </svg>
             <span>Share</span>
           </button>
-          <button class="hdr-btn" id="btn-settings">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M6.62524 2.06908C6.93167 1.60943 7.44753 1.33333 8 1.33333C8.55247 1.33333 9.06833 1.60943 9.37473 2.06908L9.7548 2.63917C9.94707 2.92758 10.2978 3.06685 10.6356 2.98891L11.1044 2.88071C11.6689 2.75045 12.2606 2.92017 12.6702 3.32978C13.0799 3.7394 13.2495 4.33113 13.1193 4.89559L13.0111 5.36443C12.9331 5.70218 13.0724 6.05291 13.3609 6.24519L13.9309 6.62524C14.3906 6.93167 14.6667 7.44753 14.6667 8C14.6667 8.55247 14.3906 9.06833 13.9309 9.37473L13.3609 9.7548C13.0724 9.94707 12.9331 10.2978 13.0111 10.6356L13.1193 11.1044C13.2495 11.6689 13.0799 12.2606 12.6702 12.6702C12.2606 13.0799 11.6689 13.2495 11.1044 13.1193L10.6356 13.0111C10.2978 12.9331 9.94707 13.0724 9.7548 13.3609L9.37473 13.9309C9.06833 14.3906 8.55247 14.6667 8 14.6667C7.44753 14.6667 6.93167 14.3906 6.62524 13.9309L6.24519 13.3609C6.05291 13.0724 5.70218 12.9331 5.36443 13.0111L4.89559 13.1193C4.33113 13.2495 3.7394 13.0799 3.32978 12.6702C2.92017 12.2606 2.75045 11.6689 2.88071 11.1044L2.98891 10.6356C3.06685 10.2978 2.92758 9.94707 2.63917 9.7548L2.06908 9.37473C1.60943 9.06833 1.33333 8.55247 1.33333 8C1.33333 7.44753 1.60943 6.93167 2.06908 6.62524L2.63917 6.24519C2.92758 6.05291 3.06685 5.70218 2.98891 5.36443L2.88071 4.89559C2.75045 4.33114 2.92016 3.7394 3.32978 3.32978C3.7394 2.92016 4.33113 2.75045 4.89559 2.88071L5.36443 2.98891C5.70218 3.06685 6.05291 2.92758 6.24519 2.63917L6.62524 2.06908ZM5.91667 8C5.91667 6.8494 6.8494 5.91667 8 5.91667C9.1506 5.91667 10.0833 6.8494 10.0833 8C10.0833 9.1506 9.1506 10.0833 8 10.0833C6.8494 10.0833 5.91667 9.1506 5.91667 8Z" fill="#EAECF0"/>
-            </svg>
-            <span>Settings</span>
-          </button>
         </div>
       </div>
     </div>
@@ -141,31 +135,6 @@
         </div>
       </div>
 
-      <!-- Floating player -->
-      <div class="player" id="player">
-        <div class="player-controls">
-          <button class="player-play" id="btn-play" title="Play / Pause">
-            <svg class="player-icon-play" viewBox="0 0 20 20" fill="none"><path d="M7.703 1.973C6.178.986 4.167 2.08 4.167 3.897v12.206c0 1.816 2.012 2.91 3.536 1.924l9.432-5.848c1.396-.903 1.396-2.945 0-3.848L7.703 1.973z" fill="currentColor"/></svg>
-            <svg class="player-icon-pause hidden" viewBox="0 0 20 20" fill="none"><rect x="3.5" y="2" width="4.5" height="16" rx="1.5" fill="currentColor"/><rect x="12" y="2" width="4.5" height="16" rx="1.5" fill="currentColor"/></svg>
-          </button>
-          <div class="player-nav">
-            <button class="player-nav-btn" id="btn-prev-lap" title="Previous lap">
-              <svg viewBox="0 0 16 16" fill="none"><path d="M3.333 2.667a.667.667 0 01.667.667v9.333a.667.667 0 01-1.333 0V3.334a.667.667 0 01.666-.667z" fill="currentColor"/><path d="M11.279 2.89c.877-.585 2.054.042 2.054 1.098v8.024c0 1.056-1.177 1.683-2.054 1.098L5.255 9.1c-.785-.523-.785-1.676 0-2.199l6.024-4.01z" fill="currentColor"/></svg>
-            </button>
-            <button class="player-nav-btn" id="btn-next-lap" title="Next lap">
-              <svg viewBox="0 0 16 16" fill="none"><path d="M2.667 3.989c0-1.056 1.177-1.683 2.054-1.099l6.024 4.011c.785.523.785 1.676 0 2.199l-6.024 4.01c-.877.585-2.054-.041-2.054-1.098V3.989z" fill="currentColor"/><path d="M12.667 2.667a.667.667 0 01.666.667v9.333a.667.667 0 01-1.333 0V3.334a.667.667 0 01.667-.667z" fill="currentColor"/></svg>
-            </button>
-          </div>
-        </div>
-        <span class="player-time" id="player-time">0:00:00 / 0:00:00</span>
-        <div class="seg-control player-speed" id="player-speed">
-          <div class="seg-indicator"></div>
-          <button class="seg-tab active" data-speed="1">x1</button>
-          <button class="seg-tab" data-speed="2">x2</button>
-          <button class="seg-tab" data-speed="4">x4</button>
-          <button class="seg-tab" data-speed="8">x8</button>
-        </div>
-      </div>
     </section>
 
     <!-- RIGHT: INSIGHTS / EVENTS -->
@@ -193,12 +162,62 @@
       </div>
     </aside>
 
-    <!-- BOTTOM: TIMELINE & EVENTS -->
+    <!-- BOTTOM: PLAYER + TIMELINE + EVENTS -->
     <div class="timeline-bar">
+      <!-- Player controls row -->
+      <div class="player-bar" id="player-bar">
+        <div class="player-left">
+          <button class="player-nav-btn" id="btn-prev-lap" title="Previous lap (Shift+Left)">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M3.333 2.667a.667.667 0 01.667.667v9.333a.667.667 0 01-1.333 0V3.334a.667.667 0 01.666-.667z" fill="currentColor"/><path d="M11.279 2.89c.877-.585 2.054.042 2.054 1.098v8.024c0 1.056-1.177 1.683-2.054 1.098L5.255 9.1c-.785-.523-.785-1.676 0-2.199l6.024-4.01z" fill="currentColor"/></svg>
+          </button>
+          <button class="player-play" id="btn-play" title="Play / Pause (Space)">
+            <svg class="player-icon-play" viewBox="0 0 20 20" fill="none"><path d="M7.703 1.973C6.178.986 4.167 2.08 4.167 3.897v12.206c0 1.816 2.012 2.91 3.536 1.924l9.432-5.848c1.396-.903 1.396-2.945 0-3.848L7.703 1.973z" fill="currentColor"/></svg>
+            <svg class="player-icon-pause hidden" viewBox="0 0 20 20" fill="none"><rect x="3.5" y="2" width="4.5" height="16" rx="1.5" fill="currentColor"/><rect x="12" y="2" width="4.5" height="16" rx="1.5" fill="currentColor"/></svg>
+          </button>
+          <button class="player-nav-btn" id="btn-next-lap" title="Next lap (Shift+Right)">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M2.667 3.989c0-1.056 1.177-1.683 2.054-1.099l6.024 4.011c.785.523.785 1.676 0 2.199l-6.024 4.01c-.877.585-2.054-.041-2.054-1.098V3.989z" fill="currentColor"/><path d="M12.667 2.667a.667.667 0 01.666.667v9.333a.667.667 0 01-1.333 0V3.334a.667.667 0 01.667-.667z" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <span class="player-time" id="player-time">0:00:00 / 0:00:00</span>
+        <div class="player-right">
+          <div class="speed-control" id="speed-control">
+            <button class="player-speed-btn" id="btn-speed" title="Playback speed">1x</button>
+            <div class="speed-dropdown hidden" id="speed-dropdown">
+              <button class="speed-option active" data-speed="1">1x</button>
+              <button class="speed-option" data-speed="2">2x</button>
+              <button class="speed-option" data-speed="4">4x</button>
+              <button class="speed-option" data-speed="8">8x</button>
+              <button class="speed-option" data-speed="16">16x</button>
+              <button class="speed-option" data-speed="32">32x</button>
+            </div>
+          </div>
+          <div class="settings-control" id="settings-control">
+            <button class="player-icon-btn" id="btn-player-settings" title="Settings">
+              <svg viewBox="0 0 16 16" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M6.62524 2.06908C6.93167 1.60943 7.44753 1.33333 8 1.33333C8.55247 1.33333 9.06833 1.60943 9.37473 2.06908L9.7548 2.63917C9.94707 2.92758 10.2978 3.06685 10.6356 2.98891L11.1044 2.88071C11.6689 2.75045 12.2606 2.92017 12.6702 3.32978C13.0799 3.7394 13.2495 4.33113 13.1193 4.89559L13.0111 5.36443C12.9331 5.70218 13.0724 6.05291 13.3609 6.24519L13.9309 6.62524C14.3906 6.93167 14.6667 7.44753 14.6667 8C14.6667 8.55247 14.3906 9.06833 13.9309 9.37473L13.3609 9.7548C13.0724 9.94707 12.9331 10.2978 13.0111 10.6356L13.1193 11.1044C13.2495 11.6689 13.0799 12.2606 12.6702 12.6702C12.2606 13.0799 11.6689 13.2495 11.1044 13.1193L10.6356 13.0111C10.2978 12.9331 9.94707 13.0724 9.7548 13.3609L9.37473 13.9309C9.06833 14.3906 8.55247 14.6667 8 14.6667C7.44753 14.6667 6.93167 14.3906 6.62524 13.9309L6.24519 13.3609C6.05291 13.0724 5.70218 12.9331 5.36443 13.0111L4.89559 13.1193C4.33113 13.2495 3.7394 13.0799 3.32978 12.6702C2.92017 12.2606 2.75045 11.6689 2.88071 11.1044L2.98891 10.6356C3.06685 10.2978 2.92758 9.94707 2.63917 9.7548L2.06908 9.37473C1.60943 9.06833 1.33333 8.55247 1.33333 8C1.33333 7.44753 1.60943 6.93167 2.06908 6.62524L2.63917 6.24519C2.92758 6.05291 3.06685 5.70218 2.98891 5.36443L2.88071 4.89559C2.75045 4.33114 2.92016 3.7394 3.32978 3.32978C3.7394 2.92016 4.33113 2.75045 4.89559 2.88071L5.36443 2.98891C5.70218 3.06685 6.05291 2.92758 6.24519 2.63917L6.62524 2.06908ZM5.91667 8C5.91667 6.8494 6.8494 5.91667 8 5.91667C9.1506 5.91667 10.0833 6.8494 10.0833 8C10.0833 9.1506 9.1506 10.0833 8 10.0833C6.8494 10.0833 5.91667 9.1506 5.91667 8Z" fill="currentColor"/></svg>
+            </button>
+            <div class="settings-popup hidden" id="settings-popup">
+              <label class="settings-row">
+                <span>Show trails</span>
+                <input type="checkbox" id="opt-trails" checked />
+              </label>
+              <label class="settings-row">
+                <span>Show labels</span>
+                <input type="checkbox" id="opt-labels" checked />
+              </label>
+            </div>
+          </div>
+          <button class="player-icon-btn" id="btn-fullscreen" title="Fullscreen (F)">
+            <svg class="fs-expand" viewBox="0 0 16 16" fill="none"><path d="M2.667 6V3.333c0-.368.298-.666.666-.666H6M10 2.667h2.667c.368 0 .666.298.666.666V6M13.333 10v2.667a.667.667 0 01-.666.666H10M6 13.333H3.333a.667.667 0 01-.666-.666V10" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="fs-compress hidden" viewBox="0 0 16 16" fill="none"><path d="M6 2.667V5.333a.667.667 0 01-.667.667H2.667M13.333 6H10.667A.667.667 0 0110 5.333V2.667M10 13.333V10.667c0-.369.298-.667.667-.667h2.666M2.667 10h2.666c.369 0 .667.298.667.667v2.666" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <!-- Timeline (thinner) -->
       <div class="tl-track" id="tl-track">
         <div class="tl-progress" id="tl-progress"></div>
         <div class="tl-laps" id="tl-laps"></div>
       </div>
+      <!-- Events (simplified) -->
       <div class="tl-events" id="tl-events"></div>
     </div>
 

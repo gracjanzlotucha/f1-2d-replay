@@ -1670,19 +1670,51 @@ function bindControls() {
   });
   document.addEventListener('touchend', () => { tlDragging = false; });
 
-  // Speed segmented control
-  const speedContainer = document.getElementById('player-speed');
-  speedContainer.querySelectorAll('.seg-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      speedContainer.querySelectorAll('.seg-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      G.speed = parseFloat(tab.dataset.speed);
-      moveSegIndicator(tab);
+  // Speed dropdown
+  const speedBtn = document.getElementById('btn-speed');
+  const speedDropdown = document.getElementById('speed-dropdown');
+  const speedControl = document.getElementById('speed-control');
+  speedBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    speedDropdown.classList.toggle('hidden');
+    // Close settings if open
+    document.getElementById('settings-popup').classList.add('hidden');
+  });
+  speedDropdown.querySelectorAll('.speed-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      speedDropdown.querySelectorAll('.speed-option').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      G.speed = parseFloat(opt.dataset.speed);
+      speedBtn.textContent = opt.textContent;
+      speedDropdown.classList.add('hidden');
     });
   });
-  // Init speed indicator
-  const activeSpeedTab = speedContainer.querySelector('.seg-tab.active');
-  if (activeSpeedTab) requestAnimationFrame(() => moveSegIndicator(activeSpeedTab));
+
+  // Settings popup
+  const settingsBtn = document.getElementById('btn-player-settings');
+  const settingsPopup = document.getElementById('settings-popup');
+  settingsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    settingsPopup.classList.toggle('hidden');
+    // Close speed if open
+    speedDropdown.classList.add('hidden');
+  });
+  document.getElementById('opt-trails').addEventListener('change', (e) => {
+    G.showTrails = e.target.checked;
+  });
+  document.getElementById('opt-labels').addEventListener('change', (e) => {
+    G.showLabels = e.target.checked;
+  });
+
+  // Close dropdowns/popups on outside click
+  document.addEventListener('click', (e) => {
+    if (!speedControl.contains(e.target)) speedDropdown.classList.add('hidden');
+    if (!document.getElementById('settings-control').contains(e.target)) settingsPopup.classList.add('hidden');
+  });
+
+  // Fullscreen
+  document.getElementById('btn-fullscreen').addEventListener('click', toggleFullscreen);
+  document.addEventListener('fullscreenchange', updateFullscreenIcon);
 
   // Right sidebar tab switcher (Insights / Events / Track)
   const panelTabBar = document.querySelector('.panel-tab-bar');
@@ -2026,6 +2058,21 @@ function onCanvasHover(e) {
   }
 }
 
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+function updateFullscreenIcon() {
+  const isFs = !!document.fullscreenElement;
+  const btn = document.getElementById('btn-fullscreen');
+  btn.querySelector('.fs-expand').classList.toggle('hidden', isFs);
+  btn.querySelector('.fs-compress').classList.toggle('hidden', !isFs);
+}
+
 function onKeyDown(e) {
   switch (e.code) {
     case 'Space': e.preventDefault(); togglePlay(); break;
@@ -2041,6 +2088,7 @@ function onKeyDown(e) {
       break;
     case 'Home': e.preventDefault(); seekToT(0); break;
     case 'End':  e.preventDefault(); seekToT(G.maxT); break;
+    case 'KeyF': e.preventDefault(); toggleFullscreen(); break;
   }
 }
 

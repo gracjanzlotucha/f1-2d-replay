@@ -850,6 +850,22 @@ html, body {
   );
   background-size: 12px 12px;
 }
+.tl-event-sc:hover {
+  background-color: rgba(255,137,4,.2);
+  background-image: linear-gradient(-45deg, rgba(255,137,4,1) 10%, transparent 10%, transparent 50%, rgba(255,137,4,1) 50%, rgba(255,137,4,1) 60%, transparent 60%);
+}
+.tl-event-vsc:hover {
+  background-color: rgba(255,137,4,.2);
+  background-image: linear-gradient(-45deg, rgba(255,137,4,1) 10%, transparent 10%, transparent 50%, rgba(255,137,4,1) 50%, rgba(255,137,4,1) 60%, transparent 60%);
+}
+.tl-event-red:hover {
+  background-color: rgba(224,44,89,.2);
+  background-image: linear-gradient(-45deg, rgba(224,44,89,1) 10%, transparent 10%, transparent 50%, rgba(224,44,89,1) 50%, rgba(224,44,89,1) 60%, transparent 60%);
+}
+.tl-event-yellow:hover {
+  background-color: rgba(253,199,0,.2);
+  background-image: linear-gradient(-45deg, rgba(253,199,0,1) 10%, transparent 10%, transparent 50%, rgba(253,199,0,1) 50%, rgba(253,199,0,1) 60%, transparent 60%);
+}
 /* Event tooltip */
 .tl-event-tooltip {
   position: fixed;

@@ -47,7 +47,14 @@
       "WebFetch(domain:openf1.org)",
       "WebFetch(domain:api.openf1.org)",
       "WebFetch(domain:www.apple.com)",
-      "WebFetch(domain:benfrain.com)"
+      "WebFetch(domain:benfrain.com)",
+      "WebFetch(domain:linear.app)",
+      "WebFetch(domain:stripearmy.medium.com)",
+      "WebFetch(domain:appleinsider.com)",
+      "WebFetch(domain:wildfirestudios.ca)",
+      "WebFetch(domain:www.framer.community)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:mikepiontek.com)"
     ]
   }
 }

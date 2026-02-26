@@ -84,7 +84,7 @@ html, body {
 #app {
   display: grid;
   grid-template-rows: var(--header-h) 1fr;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 

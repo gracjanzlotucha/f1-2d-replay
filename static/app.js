@@ -1609,11 +1609,13 @@ function buildEventMarkers() {
     const ts = String(lap.track_status || '');
     const ln = lap.lap;
     if (!ln || ts === '1') continue;
-    // Classify: SC if any digit is 4, VSC if any digit is 6 or 7, Yellow if any digit is 2
+    // Classify: Red if 5, SC if 4, VSC if 6 or 7, Yellow if 2
+    const hasRed = ts.includes('5');
     const hasSC = ts.includes('4');
     const hasVSC = ts.includes('6') || ts.includes('7');
     const hasYellow = ts.includes('2');
-    if (hasSC) lapStatus[ln] = lapStatus[ln] || 'sc';
+    if (hasRed) lapStatus[ln] = lapStatus[ln] || 'red';
+    else if (hasSC) lapStatus[ln] = lapStatus[ln] || 'sc';
     else if (hasVSC && !lapStatus[ln]) lapStatus[ln] = 'vsc';
     else if (hasYellow && !lapStatus[ln]) lapStatus[ln] = 'yellow';
   }
@@ -1637,7 +1639,7 @@ function buildEventMarkers() {
   if (current) ranges.push(current);
 
   // Status labels for tooltips
-  const STATUS_LABELS = { sc: 'Safety Car', vsc: 'Virtual Safety Car', yellow: 'Yellow Flag' };
+  const STATUS_LABELS = { sc: 'Safety Car', vsc: 'Virtual Safety Car', yellow: 'Yellow Flag', red: 'Red Flag' };
 
   // Shared tooltip element
   let tooltip = document.getElementById('tl-event-tooltip');
@@ -1650,7 +1652,8 @@ function buildEventMarkers() {
   }
 
   // Render
-  for (const range of ranges) {
+  for (let i = 0; i < ranges.length; i++) {
+    const range = ranges[i];
     // End time = start of next lap after range, or maxT
     const nextLap = G.lapStartTimes.find(e => e.lap === range.endLap + 1);
     const endT = nextLap ? nextLap.t : G.maxT;
@@ -1660,10 +1663,20 @@ function buildEventMarkers() {
     const el = document.createElement('div');
     el.className = 'tl-event';
     if (range.status === 'sc') el.classList.add('tl-event-sc');
-    else if (range.status === 'vsc') el.classList.add('tl-event-red');
+    else if (range.status === 'vsc') el.classList.add('tl-event-vsc');
+    else if (range.status === 'red') el.classList.add('tl-event-red');
     else el.classList.add('tl-event-yellow');
-    el.style.left = leftPct + '%';
-    el.style.width = widthPct + '%';
+
+    // Add 1px gap between consecutive events
+    const prevRange = i > 0 ? ranges[i - 1] : null;
+    const isAdjacent = prevRange && range.startLap === prevRange.endLap + 1;
+    if (isAdjacent) {
+      el.style.left = 'calc(' + leftPct + '% + 1px)';
+      el.style.width = 'calc(' + widthPct + '% - 1px)';
+    } else {
+      el.style.left = leftPct + '%';
+      el.style.width = widthPct + '%';
+    }
 
     // Tooltip data
     const lapLabel = range.startLap === range.endLap

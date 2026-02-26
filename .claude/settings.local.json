@@ -43,7 +43,9 @@
       "Bash(perl -ne 'print \"\"$_\\\\n\"\" if /y=\"\"[89]\\\\d\\\\d\\\\d\"\" width=\"\"\\\\d+\\\\\"\"/' \"C:\\\\Users\\\\Gracjan\\\\.claude\\\\projects\\\\c--Users-Gracjan-Desktop-f1-2d-replay\\\\c1252b2d-ebea-436b-92c7-c3b13d669837\\\\tool-results\\\\mcp-figma-desktop-get_metadata-1772015631996.txt\")",
       "Bash(tr '>' '\\\\n')",
       "Bash(identify /tmp/figma_ant.png)",
-      "WebFetch(domain:css-tricks.com)"
+      "WebFetch(domain:css-tricks.com)",
+      "WebFetch(domain:openf1.org)",
+      "WebFetch(domain:api.openf1.org)"
     ]
   }
 }

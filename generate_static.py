@@ -1,8 +1,8 @@
 """
 generate_static.py — Pre-generate static JSON data files for Vercel deployment.
 
-Run this ONCE locally before deploying. Uses your existing local FastF1 cache
-so no re-download is needed.
+Fetches data from the OpenF1 REST API (https://openf1.org) using Pro tier
+authentication for higher rate limits.
 
 Usage:
     python generate_static.py
@@ -17,14 +17,25 @@ import re
 import json
 import logging
 import math
-import pandas as pd
-import numpy as np
-import fastf1
+import time
+from datetime import datetime, timezone
+
+import requests
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
 log = logging.getLogger(__name__)
 
-# ─── Helpers ─────────────────────────────────────────────────────────────────
+# ─── OpenF1 Config ────────────────────────────────────────────────────────────
+
+BASE_URL = 'https://api.openf1.org/v1'
+CIRCUIT_INFO_URL = 'https://api.multiviewer.app/api/v1/circuits/63/2025'
+SESSION_KEY = 9947       # 2025 British GP Race
+MEETING_KEY = 1277       # 2025 British GP
+
+OPENF1_USERNAME = 'm@d8a.gg'
+OPENF1_PASSWORD = 'DSJLuZHJUBRHX7BN'
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
 
 TEAM_COLORS = {
     'Red Bull Racing': '#3671C6',
@@ -55,12 +66,11 @@ TIRE_COLORS = {
 
 
 def _scrub(obj):
+    """Recursively convert problematic float values to None."""
     if isinstance(obj, dict):
         return {k: _scrub(v) for k, v in obj.items()}
     if isinstance(obj, list):
         return [_scrub(v) for v in obj]
-    if isinstance(obj, np.generic):
-        obj = obj.item()
     if isinstance(obj, float):
         return None if (math.isnan(obj) or math.isinf(obj)) else obj
     return obj
@@ -83,6 +93,15 @@ def fmt_time(seconds):
     return f'{s:.3f}'
 
 
+def parse_iso(date_str):
+    """Parse ISO 8601 date string to UTC timestamp in seconds."""
+    if not date_str:
+        return None
+    # Handle timezone offset format
+    dt = datetime.fromisoformat(date_str)
+    return dt.timestamp()
+
+
 def compute_insights(laps, drivers, total_laps):
     insights = {}
     by_lap = {}
@@ -102,6 +121,8 @@ def compute_insights(laps, drivers, total_laps):
         if '4' in statuses:
             events.append({'type': 'safety_car', 'icon': '🚗', 'title': 'Safety Car deployed', 'detail': '', 'driver': None, 'priority': 10})
         elif '5' in statuses:
+            events.append({'type': 'red_flag', 'icon': '🔴', 'title': 'Red Flag', 'detail': '', 'driver': None, 'priority': 10})
+        elif '6' in statuses or '7' in statuses:
             events.append({'type': 'vsc', 'icon': '🟡', 'title': 'Virtual Safety Car', 'detail': '', 'driver': None, 'priority': 9})
         elif '2' in statuses or '3' in statuses:
             events.append({'type': 'yellow', 'icon': '🟡', 'title': 'Yellow Flag', 'detail': '', 'driver': None, 'priority': 8})
@@ -183,192 +204,414 @@ def compute_insights(laps, drivers, total_laps):
     return insights
 
 
+# ─── API Helpers ──────────────────────────────────────────────────────────────
+
+def authenticate():
+    """Authenticate with OpenF1 Pro and return a configured requests session."""
+    log.info('Authenticating with OpenF1 Pro…')
+    resp = requests.post(
+        'https://api.openf1.org/token',
+        data={'username': OPENF1_USERNAME, 'password': OPENF1_PASSWORD},
+        headers={'Content-Type': 'application/x-www-form-urlencoded'},
+    )
+    resp.raise_for_status()
+    token = resp.json()['access_token']
+    log.info('  Authenticated successfully')
+
+    session = requests.Session()
+    session.headers.update({'Authorization': f'Bearer {token}'})
+    return session
+
+
+def fetch(session, endpoint, params=None):
+    """Fetch data from OpenF1 API with rate-limit awareness."""
+    url = f'{BASE_URL}/{endpoint}'
+    resp = session.get(url, params=params or {})
+    resp.raise_for_status()
+    return resp.json()
+
+
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 def main():
-    CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    fastf1.Cache.enable_cache(CACHE_DIR)
+    api = authenticate()
 
-    log.info('Loading Silverstone 2025 GP from cache…')
-    session = fastf1.get_session(2025, 'British Grand Prix', 'R')
-    session.load(laps=True, telemetry=True, weather=True, messages=False)
+    # ── Fetch all raw data ────────────────────────────────────────────────────
+
+    log.info('Fetching drivers…')
+    raw_drivers = fetch(api, 'drivers', {'session_key': SESSION_KEY})
+    log.info(f'  {len(raw_drivers)} drivers')
+
+    log.info('Fetching lap data…')
+    raw_laps = fetch(api, 'laps', {'session_key': SESSION_KEY})
+    log.info(f'  {len(raw_laps)} lap records')
+
+    log.info('Fetching stints…')
+    raw_stints = fetch(api, 'stints', {'session_key': SESSION_KEY})
+    log.info(f'  {len(raw_stints)} stints')
+
+    log.info('Fetching pit stops…')
+    raw_pits = fetch(api, 'pit', {'session_key': SESSION_KEY})
+    log.info(f'  {len(raw_pits)} pit stops')
+
+    log.info('Fetching race control events…')
+    raw_race_control = fetch(api, 'race_control', {'session_key': SESSION_KEY})
+    log.info(f'  {len(raw_race_control)} events')
+
+    log.info('Fetching position data…')
+    raw_positions = fetch(api, 'position', {'session_key': SESSION_KEY})
+    log.info(f'  {len(raw_positions)} position entries')
+
+    log.info('Fetching weather…')
+    raw_weather = fetch(api, 'weather', {'session_key': SESSION_KEY})
+    log.info(f'  {len(raw_weather)} weather samples')
+
+    log.info('Fetching circuit info from Multiviewer…')
+    circuit_resp = requests.get(CIRCUIT_INFO_URL, headers={'User-Agent': 'f1-2d-replay/1.0'})
+    circuit_resp.raise_for_status()
+    raw_circuit = circuit_resp.json()
+    log.info(f'  {len(raw_circuit["x"])} track points, {len(raw_circuit["corners"])} corners')
+
+    # ── Process drivers ───────────────────────────────────────────────────────
 
     log.info('Processing drivers…')
     drivers = {}
-    for num in session.drivers:
-        d = session.get_driver(num)
-        team = d.get('TeamName', '')
+    driver_numbers = []
+    for d in raw_drivers:
+        num = str(d['driver_number'])
+        team = d.get('team_name', '')
         color = TEAM_COLORS.get(team)
         if not color:
-            raw = d.get('TeamColor', None)
-            color = ('#' + raw) if raw else '#888888'
-        drivers[str(num)] = {
-            'number': str(num),
-            'abbr': d.get('Abbreviation', str(num)),
-            'name': d.get('FullName', ''),
+            raw_color = d.get('team_colour')
+            color = ('#' + raw_color) if raw_color else '#888888'
+        drivers[num] = {
+            'number': num,
+            'abbr': d.get('name_acronym', num),
+            'name': d.get('full_name', ''),
             'team': team,
             'color': color,
         }
+        driver_numbers.append(d['driver_number'])
 
-    log.info('Extracting track outline…')
-    try:
-        fast_lap = session.laps.pick_fastest()
-        tel = fast_lap.get_telemetry()[['X', 'Y', 'Distance']].dropna()
-        tel = tel.drop_duplicates('Distance').sort_values('Distance')
-        track = {
-            'x': [round(float(v), 1) for v in tel['X'].tolist()],
-            'y': [round(float(v), 1) for v in tel['Y'].tolist()],
-        }
-    except Exception as e:
-        log.warning(f'Track outline fallback: {e}')
-        track = {'x': [], 'y': []}
+    # ── Process track outline + circuit info ──────────────────────────────────
 
-    log.info('Extracting circuit info…')
-    circuit_info = {}
-    try:
-        ci = session.get_circuit_info()
-        circuit_info['rotation'] = round(float(ci.rotation), 2)
-        corners = ci.corners
-        circuit_info['corners'] = [
+    log.info('Processing track outline…')
+    track = {
+        'x': [round(float(v), 1) for v in raw_circuit['x']],
+        'y': [round(float(v), 1) for v in raw_circuit['y']],
+    }
+
+    log.info('Processing circuit info…')
+    circuit_info = {
+        'rotation': round(float(raw_circuit.get('rotation', 0)), 2),
+        'corners': [
             {
-                'number': int(row.get('Number', 0)),
-                'letter': str(row.get('Letter', '')),
-                'x': round(float(row.get('X', 0)), 1),
-                'y': round(float(row.get('Y', 0)), 1),
-                'angle': round(float(row.get('Angle', 0)), 1),
-                'distance': round(float(row.get('Distance', 0)), 1),
+                'number': int(c.get('number', 0)),
+                'letter': '',
+                'x': round(float(c['trackPosition']['x']), 1),
+                'y': round(float(c['trackPosition']['y']), 1),
+                'angle': round(float(c.get('angle', 0)), 1),
+                'distance': round(float(c.get('length', 0)), 1),
             }
-            for _, row in corners.iterrows()
-        ]
-        log.info(f'  Circuit rotation: {circuit_info["rotation"]}°, {len(circuit_info["corners"])} corners')
-    except Exception as e:
-        log.warning(f'Circuit info fallback: {e}')
+            for c in raw_circuit['corners']
+        ],
+    }
+    log.info(f'  Circuit rotation: {circuit_info["rotation"]}°, {len(circuit_info["corners"])} corners')
+
+    # ── Detect race start time ────────────────────────────────────────────────
 
     log.info('Detecting race start time…')
-    laps_df = session.laps.copy()
-    race_start_t = 0.0
-    try:
-        lap1_starts = laps_df[laps_df['LapNumber'] == 1]['LapStartTime'].dropna()
-        if len(lap1_starts):
-            race_start_t = float(lap1_starts.min().total_seconds())
-            log.info(f'Race start at session t={race_start_t:.1f}s')
-    except Exception as e:
-        log.warning(f'Could not detect race start: {e}')
+    # Find the earliest lap 1 start time across all drivers
+    lap1_starts = [
+        parse_iso(lap['date_start'])
+        for lap in raw_laps
+        if lap.get('lap_number') == 1 and lap.get('date_start')
+    ]
+    race_start_ts = min(lap1_starts) if lap1_starts else 0.0
+    log.info(f'  Race start timestamp: {race_start_ts:.1f}')
 
-    def safe_sec(td):
-        try:
-            if pd.isna(td):
-                return None
-            val = float(td.total_seconds())
-            if math.isnan(val) or math.isinf(val):
-                return None
-            return round(val, 3)
-        except Exception:
-            return None
+    # ── Build lookup tables ───────────────────────────────────────────────────
 
-    def safe_sec_r(td):
-        v = safe_sec(td)
-        return None if v is None else round(v - race_start_t, 3)
+    # Stints lookup: {driver_number: [{lap_start, lap_end, compound, tyre_age_at_start, stint_number}, ...]}
+    stints_by_driver = {}
+    for s in raw_stints:
+        dn = s['driver_number']
+        stints_by_driver.setdefault(dn, []).append(s)
 
-    def safe_int(v):
-        try:
-            return int(v) if pd.notna(v) else None
-        except Exception:
-            return None
+    # Pit stops lookup: {(driver_number, lap_number): pit_data}
+    pits_by_driver_lap = {}
+    for p in raw_pits:
+        key = (p['driver_number'], p['lap_number'])
+        pits_by_driver_lap[key] = p
 
-    log.info('Resampling position data (2 Hz)…')
-    positions = {}
-    for num in session.drivers:
-        snum = str(num)
-        if num not in session.pos_data:
+    # Race control → track status per lap
+    # Build a map: lap_number → status code string
+    # Status codes: '1'=green, '2'=yellow, '4'=SC, '5'/'6'=VSC
+    log.info('Building track status per lap…')
+    lap_track_status = {}  # {lap_number: status_code}
+    for evt in raw_race_control:
+        lap_num = evt.get('lap_number')
+        if not lap_num:
             continue
-        try:
-            pos = session.pos_data[num].copy()
-            pos = pos.dropna(subset=['X', 'Y'])
-            pos['t'] = pos['SessionTime'].dt.total_seconds() - race_start_t
-            pos = pos[pos['t'] >= 0].sort_values('t')
-            if pos.empty:
-                continue
-            pos['bucket'] = (pos['t'] / 0.5).astype(int)
-            pos = pos.drop_duplicates('bucket')
-            positions[snum] = {
-                't': [round(float(v), 2) for v in pos['t'].tolist()],
-                'x': [round(float(v), 1) for v in pos['X'].tolist()],
-                'y': [round(float(v), 1) for v in pos['Y'].tolist()],
-            }
-        except Exception as e:
-            log.warning(f'Pos data error for {num}: {e}')
+        category = evt.get('category', '')
+        message = evt.get('message', '').upper()
+        flag = evt.get('flag', '') or ''
 
-    log.info('Extracting pit lane path from driver telemetry…')
+        if category == 'SafetyCar':
+            if 'VIRTUAL' in message:
+                # VSC deployed — mark this lap and subsequent until ending
+                if 'ENDING' not in message:
+                    lap_track_status[lap_num] = '6'  # VSC
+            else:
+                if 'IN THIS LAP' not in message:
+                    lap_track_status[lap_num] = '4'  # SC
+        elif category == 'Flag' and flag in ('YELLOW', 'DOUBLE YELLOW') and evt.get('scope') == 'Track':
+            if lap_num not in lap_track_status:
+                lap_track_status[lap_num] = '2'  # Yellow
+
+    # Expand SC/VSC ranges: if lap N has SC deployed, mark all subsequent laps until SC ends
+    sc_active = None  # 'sc' or 'vsc'
+    sc_start_lap = None
+    sc_events = []
+    for evt in sorted(raw_race_control, key=lambda e: e.get('date', '')):
+        if evt.get('category') != 'SafetyCar':
+            continue
+        message = (evt.get('message') or '').upper()
+        lap_num = evt.get('lap_number')
+        if not lap_num:
+            continue
+
+        if 'DEPLOYED' in message:
+            sc_type = 'vsc' if 'VIRTUAL' in message else 'sc'
+            sc_active = sc_type
+            sc_start_lap = lap_num
+        elif 'ENDING' in message or 'IN THIS LAP' in message:
+            if sc_active and sc_start_lap:
+                code = '6' if sc_active == 'vsc' else '4'
+                for ln in range(sc_start_lap, lap_num + 1):
+                    lap_track_status[ln] = code
+            sc_active = None
+            sc_start_lap = None
+
+    # Position lookup: {driver_number: [(timestamp, position), ...]} sorted by time
+    positions_by_driver = {}
+    for p in raw_positions:
+        dn = p['driver_number']
+        ts = parse_iso(p.get('date'))
+        if ts is not None:
+            positions_by_driver.setdefault(dn, []).append((ts, p['position']))
+    for dn in positions_by_driver:
+        positions_by_driver[dn].sort()
+
+    def get_position_at(driver_num, timestamp):
+        """Get the position for a driver at or before a given timestamp."""
+        entries = positions_by_driver.get(driver_num, [])
+        pos = None
+        for ts, p in entries:
+            if ts <= timestamp:
+                pos = p
+            else:
+                break
+        return pos
+
+    # ── Process lap data ──────────────────────────────────────────────────────
+
+    log.info('Processing lap data…')
+    # Track personal bests per driver
+    driver_best_times = {}
+    laps_list = []
+
+    # Sort laps by driver and lap number for personal best tracking
+    sorted_laps = sorted(raw_laps, key=lambda l: (l.get('driver_number', 0), l.get('lap_number', 0)))
+
+    for lap in sorted_laps:
+        dn = lap['driver_number']
+        sdn = str(dn)
+        lap_num = lap.get('lap_number')
+        lap_duration = lap.get('lap_duration')
+
+        # Find matching stint for compound + tyre life
+        compound = 'UNKNOWN'
+        tyre_life = None
+        stint_num = None
+        for s in stints_by_driver.get(dn, []):
+            if s['lap_start'] <= (lap_num or 0) <= s['lap_end']:
+                compound = s.get('compound', 'UNKNOWN')
+                tyre_life = (lap_num or 0) - s['lap_start'] + (s.get('tyre_age_at_start') or 0) + 1
+                stint_num = s.get('stint_number')
+                break
+
+        # Pit stop data
+        pit_data = pits_by_driver_lap.get((dn, lap_num))
+        pit_in = None
+        pit_out = None
+        if pit_data:
+            pit_ts = parse_iso(pit_data.get('date'))
+            if pit_ts is not None:
+                pit_in = round(pit_ts - race_start_ts, 3)
+                lane_dur = pit_data.get('lane_duration') or 30
+                pit_out = round(pit_in + lane_dur, 3)
+
+        # Lap start relative to race start
+        lap_start_ts = parse_iso(lap.get('date_start'))
+        lap_start = None
+        if lap_start_ts is not None:
+            lap_start = round(lap_start_ts - race_start_ts, 3)
+
+        # Position at end of this lap
+        position = None
+        if lap_start_ts and lap_duration:
+            lap_end_ts = lap_start_ts + lap_duration
+            position = get_position_at(dn, lap_end_ts)
+        elif lap_start_ts:
+            position = get_position_at(dn, lap_start_ts)
+
+        # Track status for this lap
+        track_status = lap_track_status.get(lap_num, '1')
+
+        # Personal best detection
+        is_pb = False
+        if lap_duration and not lap.get('is_pit_out_lap'):
+            prev_best = driver_best_times.get(dn)
+            if prev_best is None or lap_duration < prev_best:
+                driver_best_times[dn] = lap_duration
+                if prev_best is not None:  # Not the first lap
+                    is_pb = True
+
+        laps_list.append({
+            'driver': sdn,
+            'lap': lap_num,
+            'lap_time': round(lap_duration, 3) if lap_duration else None,
+            'sector1': round(lap['duration_sector_1'], 3) if lap.get('duration_sector_1') else None,
+            'sector2': round(lap['duration_sector_2'], 3) if lap.get('duration_sector_2') else None,
+            'sector3': round(lap['duration_sector_3'], 3) if lap.get('duration_sector_3') else None,
+            'compound': compound,
+            'tyre_life': tyre_life,
+            'pit_in': pit_in,
+            'pit_out': pit_out,
+            'lap_start': lap_start,
+            'position': position,
+            'is_pb': is_pb,
+            'track_status': track_status,
+            'stint': stint_num,
+        })
+
+    total_laps = max((l.get('lap_number') or 0 for l in raw_laps), default=0)
+
+    # ── Fetch and process position telemetry ──────────────────────────────────
+
+    log.info('Fetching position telemetry (location data)…')
+    positions = {}
+    all_location_data = {}  # Keep raw for pit lane extraction
+
+    for i, dn in enumerate(driver_numbers):
+        sdn = str(dn)
+        log.info(f'  Fetching driver #{dn} ({i+1}/{len(driver_numbers)})…')
+        try:
+            raw_loc = fetch(api, 'location', {
+                'session_key': SESSION_KEY,
+                'driver_number': dn,
+            })
+        except Exception as e:
+            log.warning(f'  Location data error for {dn}: {e}')
+            continue
+
+        if not raw_loc:
+            continue
+
+        all_location_data[dn] = raw_loc
+
+        # Convert to race-relative time and resample to 2Hz
+        points = []
+        for pt in raw_loc:
+            ts = parse_iso(pt.get('date'))
+            if ts is None:
+                continue
+            t = ts - race_start_ts
+            if t >= 0:
+                points.append((t, pt['x'], pt['y']))
+
+        if not points:
+            continue
+
+        points.sort()
+
+        # Resample to 2Hz (0.5s buckets)
+        resampled_t = []
+        resampled_x = []
+        resampled_y = []
+        seen_buckets = set()
+        for t, x, y in points:
+            bucket = int(t / 0.5)
+            if bucket not in seen_buckets:
+                seen_buckets.add(bucket)
+                resampled_t.append(round(t, 2))
+                resampled_x.append(round(float(x), 1))
+                resampled_y.append(round(float(y), 1))
+
+        positions[sdn] = {
+            't': resampled_t,
+            'x': resampled_x,
+            'y': resampled_y,
+        }
+        log.info(f'    {len(raw_loc)} raw → {len(resampled_t)} resampled points')
+
+        # Small delay to respect rate limits on bulk fetches
+        if i < len(driver_numbers) - 1:
+            time.sleep(0.2)
+
+    # ── Extract pit lane path ─────────────────────────────────────────────────
+
+    log.info('Extracting pit lane path…')
     pit_lane_path = []
     try:
-        # Find a lap with a pit stop (has PitInTime)
-        pit_laps = laps_df[laps_df['PitInTime'].notna()].copy()
-        if not pit_laps.empty:
-            # Pick the first clean pit stop
-            pit_lap = pit_laps.iloc[0]
-            pit_driver = pit_lap['DriverNumber']
-            pit_in_t = float(pit_lap['PitInTime'].total_seconds())
-            pit_out_t = float(pit_lap['PitOutTime'].total_seconds()) if pd.notna(pit_lap.get('PitOutTime')) else pit_in_t + 30
+        if raw_pits:
+            first_pit = raw_pits[0]
+            pit_driver = first_pit['driver_number']
+            pit_ts = parse_iso(first_pit.get('date'))
+            lane_dur = first_pit.get('lane_duration') or 30
 
-            # Get this driver's position data during the pit stop window
-            if pit_driver in session.pos_data:
-                pos = session.pos_data[pit_driver].copy()
-                pos = pos.dropna(subset=['X', 'Y'])
-                pos['t'] = pos['SessionTime'].dt.total_seconds()
-                # Include the full transition: a few seconds before pit-in to after pit-out
-                pit_pos = pos[(pos['t'] >= pit_in_t - 5) & (pos['t'] <= pit_out_t + 5)]
-                pit_pos = pit_pos.sort_values('t')
-
-                if not pit_pos.empty:
-                    pit_lane_path = [
-                        [round(float(row['X']), 1), round(float(row['Y']), 1)]
-                        for _, row in pit_pos.iterrows()
-                    ]
-                    log.info(f'  {len(pit_lane_path)} points from driver #{pit_driver} pit stop')
+            loc_data = all_location_data.get(pit_driver, [])
+            if pit_ts and loc_data:
+                window_start = pit_ts - 5
+                window_end = pit_ts + lane_dur + 5
+                pit_points = []
+                for pt in loc_data:
+                    ts = parse_iso(pt.get('date'))
+                    if ts and window_start <= ts <= window_end:
+                        pit_points.append((ts, pt['x'], pt['y']))
+                pit_points.sort()
+                pit_lane_path = [[round(float(x), 1), round(float(y), 1)] for _, x, y in pit_points]
+                log.info(f'  {len(pit_lane_path)} points from driver #{pit_driver} pit stop')
     except Exception as e:
         log.warning(f'Pit lane extraction failed: {e}')
 
-    log.info('Processing lap data…')
-    laps_list = []
-    for _, lap in laps_df.iterrows():
-        laps_list.append({
-            'driver': str(lap.get('DriverNumber', '')),
-            'lap': safe_int(lap.get('LapNumber')),
-            'lap_time': safe_sec(lap.get('LapTime')),
-            'sector1': safe_sec(lap.get('Sector1Time')),
-            'sector2': safe_sec(lap.get('Sector2Time')),
-            'sector3': safe_sec(lap.get('Sector3Time')),
-            'compound': str(lap.get('Compound', 'UNKNOWN')),
-            'tyre_life': safe_int(lap.get('TyreLife')),
-            'pit_in': safe_sec_r(lap.get('PitInTime')),
-            'pit_out': safe_sec_r(lap.get('PitOutTime')),
-            'lap_start': safe_sec_r(lap.get('LapStartTime')),
-            'position': safe_int(lap.get('Position')),
-            'is_pb': bool(lap.get('IsPersonalBest', False)),
-            'track_status': str(lap.get('TrackStatus', '')),
-            'stint': safe_int(lap.get('Stint')),
-        })
+    # ── Process weather ───────────────────────────────────────────────────────
 
-    log.info('Computing insights…')
-    total_laps = int(laps_df['LapNumber'].max()) if not laps_df.empty else 0
-    insights = compute_insights(laps_list, drivers, total_laps)
-
-    log.info('Reading weather data…')
+    log.info('Processing weather…')
     weather = {}
     try:
-        wdf = session.weather_data
-        weather = {
-            'air_temp': round(float(wdf['AirTemp'].mean()), 1),
-            'track_temp': round(float(wdf['TrackTemp'].mean()), 1),
-            'humidity': round(float(wdf['Humidity'].mean()), 1),
-            'rainfall': bool(wdf['Rainfall'].any()),
-        }
+        if raw_weather:
+            air_temps = [w['air_temperature'] for w in raw_weather if w.get('air_temperature') is not None]
+            track_temps = [w['track_temperature'] for w in raw_weather if w.get('track_temperature') is not None]
+            humidities = [w['humidity'] for w in raw_weather if w.get('humidity') is not None]
+            rainfalls = [w.get('rainfall', 0) for w in raw_weather]
+            weather = {
+                'air_temp': round(sum(air_temps) / len(air_temps), 1) if air_temps else 0,
+                'track_temp': round(sum(track_temps) / len(track_temps), 1) if track_temps else 0,
+                'humidity': round(sum(humidities) / len(humidities), 1) if humidities else 0,
+                'rainfall': any(r > 0 for r in rainfalls),
+            }
     except Exception:
         pass
 
+    # ── Compute insights ──────────────────────────────────────────────────────
+
+    log.info('Computing insights…')
+    insights = compute_insights(laps_list, drivers, total_laps)
+
     # ── Write output files ────────────────────────────────────────────────────
+
     out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 
     data_payload = {

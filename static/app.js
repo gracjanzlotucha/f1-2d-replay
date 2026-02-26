@@ -2112,7 +2112,9 @@ function fmtLapTime(seconds) {
 }
 
 function showApp() {
-  document.getElementById('loading-screen').classList.add('hidden');
+  const ls = document.getElementById('loading-screen');
+  ls.classList.add('hidden');
+  ls.remove();
   document.getElementById('app').classList.remove('hidden');
 }
 

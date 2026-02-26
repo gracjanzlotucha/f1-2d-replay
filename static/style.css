@@ -868,6 +868,7 @@ body {
 /* Event tooltip */
 .tl-event-tooltip {
   position: fixed;
+  top: -100px;
   pointer-events: none;
   background: #16171d;
   border: 1px solid #272a35;

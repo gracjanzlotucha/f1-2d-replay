@@ -45,7 +45,9 @@
       "Bash(identify /tmp/figma_ant.png)",
       "WebFetch(domain:css-tricks.com)",
       "WebFetch(domain:openf1.org)",
-      "WebFetch(domain:api.openf1.org)"
+      "WebFetch(domain:api.openf1.org)",
+      "WebFetch(domain:www.apple.com)",
+      "WebFetch(domain:benfrain.com)"
     ]
   }
 }

@@ -842,7 +842,6 @@ html, body {
   background: #0d0e12;
   position: relative;
   overflow: visible;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .tl-event {
   position: absolute; top: 3px;
@@ -993,4 +992,8 @@ html, body {
   /* Internal list/content: let content flow, no inner scroll */
   .standings-list,
   .insights-content { overflow: visible; flex: none; height: auto; }
+
+  /* Safe area: let content scroll behind the iOS Liquid Glass bar */
+  .standings-panel,
+  .insights-panel { padding-bottom: env(safe-area-inset-bottom, 0px); }
 }

@@ -226,7 +226,15 @@ def authenticate():
 def fetch(session, endpoint, params=None):
     """Fetch data from OpenF1 API with rate-limit awareness."""
     url = f'{BASE_URL}/{endpoint}'
-    resp = session.get(url, params=params or {})
+    for attempt in range(3):
+        resp = session.get(url, params=params or {})
+        if resp.status_code == 429:
+            wait = 10 * (attempt + 1)
+            log.warning(f'  Rate limited, waiting {wait}s…')
+            time.sleep(wait)
+            continue
+        resp.raise_for_status()
+        return resp.json()
     resp.raise_for_status()
     return resp.json()
 
@@ -426,6 +434,7 @@ def main():
         pit_data = pits_by_driver_lap.get((dn, lap_num))
         pit_in = None
         pit_out = None
+        stop_duration = None
         if pit_data:
             pit_ts = parse_iso(pit_data.get('date'))
             if pit_ts is not None:
@@ -433,6 +442,11 @@ def main():
                 lane_dur = pit_data.get('lane_duration') or 30
                 pit_out = round(pit_ts - race_start_ts, 3)
                 pit_in = round(pit_out - lane_dur, 3)
+                stop_duration = pit_data.get('stop_duration')
+
+        # Pit lane start: lap 1 marked as pit_out_lap without a pit stop
+        if lap_num == 1 and lap.get('is_pit_out_lap') and not pit_data:
+            pit_out = lap_start if lap_start is not None else 0
 
         # Lap start relative to race start
         lap_start_ts = parse_iso(lap.get('date_start'))
@@ -469,6 +483,7 @@ def main():
             'tyre_life': tyre_life,
             'pit_in': pit_in,
             'pit_out': pit_out,
+            'stop_duration': stop_duration,
             'lap_start': lap_start,
             'position': position,
             'is_pb': is_pb,

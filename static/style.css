@@ -383,6 +383,10 @@ html, body {
   background: #272a35;
   color: #838aa5;
 }
+.dr-status-badge.pit {
+  background: linear-gradient(90deg, rgba(255,137,4,0.15) 0%, rgba(255,137,4,0.15) 100%), #0d0e12;
+  color: #ff8904;
+}
 
 /* Tyre column */
 .dr-tyre {

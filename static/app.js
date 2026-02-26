@@ -286,19 +286,27 @@ function setupDerivedData() {
   // ── Pre-compute pit stop intervals ─────────────────────────────────────
   // Use pit_in / pit_out timestamps from lap data directly (position data
   // at ~2 Hz is too coarse to reliably detect the brief stationary window).
-  G.pitStops = []; // [{ driver, tStart, tEnd, duration }]
+  G.pitStops = []; // [{ driver, tStart, tEnd, duration, boxStart, boxEnd, stopDuration }]
 
-  const pitPending = {}; // { driverNum: pitIn timestamp waiting for pit_out }
+  const pitPending = {}; // { driverNum: { pitIn, stopDuration } }
   for (const lap of G.laps) {
     if (lap.pit_in != null) {
-      pitPending[lap.driver] = lap.pit_in;
+      pitPending[lap.driver] = { pitIn: lap.pit_in, stopDuration: lap.stop_duration };
     }
     if (lap.pit_out != null && pitPending[lap.driver] != null) {
+      const pending = pitPending[lap.driver];
+      const duration = lap.pit_out - pending.pitIn;
+      const stopDur = pending.stopDuration || 0;
+      // Approximate box timing: split remaining drive time equally for in/out
+      const driveIn = (duration - stopDur) / 2;
       G.pitStops.push({
         driver: lap.driver,
-        tStart: pitPending[lap.driver],
+        tStart: pending.pitIn,
         tEnd: lap.pit_out,
-        duration: lap.pit_out - pitPending[lap.driver],
+        duration: duration,
+        boxStart: pending.pitIn + driveIn,
+        boxEnd: pending.pitIn + driveIn + stopDur,
+        stopDuration: stopDur,
       });
       delete pitPending[lap.driver];
     }
@@ -891,14 +899,18 @@ function renderFrame() {
     drawCar(ctx, num, cx, cy);
   }
 
-  // Draw pit stop timers above cars currently in pit box
+  // Draw pit stop timers above cars currently in pit
   for (const ps of G.pitStops) {
     if (G.currentT >= ps.tStart && G.currentT <= ps.tEnd + 1.5) {
-      // Show timer during stop + 1.5s after (to display final time)
       const car = carData.find(c => c.num === ps.driver);
       if (!car) continue;
       const elapsed = Math.min(G.currentT - ps.tStart, ps.duration);
-      drawPitTimer(ctx, car.cx, car.cy, elapsed, ps.duration, G.currentT > ps.tEnd, G.drivers[ps.driver]);
+      const finished = G.currentT > ps.tEnd;
+      // Box phase: compute box elapsed time
+      const inBox = G.currentT >= ps.boxStart;
+      const boxElapsed = inBox ? Math.min(G.currentT - ps.boxStart, ps.stopDuration) : 0;
+      const boxFinished = G.currentT > ps.boxEnd;
+      drawPitTimer(ctx, car.cx, car.cy, elapsed, finished, inBox, boxElapsed, ps.stopDuration, boxFinished, G.drivers[ps.driver]);
     }
   }
 
@@ -972,29 +984,36 @@ function drawCar(ctx, num, cx, cy) {
   }
 }
 
-function drawPitTimer(ctx, cx, cy, elapsed, /* totalDuration */ _, finished, driver) {
-  const timeStr = elapsed.toFixed(1) + 's';
-  const color   = driver?.color || '#888';
+function drawPitTimer(ctx, cx, cy, elapsed, finished, inBox, boxElapsed, stopDuration, boxFinished, driver) {
+  const color  = driver?.color || '#888';
+  const radius = 4;
+  const padH   = 6;
+  const barW   = 3;
 
   ctx.save();
+  ctx.font = 'bold 11px "JetBrains Mono", monospace';
+
+  // Build lines to display
+  const pitStr = elapsed.toFixed(1) + 's';
+  const showBox = inBox && stopDuration > 0;
+  const boxStr = showBox ? ('BOX ' + boxElapsed.toFixed(1) + 's') : '';
+
+  // Measure widths for the widest line
+  const pitW = ctx.measureText(pitStr).width;
+  const boxW_text = showBox ? ctx.measureText(boxStr).width : 0;
+  const contentW = Math.max(pitW, boxW_text);
+
+  const boxW = barW + contentW + padH * 2;
+  const lineH = 16;
+  const boxH = showBox ? lineH * 2 : lineH;
 
   // Position above the car
   const boxX = cx;
-  const boxY = cy - DRIVER_RADIUS - 22;
-
-  // Measure text
-  ctx.font = 'bold 11px "JetBrains Mono", monospace';
-  const textW = ctx.measureText(timeStr).width;
-  const padH  = 6;
-  const barW  = 3;
-  const boxW  = barW + textW + padH * 2;
-  const boxH  = 16;
-
+  const boxY = cy - DRIVER_RADIUS - 22 - (showBox ? lineH / 2 : 0);
   const x0 = boxX - boxW / 2;
   const y0 = boxY - boxH / 2;
 
   // Background rounded rect
-  const radius = 4;
   ctx.beginPath();
   ctx.moveTo(x0 + radius, y0);
   ctx.lineTo(x0 + boxW - radius, y0);
@@ -1006,7 +1025,6 @@ function drawPitTimer(ctx, cx, cy, elapsed, /* totalDuration */ _, finished, dri
   ctx.lineTo(x0, y0 + radius);
   ctx.arcTo(x0, y0, x0 + radius, y0, radius);
   ctx.closePath();
-
   ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
   ctx.fill();
 
@@ -1023,12 +1041,19 @@ function drawPitTimer(ctx, cx, cy, elapsed, /* totalDuration */ _, finished, dri
   ctx.closePath();
   ctx.fill();
 
-  // Timer text
+  // Pit lane time (top line)
+  const textCx = x0 + barW + padH + contentW / 2;
   ctx.font         = 'bold 11px "JetBrains Mono", monospace';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle    = finished ? '#2EE86B' : '#FFFFFF';
-  ctx.fillText(timeStr, x0 + barW + padH + textW / 2, boxY + 0.5);
+  ctx.fillText(pitStr, textCx, y0 + lineH / 2);
+
+  // Box time (bottom line, shown during/after box phase)
+  if (showBox) {
+    ctx.fillStyle = boxFinished ? '#2EE86B' : '#FFCC00';
+    ctx.fillText(boxStr, textCx, y0 + lineH + lineH / 2);
+  }
 
   // Small pointer triangle pointing down to the car
   ctx.beginPath();
@@ -1121,14 +1146,22 @@ function renderStandings() {
       }
     }
 
-    // Pit lane start (show as DNS-style badge on lap 1)
+    // Pit lane start (show as PIT badge on lap 1)
     if (ds.pitStart && G.currentLap <= 1) {
-      statusHtml = '<span class="dr-status-badge dns">PIT</span>';
+      statusHtml = '<span class="dr-status-badge pit">PIT</span>';
+    }
+
+    // Currently in pit (active pit stop)
+    const inPitNow = !isRetired && G.pitStops.some(ps => ps.driver === num && G.currentT >= ps.tStart && G.currentT <= ps.tEnd);
+    if (inPitNow) {
+      statusHtml = '<span class="dr-status-badge pit">PIT</span>';
     }
 
     // Gap to leader
     let gapHtml = '';
     if (isRetired) {
+      gapHtml = statusHtml;
+    } else if (inPitNow) {
       gapHtml = statusHtml;
     } else if (ds.pitStart && G.currentLap <= 1) {
       gapHtml = statusHtml;

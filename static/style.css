@@ -30,7 +30,7 @@
 
 html, body {
   height: 100%;
-  background: var(--bg);
+  background: transparent;
   color: var(--text);
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 13px;
@@ -86,6 +86,7 @@ html, body {
   grid-template-rows: var(--header-h) 1fr;
   height: 100dvh;
   overflow: hidden;
+  background: var(--bg);
 }
 
 /* ─── HEADER ─────────────────────────────────────────────────────────────── */

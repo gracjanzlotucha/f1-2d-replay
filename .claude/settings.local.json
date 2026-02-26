@@ -54,7 +54,8 @@
       "WebFetch(domain:wildfirestudios.ca)",
       "WebFetch(domain:www.framer.community)",
       "WebFetch(domain:dev.to)",
-      "WebFetch(domain:mikepiontek.com)"
+      "WebFetch(domain:mikepiontek.com)",
+      "WebFetch(domain:discussions.apple.com)"
     ]
   }
 }

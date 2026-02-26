@@ -429,9 +429,10 @@ def main():
         if pit_data:
             pit_ts = parse_iso(pit_data.get('date'))
             if pit_ts is not None:
-                pit_in = round(pit_ts - race_start_ts, 3)
+                # OpenF1 'date' = pit lane EXIT timestamp
                 lane_dur = pit_data.get('lane_duration') or 30
-                pit_out = round(pit_in + lane_dur, 3)
+                pit_out = round(pit_ts - race_start_ts, 3)
+                pit_in = round(pit_out - lane_dur, 3)
 
         # Lap start relative to race start
         lap_start_ts = parse_iso(lap.get('date_start'))
@@ -439,13 +440,11 @@ def main():
         if lap_start_ts is not None:
             lap_start = round(lap_start_ts - race_start_ts, 3)
 
-        # Position at end of this lap
+        # Position at end of this lap (only if lap was completed)
         position = None
         if lap_start_ts and lap_duration:
             lap_end_ts = lap_start_ts + lap_duration
             position = get_position_at(dn, lap_end_ts)
-        elif lap_start_ts:
-            position = get_position_at(dn, lap_start_ts)
 
         # Track status for this lap
         track_status = lap_track_status.get(lap_num, '1')
@@ -656,8 +655,9 @@ def main():
 
             loc_data = all_location_data.get(pit_driver, [])
             if pit_ts and loc_data:
-                window_start = pit_ts - 5
-                window_end = pit_ts + lane_dur + 5
+                # date = pit lane exit; entry = date - lane_dur
+                window_start = pit_ts - lane_dur - 5
+                window_end = pit_ts + 5
                 pit_points = []
                 for pt in loc_data:
                     ts = parse_iso(pt.get('date'))

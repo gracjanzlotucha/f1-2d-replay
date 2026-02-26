@@ -293,30 +293,11 @@ def main():
         }
         driver_numbers.append(d['driver_number'])
 
-    # ── Process track outline + circuit info ──────────────────────────────────
-
-    log.info('Processing track outline…')
-    track = {
-        'x': [round(float(v), 1) for v in raw_circuit['x']],
-        'y': [round(float(v), 1) for v in raw_circuit['y']],
-    }
+    # ── Circuit info (rotation only for now; track + corners set after location fetch) ─
 
     log.info('Processing circuit info…')
-    circuit_info = {
-        'rotation': round(float(raw_circuit.get('rotation', 0)), 2),
-        'corners': [
-            {
-                'number': int(c.get('number', 0)),
-                'letter': '',
-                'x': round(float(c['trackPosition']['x']), 1),
-                'y': round(float(c['trackPosition']['y']), 1),
-                'angle': round(float(c.get('angle', 0)), 1),
-                'distance': round(float(c.get('length', 0)), 1),
-            }
-            for c in raw_circuit['corners']
-        ],
-    }
-    log.info(f'  Circuit rotation: {circuit_info["rotation"]}°, {len(circuit_info["corners"])} corners')
+    circuit_rotation = round(float(raw_circuit.get('rotation', 0)), 2)
+    log.info(f'  Circuit rotation: {circuit_rotation}°')
 
     # ── Detect race start time ────────────────────────────────────────────────
 
@@ -559,6 +540,108 @@ def main():
         # Small delay to respect rate limits on bulk fetches
         if i < len(driver_numbers) - 1:
             time.sleep(0.2)
+
+    # ── Build track outline from location data ──────────────────────────────
+
+    log.info('Building track outline from location data…')
+    track = {'x': [], 'y': []}
+    try:
+        # Find the fastest clean lap (after SC periods, not a pit out lap)
+        candidate_laps = [
+            l for l in raw_laps
+            if l.get('lap_duration')
+            and (l.get('lap_number') or 0) >= 25
+            and not l.get('is_pit_out_lap')
+        ]
+        if candidate_laps:
+            best_lap = min(candidate_laps, key=lambda l: l['lap_duration'])
+            ref_dn = best_lap['driver_number']
+            ref_lap_start = parse_iso(best_lap['date_start'])
+            ref_lap_end = ref_lap_start + best_lap['lap_duration']
+
+            loc_data = all_location_data.get(ref_dn, [])
+            lap_points = []
+            for pt in loc_data:
+                pt_ts = parse_iso(pt['date'])
+                if pt_ts and ref_lap_start <= pt_ts <= ref_lap_end:
+                    lap_points.append((pt_ts, pt['x'], pt['y']))
+            lap_points.sort()
+
+            if lap_points:
+                track = {
+                    'x': [round(float(x), 1) for _, x, y in lap_points],
+                    'y': [round(float(y), 1) for _, x, y in lap_points],
+                }
+                log.info(f'  {len(track["x"])} points from driver #{ref_dn} lap {best_lap["lap_number"]} ({best_lap["lap_duration"]:.3f}s)')
+    except Exception as e:
+        log.warning(f'Track outline extraction failed: {e}')
+
+    # ── Transform corner coordinates from Multiviewer to location space ───
+
+    log.info('Transforming corner coordinates…')
+    circuit_info = {'rotation': circuit_rotation, 'corners': []}
+    try:
+        if track['x'] and raw_circuit['x']:
+            # Compute centroids
+            mv_cx = sum(raw_circuit['x']) / len(raw_circuit['x'])
+            mv_cy = sum(raw_circuit['y']) / len(raw_circuit['y'])
+            loc_cx = sum(track['x']) / len(track['x'])
+            loc_cy = sum(track['y']) / len(track['y'])
+
+            # Center both track outlines
+            mv_centered_x = [x - mv_cx for x in raw_circuit['x']]
+            mv_centered_y = [y - mv_cy for y in raw_circuit['y']]
+
+            # Resample location track to same number of points as Multiviewer
+            # for Procrustes alignment (simple uniform resampling)
+            n_mv = len(raw_circuit['x'])
+            n_loc = len(track['x'])
+            loc_resampled_x = []
+            loc_resampled_y = []
+            for i in range(n_mv):
+                idx = int(i * n_loc / n_mv)
+                idx = min(idx, n_loc - 1)
+                loc_resampled_x.append(track['x'][idx] - loc_cx)
+                loc_resampled_y.append(track['y'][idx] - loc_cy)
+
+            # Compute optimal rotation using Procrustes formula:
+            # theta = atan2(sum(mx*ly - my*lx), sum(mx*lx + my*ly))
+            num = sum(mx * ly - my * lx for mx, my, lx, ly
+                      in zip(mv_centered_x, mv_centered_y, loc_resampled_x, loc_resampled_y))
+            den = sum(mx * lx + my * ly for mx, my, lx, ly
+                      in zip(mv_centered_x, mv_centered_y, loc_resampled_x, loc_resampled_y))
+            theta = math.atan2(num, den)
+
+            # Compute uniform scale
+            mv_rms = math.sqrt(sum(x**2 + y**2 for x, y in zip(mv_centered_x, mv_centered_y)) / n_mv)
+            loc_rms = math.sqrt(sum(x**2 + y**2 for x, y in zip(loc_resampled_x, loc_resampled_y)) / n_mv)
+            scale = loc_rms / mv_rms if mv_rms else 1.0
+
+            cos_t = math.cos(theta)
+            sin_t = math.sin(theta)
+
+            def transform_mv(mx, my):
+                """Transform Multiviewer coordinates to OpenF1 location space."""
+                cx = mx - mv_cx
+                cy = my - mv_cy
+                rx = (cx * cos_t - cy * sin_t) * scale + loc_cx
+                ry = (cx * sin_t + cy * cos_t) * scale + loc_cy
+                return round(rx, 1), round(ry, 1)
+
+            circuit_info['corners'] = [
+                {
+                    'number': int(c.get('number', 0)),
+                    'letter': '',
+                    'x': transform_mv(c['trackPosition']['x'], c['trackPosition']['y'])[0],
+                    'y': transform_mv(c['trackPosition']['x'], c['trackPosition']['y'])[1],
+                    'angle': round(float(c.get('angle', 0)), 1),
+                    'distance': round(float(c.get('length', 0)), 1),
+                }
+                for c in raw_circuit['corners']
+            ]
+            log.info(f'  Transformed {len(circuit_info["corners"])} corners (rotation={math.degrees(theta):.1f}°, scale={scale:.4f})')
+    except Exception as e:
+        log.warning(f'Corner transformation failed: {e}')
 
     # ── Extract pit lane path ─────────────────────────────────────────────────
 

@@ -493,13 +493,15 @@ def main():
 
     # ── Fetch and process position telemetry ──────────────────────────────────
 
-    log.info('Fetching position telemetry (location data)…')
+    log.info('Fetching position telemetry (location + car data)…')
     positions = {}
     all_location_data = {}  # Keep raw for pit lane extraction
 
     for i, dn in enumerate(driver_numbers):
         sdn = str(dn)
         log.info(f'  Fetching driver #{dn} ({i+1}/{len(driver_numbers)})…')
+
+        # Fetch location data
         try:
             raw_loc = fetch(api, 'location', {
                 'session_key': SESSION_KEY,
@@ -514,27 +516,57 @@ def main():
 
         all_location_data[dn] = raw_loc
 
-        # Convert to race-relative time and resample to 2Hz
-        points = []
+        # Fetch car telemetry data
+        time.sleep(0.2)
+        raw_car = []
+        try:
+            raw_car = fetch(api, 'car_data', {
+                'session_key': SESSION_KEY,
+                'driver_number': dn,
+            })
+        except Exception as e:
+            log.warning(f'  Car data error for {dn}: {e}')
+
+        # Convert location to race-relative time
+        loc_points = []
         for pt in raw_loc:
             ts = parse_iso(pt.get('date'))
             if ts is None:
                 continue
             t = ts - race_start_ts
             if t >= 0:
-                points.append((t, pt['x'], pt['y']))
+                loc_points.append((t, pt['x'], pt['y']))
 
-        if not points:
+        if not loc_points:
             continue
 
-        points.sort()
+        loc_points.sort()
 
-        # Resample to 2Hz (0.5s buckets)
+        # Convert car data to race-relative time
+        car_points = []
+        for pt in raw_car:
+            ts = parse_iso(pt.get('date'))
+            if ts is None:
+                continue
+            t = ts - race_start_ts
+            if t >= 0:
+                car_points.append((
+                    t,
+                    pt.get('speed', 0),
+                    pt.get('rpm', 0),
+                    pt.get('throttle', 0),
+                    1 if pt.get('brake', 0) > 50 else 0,
+                    pt.get('n_gear', 0),
+                    pt.get('drs', 0),
+                ))
+        car_points.sort()
+
+        # Resample both to 2Hz (0.5s buckets)
         resampled_t = []
         resampled_x = []
         resampled_y = []
         seen_buckets = set()
-        for t, x, y in points:
+        for t, x, y in loc_points:
             bucket = int(t / 0.5)
             if bucket not in seen_buckets:
                 seen_buckets.add(bucket)
@@ -542,12 +574,44 @@ def main():
                 resampled_x.append(round(float(x), 1))
                 resampled_y.append(round(float(y), 1))
 
+        # Resample car data to same 2Hz grid
+        r_speed = []
+        r_rpm = []
+        r_throttle = []
+        r_brake = []
+        r_gear = []
+        r_drs = []
+        car_buckets = set()
+        for t, spd, rpm, thr, brk, gear, drs in car_points:
+            bucket = int(t / 0.5)
+            if bucket not in car_buckets:
+                car_buckets.add(bucket)
+                r_speed.append(spd)
+                r_rpm.append(rpm)
+                r_throttle.append(thr)
+                r_brake.append(brk)
+                r_gear.append(gear)
+                r_drs.append(drs)
+
+        # Align telemetry to position array length (pad or trim)
+        n = len(resampled_t)
+        def align(arr, default=0):
+            if len(arr) >= n:
+                return arr[:n]
+            return arr + [default] * (n - len(arr))
+
         positions[sdn] = {
             't': resampled_t,
             'x': resampled_x,
             'y': resampled_y,
+            'speed': align(r_speed),
+            'rpm': align(r_rpm),
+            'throttle': align(r_throttle),
+            'brake': align(r_brake),
+            'gear': align(r_gear),
+            'drs': align(r_drs),
         }
-        log.info(f'    {len(raw_loc)} raw → {len(resampled_t)} resampled points')
+        log.info(f'    {len(raw_loc)} loc + {len(raw_car)} car → {n} resampled points')
 
         # Small delay to respect rate limits on bulk fetches
         if i < len(driver_numbers) - 1:

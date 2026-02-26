@@ -733,6 +733,42 @@ function getPosition(driverNum, t) {
   };
 }
 
+/**
+ * Returns interpolated telemetry for a given driver at time t.
+ * Continuous values (speed, rpm, throttle) are linearly interpolated.
+ * Discrete values (brake, gear, drs) use nearest-neighbor.
+ */
+function getTelemetry(driverNum, t) {
+  const pd = G.positions[driverNum];
+  if (!pd || !pd.speed || !pd.speed.length) return null;
+
+  const idx = bisect(pd.t, t);
+  const near = idx === 0 ? 0
+    : idx >= pd.t.length ? pd.t.length - 1
+    : (t - pd.t[idx - 1] <= pd.t[idx] - t ? idx - 1 : idx);
+
+  if (idx === 0 || idx >= pd.t.length) {
+    const i = idx === 0 ? 0 : pd.t.length - 1;
+    return {
+      speed: pd.speed[i], rpm: pd.rpm[i], throttle: pd.throttle[i],
+      brake: pd.brake[i], gear: pd.gear[i], drs: pd.drs[i],
+    };
+  }
+
+  const t0 = pd.t[idx - 1], t1 = pd.t[idx];
+  const f = t1 === t0 ? 0 : (t - t0) / (t1 - t0);
+  const lerp = (a, b) => a + f * (b - a);
+
+  return {
+    speed: lerp(pd.speed[idx - 1], pd.speed[idx]),
+    rpm: lerp(pd.rpm[idx - 1], pd.rpm[idx]),
+    throttle: lerp(pd.throttle[idx - 1], pd.throttle[idx]),
+    brake: pd.brake[near],
+    gear: pd.gear[near],
+    drs: pd.drs[near],
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // REPLAY ENGINE
 // ═══════════════════════════════════════════════════════════════════════════
@@ -917,6 +953,14 @@ function renderFrame() {
   // Update driver order (for standings) based on position at current time
   updateDriverOrder();
 
+  // Draw telemetry gauge when following a driver
+  if (G.followDriver) {
+    const telem = getTelemetry(G.followDriver, G.currentT);
+    if (telem) {
+      drawTelemetryGauge(ctx, W, H, telem, G.drivers[G.followDriver]);
+    }
+  }
+
   // Zoom / follow indicator
   if (G.followDriver) {
     ctx.save();
@@ -1063,6 +1107,195 @@ function drawPitTimer(ctx, cx, cy, elapsed, finished, inBox, boxElapsed, stopDur
   ctx.closePath();
   ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
   ctx.fill();
+
+  ctx.restore();
+}
+
+// ── Telemetry gauge (shown in follow mode) ──────────────────────────────
+
+function drawTelemetryGauge(ctx, W, H, tel, driver) {
+  const R = 80;             // gauge radius
+  const cx = R + 16;        // center x (bottom-left)
+  const cy = H - R - 16;    // center y
+  const color = driver?.color || '#888';
+
+  ctx.save();
+
+  // ── Background circle ──
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.stroke();
+
+  // ── Speed tick marks & arc ──
+  // Arc spans from 150° (bottom-left) to 390° (bottom-right) = 240° range
+  const arcStart = (150 * Math.PI) / 180;
+  const arcSpan  = (240 * Math.PI) / 180;
+  const maxSpeed = 360;
+  const ticks = [0, 60, 120, 180, 240, 300, 360];
+  const tickR = R - 6;
+  const tickLen = 6;
+
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.font = '7px "JetBrains Mono", monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  for (const spd of ticks) {
+    const frac = spd / maxSpeed;
+    const angle = arcStart + frac * arcSpan;
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    ctx.beginPath();
+    ctx.moveTo(cx + cos * (tickR - tickLen), cy + sin * (tickR - tickLen));
+    ctx.lineTo(cx + cos * tickR, cy + sin * tickR);
+    ctx.stroke();
+    // Label
+    const lr = tickR + 8;
+    ctx.fillText(String(spd), cx + cos * lr, cy + sin * lr);
+  }
+
+  // Speed arc (colored segment showing current speed)
+  const speedFrac = Math.min(tel.speed / maxSpeed, 1);
+  const speedEnd = arcStart + speedFrac * arcSpan;
+  ctx.beginPath();
+  ctx.arc(cx, cy, tickR - 3, arcStart, speedEnd);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = color;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.lineCap = 'butt';
+
+  // ── Throttle arc (left side) ──
+  // Arc from 240° down to 150° (counter-clockwise on left)
+  const thrStart = (240 * Math.PI) / 180;
+  const thrSpan  = (90 * Math.PI) / 180;
+  const thrFrac  = Math.min(tel.throttle / 100, 1);
+  const barR = R - 18;
+
+  // Background track
+  ctx.beginPath();
+  ctx.arc(cx, cy, barR, thrStart - thrSpan, thrStart);
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.stroke();
+
+  // Filled portion
+  if (thrFrac > 0.01) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, barR, thrStart - thrFrac * thrSpan, thrStart);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#3B82F6';
+    ctx.stroke();
+  }
+
+  // "THROTTLE" label
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate((-195 * Math.PI) / 180);
+  ctx.font = 'bold 5.5px "JetBrains Mono", monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.textAlign = 'center';
+  const thrLabel = 'THROTTLE';
+  for (let i = 0; i < thrLabel.length; i++) {
+    const charAngle = ((i - thrLabel.length / 2 + 0.5) * 6.5 * Math.PI) / 180;
+    ctx.save();
+    ctx.rotate(charAngle);
+    ctx.fillText(thrLabel[i], 0, -(barR + 5));
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // ── Brake arc (right side) ──
+  // Arc from -60° (300°) down to 30° (going clockwise on right)
+  const brkStart = (-60 * Math.PI) / 180;
+  const brkSpan  = (90 * Math.PI) / 180;
+
+  // Background track
+  ctx.beginPath();
+  ctx.arc(cx, cy, barR, brkStart, brkStart + brkSpan);
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.stroke();
+
+  // Filled when braking
+  if (tel.brake) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, barR, brkStart, brkStart + brkSpan);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#EF4444';
+    ctx.stroke();
+  }
+
+  // "BRAKE" label
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate((-15 * Math.PI) / 180);
+  ctx.font = 'bold 5.5px "JetBrains Mono", monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.textAlign = 'center';
+  const brkLabel = 'BRAKE';
+  for (let i = 0; i < brkLabel.length; i++) {
+    const charAngle = ((i - brkLabel.length / 2 + 0.5) * 7.5 * Math.PI) / 180;
+    ctx.save();
+    ctx.rotate(charAngle);
+    ctx.fillText(brkLabel[i], 0, -(barR + 5));
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // ── Center text ──
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Speed (large)
+  ctx.font      = 'bold 28px "JetBrains Mono", monospace';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText(Math.round(tel.speed), cx, cy - 12);
+
+  // "KMH"
+  ctx.font      = 'bold 8px "JetBrains Mono", monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillText('KMH', cx, cy + 5);
+
+  // RPM
+  ctx.font      = 'bold 13px "JetBrains Mono", monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText(Math.round(tel.rpm), cx, cy + 20);
+
+  // "RPM"
+  ctx.font      = 'bold 7px "JetBrains Mono", monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillText('RPM', cx, cy + 31);
+
+  // ── DRS indicator ──
+  const drsActive = tel.drs >= 10;
+  const drsX = cx - 14;
+  const drsY = cy + 40;
+  const drsW = 28, drsH = 12;
+  ctx.strokeStyle = drsActive ? '#2EE86B' : 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(drsX, drsY, drsW, drsH);
+  if (drsActive) {
+    ctx.fillStyle = 'rgba(46, 232, 107, 0.15)';
+    ctx.fillRect(drsX, drsY, drsW, drsH);
+  }
+  ctx.font      = 'bold 8px "JetBrains Mono", monospace';
+  ctx.fillStyle = drsActive ? '#2EE86B' : 'rgba(255,255,255,0.25)';
+  ctx.textAlign = 'center';
+  ctx.fillText('DRS', cx, drsY + drsH / 2 + 1);
+
+  // ── Gear ──
+  ctx.font      = 'bold 7px "JetBrains Mono", monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillText('GEAR', cx - 10, cy + 60);
+  ctx.font      = 'bold 14px "JetBrains Mono", monospace';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText(tel.gear, cx + 12, cy + 60);
 
   ctx.restore();
 }

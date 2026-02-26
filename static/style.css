@@ -687,7 +687,7 @@ html, body {
 }
 .player-left {
   display: flex; align-items: center; gap: 2px;
-  flex-shrink: 0;
+  width: 84px; flex-shrink: 0;
 }
 .player-right {
   display: flex; align-items: center; gap: 12px;
@@ -776,7 +776,7 @@ html, body {
   padding: 0;
 }
 .player-icon-btn:hover { color: #eaecf0; }
-.player-icon-btn svg { width: 16px; height: 16px; }
+.player-icon-btn svg { width: 20px; height: 20px; }
 
 /* Settings popup */
 .settings-control {

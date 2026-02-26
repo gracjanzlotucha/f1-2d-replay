@@ -99,6 +99,7 @@ body {
   border-bottom: 1px solid #272a35;
   height: var(--header-h);
   flex-shrink: 0;
+  padding-top: env(safe-area-inset-top);
 }
 .header-logo-wrap {
   display: flex; align-items: center; justify-content: center;

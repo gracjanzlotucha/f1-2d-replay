@@ -335,33 +335,15 @@ def main():
 
     # Race control → track status per lap
     # Build a map: lap_number → status code string
-    # Status codes: '1'=green, '2'=yellow, '4'=SC, '5'/'6'=VSC
+    # Status codes: '1'=green, '2'=yellow, '4'=SC, '5'=red, '6'=VSC
+    # Priority: red > SC > VSC > yellow
     log.info('Building track status per lap…')
+    STATUS_PRIORITY = {'5': 4, '4': 3, '6': 2, '2': 1}
     lap_track_status = {}  # {lap_number: status_code}
-    for evt in raw_race_control:
-        lap_num = evt.get('lap_number')
-        if not lap_num:
-            continue
-        category = evt.get('category', '')
-        message = evt.get('message', '').upper()
-        flag = evt.get('flag', '') or ''
 
-        if category == 'SafetyCar':
-            if 'VIRTUAL' in message:
-                # VSC deployed — mark this lap and subsequent until ending
-                if 'ENDING' not in message:
-                    lap_track_status[lap_num] = '6'  # VSC
-            else:
-                if 'IN THIS LAP' not in message:
-                    lap_track_status[lap_num] = '4'  # SC
-        elif category == 'Flag' and flag in ('YELLOW', 'DOUBLE YELLOW') and evt.get('scope') == 'Track':
-            if lap_num not in lap_track_status:
-                lap_track_status[lap_num] = '2'  # Yellow
-
-    # Expand SC/VSC ranges: if lap N has SC deployed, mark all subsequent laps until SC ends
+    # First pass: expand SC/VSC ranges (these have highest priority after red)
     sc_active = None  # 'sc' or 'vsc'
     sc_start_lap = None
-    sc_events = []
     for evt in sorted(raw_race_control, key=lambda e: e.get('date', '')):
         if evt.get('category') != 'SafetyCar':
             continue
@@ -381,6 +363,22 @@ def main():
                     lap_track_status[ln] = code
             sc_active = None
             sc_start_lap = None
+
+    # Second pass: add yellow/red flags for laps without higher-priority status
+    for evt in raw_race_control:
+        lap_num = evt.get('lap_number')
+        if not lap_num:
+            continue
+        category = evt.get('category', '')
+        flag = evt.get('flag', '') or ''
+
+        if category == 'Flag' and flag in ('YELLOW', 'DOUBLE YELLOW'):
+            new_code = '2'
+            existing = lap_track_status.get(lap_num)
+            if not existing or STATUS_PRIORITY.get(existing, 0) < STATUS_PRIORITY.get(new_code, 0):
+                lap_track_status[lap_num] = new_code
+        elif category == 'Flag' and flag == 'RED':
+            lap_track_status[lap_num] = '5'
 
     # Position lookup: {driver_number: [(timestamp, position), ...]} sorted by time
     positions_by_driver = {}

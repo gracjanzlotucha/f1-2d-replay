@@ -588,7 +588,7 @@ function setupZoomPan() {
     if (G.followDriver) {
       // While following, wheel adjusts the follow zoom level
       const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-      G.followZoom = Math.min(6, Math.max(0.5, G.followZoom * factor));
+      G.followZoom = Math.min(6, Math.max(1, G.followZoom * factor));
       return;
     }
 
@@ -866,13 +866,19 @@ function renderFrame() {
   ctx.clearRect(0, 0, W, H);
 
   // Follow driver — smoothly zoom & pan to center on them
+  // At followZoom=1, show normal full-track view (no pan offset)
   if (G.followDriver) {
     const fpos = getPosition(G.followDriver, G.currentT);
     if (fpos) {
       const [baseCx, baseCy] = G.toCanvasBase(fpos.x, fpos.y);
       const targetZoom = G.followZoom;
-      const targetPanX = -(baseCx - W / 2) * targetZoom;
-      const targetPanY = -(baseCy - H / 2) * targetZoom;
+      // Blend between driver-centered pan and default view (0,0) based on zoom
+      // At zoom=1 → fully default view; at zoom>=2 → fully driver-centered
+      const followBlend = Math.min(1, (targetZoom - 1));
+      const driverPanX = -(baseCx - W / 2) * targetZoom;
+      const driverPanY = -(baseCy - H / 2) * targetZoom;
+      const targetPanX = driverPanX * followBlend;
+      const targetPanY = driverPanY * followBlend;
       const lerp = 0.08;
       G.zoom = G.zoom + (targetZoom - G.zoom) * lerp;
       G.panX = G.panX + (targetPanX - G.panX) * lerp;

@@ -1135,8 +1135,12 @@ body {
 /* ─── MOBILE LAYOUT ≤ 768px ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
 
-  /* Allow full-page scroll so panel content is never clipped */
-  html, body { overflow-y: auto; overflow-x: hidden; height: auto; }
+  /* Allow full-page scroll so panel content is never clipped.
+     html must be overflow:visible so body's overflow propagates to the
+     viewport (per CSS spec).  This keeps the viewport as the scroll
+     container — sticky works AND iOS Safari collapses the address bar. */
+  html { height: auto; overflow: visible; }
+  body { height: auto; overflow-y: auto; overflow-x: hidden; }
   #app { height: auto; min-height: 100dvh; overflow: visible; grid-template-rows: auto 1fr; }
 
   /* Compact header */

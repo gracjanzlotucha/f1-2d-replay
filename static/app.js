@@ -588,7 +588,7 @@ function setupZoomPan() {
     if (G.followDriver) {
       // While following, wheel adjusts the follow zoom level
       const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-      G.followZoom = Math.min(6, Math.max(1, G.followZoom * factor));
+      G.followZoom = Math.min(6, Math.max(0.5, G.followZoom * factor));
       return;
     }
 

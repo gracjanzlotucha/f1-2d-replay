@@ -470,7 +470,7 @@ function drawTrack(ctx) {
     // Extend start/end points along entry/exit direction so they overlap with the main track
     const raw = PIT_LANE_PATH;
     const n = raw.length;
-    const extAmt = 300; // extend in data-space units to reach well into the track
+    const extAmt = 800; // extend in data-space units to reach well into the track
     // Start extension: direction from point[1] toward point[0], continue further
     const sdx = raw[0][0] - raw[1][0], sdy = raw[0][1] - raw[1][1];
     const slen = Math.sqrt(sdx * sdx + sdy * sdy) || 1;

@@ -432,7 +432,7 @@ body {
 /* ─── TELEMETRY PANEL (follow mode) ──────────────────────────────────────── */
 .telemetry-panel {
   position: absolute;
-  bottom: 12px;
+  bottom: 24px;
   left: 0; right: 0;
   margin: 0 auto;
   width: 320px;
@@ -446,6 +446,7 @@ body {
   height: 48px;
   padding: 0 8px;
   border-radius: 12px 12px 0 0;
+  background: #0d0e12;
 }
 .tel-driver-info {
   display: flex;

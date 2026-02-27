@@ -585,8 +585,15 @@ function setupZoomPan() {
   // ── Mouse wheel → zoom (centered on cursor) ──
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
-    stopFollowing();
     G._resettingZoom = false;
+
+    if (G.followDriver) {
+      // While following, wheel adjusts the follow zoom level
+      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      G.followZoom = Math.min(6, Math.max(1, G.followZoom * factor));
+      return;
+    }
+
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
@@ -599,9 +606,6 @@ function setupZoomPan() {
       G.panX = 0;
       G.panY = 0;
     } else {
-      // Adjust pan so the point under the cursor stays fixed
-      // Transform is: screen = (base - center) * zoom + center + pan
-      // So we solve for newPan such that the same data point stays at (mx, my)
       const ratio = G.zoom / oldZoom;
       const cx = G.canvasW / 2;
       const cy = G.canvasH / 2;
@@ -623,11 +627,11 @@ function setupZoomPan() {
 
   window.addEventListener('mousemove', (e) => {
     if (!G._dragging) return;
+    if (G.followDriver) return; // pan disabled while following
     const dx = e.clientX - G._dragStartX;
     const dy = e.clientY - G._dragStartY;
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
       G._dragMoved = true;
-      stopFollowing();
     }
     G.panX += dx;
     G.panY += dy;
@@ -645,7 +649,11 @@ function setupZoomPan() {
   // ── Double-click → reset zoom ──
   canvas.addEventListener('dblclick', (e) => {
     e.preventDefault();
-    stopFollowing();
+    if (G.followDriver) {
+      // Reset follow zoom to default
+      G.followZoom = 3;
+      return;
+    }
     G._resettingZoom = false;
     if (G.zoom !== 1) {
       G.zoom = 1;
@@ -672,11 +680,11 @@ function setupZoomPan() {
 
   canvas.addEventListener('touchmove', (e) => {
     if (e.touches.length === 1 && G._dragging) {
+      if (G.followDriver) { e.preventDefault(); return; } // pan disabled while following
       const dx = e.touches[0].clientX - G._dragStartX;
       const dy = e.touches[0].clientY - G._dragStartY;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
         G._dragMoved = true;
-        stopFollowing();
       }
       G.panX += dx;
       G.panY += dy;
@@ -685,7 +693,7 @@ function setupZoomPan() {
       applyZoomPan();
       e.preventDefault();
     } else if (e.touches.length === 2) {
-      stopFollowing();
+      if (G.followDriver) { e.preventDefault(); return; } // pinch disabled while following
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.hypot(dx, dy);
@@ -1356,7 +1364,7 @@ function updateTelemetryPanel() {
 
     // Header gradient background
     const header = document.getElementById('tel-header');
-    header.style.background = `linear-gradient(to right, ${hexAlpha(color, 0.15)}, ${hexAlpha(color, 0.08)})`;
+    header.style.background = `linear-gradient(to right, ${hexAlpha(color, 0.15)}, ${hexAlpha(color, 0.08)}), #0d0e12`;
 
     // Team logo
     const teamSlug = TEAM_LOGO_MAP[driver.team] || '';

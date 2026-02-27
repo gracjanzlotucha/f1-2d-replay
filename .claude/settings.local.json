@@ -58,7 +58,8 @@
       "WebFetch(domain:discussions.apple.com)",
       "Bash(git push --force)",
       "Bash(python:*)",
-      "WebFetch(domain:stuffandnonsense.co.uk)"
+      "WebFetch(domain:stuffandnonsense.co.uk)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

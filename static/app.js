@@ -996,8 +996,10 @@ function drawCar(ctx, num, cx, cy) {
   const driver = G.drivers[num];
   if (!driver) return;
   const color = driver.color || '#888';
-  // Scale radius with zoom — grows but not 1:1 (sqrt gives a nice feel)
-  const r = DRIVER_RADIUS * Math.pow(G.zoom, 0.4);
+  // Scale radius with zoom — grows but not 1:1 (pow 0.4 gives a nice feel)
+  // On small screens (mobile), use a smaller base so circles don't obscure the track
+  const baseR = G.canvasW < 500 ? 9 : DRIVER_RADIUS;
+  const r = baseR * Math.pow(G.zoom, 0.4);
 
   ctx.save();
 

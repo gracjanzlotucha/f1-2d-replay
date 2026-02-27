@@ -1064,6 +1064,27 @@ body {
     position: sticky; top: 0; z-index: 11;
     background: #0d0e12;
   }
+  /* When following: grow track section to fit telemetry below the canvas */
+  .track-section.tel-active {
+    height: auto;
+    max-height: none;
+  }
+  .tel-active .track-container {
+    flex-direction: column;
+    height: auto;
+  }
+  .tel-active #track-canvas {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1;
+    max-height: 58vw;
+  }
+  .tel-active .telemetry-panel {
+    position: relative;
+    bottom: auto;
+    left: auto; right: auto;
+    margin: 8px auto 4px;
+  }
 
   /* Player bar: compact on mobile */
   .player-bar { height: 40px; padding: 4px 8px; }
@@ -1083,6 +1104,7 @@ body {
     background: #16171d;
     border-top: 1px solid #0d0e12;
     position: sticky;
+    /* When tel-active, track section is taller so we can't use a fixed value */
     top: clamp(220px, 58vw, 360px);
     z-index: 10;
   }

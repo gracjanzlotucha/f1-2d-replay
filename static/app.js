@@ -1342,19 +1342,23 @@ function updateTelemetryPanel() {
   const panel = document.getElementById('telemetry-panel');
   if (!panel) return;
 
+  const trackSection = document.querySelector('.track-section');
+
   if (!G.followDriver) {
     panel.classList.add('hidden');
+    if (trackSection) trackSection.classList.remove('tel-active');
     _telPanelDriver = null;
     return;
   }
 
   const driver = G.drivers[G.followDriver];
-  if (!driver) { panel.classList.add('hidden'); return; }
+  if (!driver) { panel.classList.add('hidden'); if (trackSection) trackSection.classList.remove('tel-active'); return; }
 
   const telem = getTelemetry(G.followDriver, G.currentT);
-  if (!telem) { panel.classList.add('hidden'); return; }
+  if (!telem) { panel.classList.add('hidden'); if (trackSection) trackSection.classList.remove('tel-active'); return; }
 
   panel.classList.remove('hidden');
+  if (trackSection) trackSection.classList.add('tel-active');
 
   const color = driver.color || '#888';
 

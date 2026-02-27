@@ -33,7 +33,7 @@ const TYRE_SVG_MAP = {
 };
 
 const TRAIL_LENGTH = 28;   // How many past positions to show as trail
-const DRIVER_RADIUS = 9;   // Car marker radius on canvas
+const DRIVER_RADIUS = 13;  // Car marker radius on canvas (base, scales with zoom)
 const PADDING_FRAC  = 0.08; // Canvas padding as fraction
 
 // Track rotation — matches the standard Silverstone map orientation (SVG reference)
@@ -512,30 +512,51 @@ function drawTrack(ctx) {
     ctx.fillText('PIT', pmx + nx * labelDist, pmy + ny * labelDist);
   }
 
-  // 4. Start/Finish line
+  // 4. Start/Finish checkerboard flag
   if (tx.length > 10) {
     const midIdx = Math.floor(tx.length * 0.02);
     const [sfx, sfy] = G.toCanvas(tx[midIdx], ty[midIdx]);
     ctx.save();
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth   = Math.max(2, 3 * scale);
+
+    // Calculate track direction angle at S/F point
     const [rx1, ry1] = rotatePoint(tx[midIdx], ty[midIdx]);
     const [rx2, ry2] = rotatePoint(tx[midIdx + 2], ty[midIdx + 2]);
     const angle = Math.atan2(-(ry2 - ry1), rx2 - rx1);
+
     ctx.translate(sfx, sfy);
     ctx.rotate(angle + Math.PI / 2);
-    const sfHalf = trackW * 0.7;
-    ctx.beginPath();
-    ctx.moveTo(-sfHalf, 0); ctx.lineTo(sfHalf, 0);
-    ctx.stroke();
-    ctx.restore();
 
-    // S/F label
-    const sfFont = Math.max(7, Math.round(9 * scale));
-    ctx.font = `bold ${sfFont}px Inter, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.textAlign = 'center';
-    ctx.fillText('S/F', sfx, sfy - trackW * 0.8 - 4);
+    // Checkerboard dimensions (4 cols × 8 rows), scaled
+    const cols = 4;
+    const rows = 8;
+    const cellSize = Math.max(2, 2.5 * scale);
+    const boardW = cols * cellSize;
+    const boardH = rows * cellSize;
+    const borderW = Math.max(2, 2.5 * scale);
+
+    // Dark border around the checkerboard
+    ctx.fillStyle = '#0D0E12';
+    ctx.fillRect(
+      -boardW / 2 - borderW,
+      -boardH / 2 - borderW,
+      boardW + borderW * 2,
+      boardH + borderW * 2
+    );
+
+    // Draw checkerboard cells
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        ctx.fillStyle = (r + c) % 2 === 0 ? '#FFFFFF' : '#000000';
+        ctx.fillRect(
+          -boardW / 2 + c * cellSize,
+          -boardH / 2 + r * cellSize,
+          cellSize,
+          cellSize
+        );
+      }
+    }
+
+    ctx.restore();
   }
 
   return true;
@@ -992,12 +1013,13 @@ function drawCar(ctx, num, cx, cy) {
   const driver = G.drivers[num];
   if (!driver) return;
   const color = driver.color || '#888';
-  const r     = DRIVER_RADIUS;
+  // Scale radius with zoom — grows but not 1:1 (sqrt gives a nice feel)
+  const r = DRIVER_RADIUS * Math.pow(G.zoom, 0.4);
 
   // Outer glow
   ctx.save();
   ctx.shadowColor = hexAlpha(color, 0.7);
-  ctx.shadowBlur  = 14;
+  ctx.shadowBlur  = 14 * Math.pow(G.zoom, 0.3);
 
   // Circle fill
   ctx.beginPath();
@@ -1007,11 +1029,11 @@ function drawCar(ctx, num, cx, cy) {
 
   ctx.shadowBlur = 0;
 
-  // White border
+  // Team-color border (matching Figma: 2px border at 0.15 opacity)
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  ctx.lineWidth   = 1.5;
+  ctx.strokeStyle = hexAlpha(color, 0.15);
+  ctx.lineWidth   = 2 * Math.pow(G.zoom, 0.3);
   ctx.stroke();
 
   ctx.restore();
@@ -1019,7 +1041,7 @@ function drawCar(ctx, num, cx, cy) {
   // Abbreviation inside
   if (G.showLabels) {
     ctx.save();
-    ctx.font         = `bold ${Math.floor(r * 0.75)}px "JetBrains Mono", monospace`;
+    ctx.font         = `600 ${Math.floor(r * 0.78)}px "JetBrains Mono", monospace`;
     ctx.fillStyle    = isLightColor(color) ? '#000' : '#fff';
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
@@ -1053,7 +1075,7 @@ function drawPitTimer(ctx, cx, cy, elapsed, finished, inBox, boxElapsed, stopDur
 
   // Position above the car
   const boxX = cx;
-  const boxY = cy - DRIVER_RADIUS - 22 - (showBox ? lineH / 2 : 0);
+  const boxY = cy - DRIVER_RADIUS * Math.pow(G.zoom, 0.4) - 22 - (showBox ? lineH / 2 : 0);
   const x0 = boxX - boxW / 2;
   const y0 = boxY - boxH / 2;
 
@@ -2044,7 +2066,7 @@ function onCanvasHover(e) {
   }
 
   const tooltip = document.getElementById('car-tooltip');
-  if (closest && closestDist < 20) {
+  if (closest && closestDist < DRIVER_RADIUS * Math.pow(G.zoom, 0.4) + 8) {
     const driver = G.drivers[closest];
     const meta   = G._posAtT?.[closest] || {};
     tooltip.classList.remove('hidden');

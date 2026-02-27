@@ -1374,7 +1374,7 @@ function updateTelemetryPanel() {
 
     // Driver photo
     const photoEl = document.getElementById('tel-driver-photo');
-    photoEl.src = `assets/drivers/${driver.abbr}.png`;
+    photoEl.src = `assets/drivers-hd/${driver.abbr}.png`;
 
     // Indicator bar colors (team color for speed, blue for RPM, amber for brake)
     document.getElementById('tel-speed-fill').style.background = color;

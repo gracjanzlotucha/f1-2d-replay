@@ -56,7 +56,8 @@
       "WebFetch(domain:dev.to)",
       "WebFetch(domain:mikepiontek.com)",
       "WebFetch(domain:discussions.apple.com)",
-      "Bash(git push --force)"
+      "Bash(git push --force)",
+      "Bash(python:*)"
     ]
   }
 }

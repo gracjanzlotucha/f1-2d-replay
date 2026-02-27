@@ -478,11 +478,8 @@ body {
   border-radius: 0 12px 0 0;
 }
 .tel-driver-photo {
-  position: absolute;
-  left: 0;
-  top: 0;
   width: 100%;
-  height: 360%;
+  height: 100%;
   object-fit: cover;
   object-position: top center;
 }

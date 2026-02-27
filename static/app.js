@@ -430,7 +430,7 @@ function drawTrack(ctx) {
   const scale = Math.max(0.5, G.canvasW / 720) * G.zoom;
   const trackW   = Math.max(4, 6 * scale);
   const centerW  = Math.max(1, 1.2 * scale);
-  const pitW     = Math.max(3, 4 * scale);
+  const pitW     = Math.max(1, 2 * scale);
 
   // Helper: trace the full track path using smooth quadratic bezier curves
   // Each data point becomes a control point; endpoints are midpoints between them
@@ -465,9 +465,24 @@ function drawTrack(ctx) {
   ctx.lineJoin    = 'round';
   ctx.stroke();
 
-  // 2. Pit lane — same surface color, drawn before center line so it merges seamlessly
+  // 2. Pit lane — thin single stroke, same color as track surface so it merges at endpoints
   if (PIT_LANE_PATH.length >= 3) {
-    const plPts = PIT_LANE_PATH.map(p => G.toCanvas(p[0], p[1]));
+    // Extend start/end points along entry/exit direction so they overlap with the main track
+    const raw = PIT_LANE_PATH;
+    const n = raw.length;
+    const extAmt = 300; // extend in data-space units to reach well into the track
+    // Start extension: direction from point[1] toward point[0], continue further
+    const sdx = raw[0][0] - raw[1][0], sdy = raw[0][1] - raw[1][1];
+    const slen = Math.sqrt(sdx * sdx + sdy * sdy) || 1;
+    const startExt = [raw[0][0] + (sdx / slen) * extAmt, raw[0][1] + (sdy / slen) * extAmt];
+    // End extension: direction from point[n-2] toward point[n-1], continue further
+    const edx = raw[n-1][0] - raw[n-2][0], edy = raw[n-1][1] - raw[n-2][1];
+    const elen = Math.sqrt(edx * edx + edy * edy) || 1;
+    const endExt = [raw[n-1][0] + (edx / elen) * extAmt, raw[n-1][1] + (edy / elen) * extAmt];
+
+    const extPath = [startExt, ...raw, endExt];
+    const plPts = extPath.map(p => G.toCanvas(p[0], p[1]));
+
     ctx.beginPath();
     ctx.moveTo(plPts[0][0], plPts[0][1]);
     for (let i = 0; i < plPts.length - 2; i++) {

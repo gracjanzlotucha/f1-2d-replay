@@ -35,7 +35,6 @@ const TYRE_SVG_MAP = {
 const TRAIL_LENGTH = 28;   // How many past positions to show as trail
 const DRIVER_RADIUS = 13;  // Car marker radius on canvas (base, scales with zoom)
 const PADDING_FRAC  = 0.08; // Canvas padding as fraction
-const PIT_OFFSET_DIST = 400; // GPS units to offset the stylized pit lane from the original
 
 // Track rotation — matches the standard Silverstone map orientation (SVG reference)
 // FastF1 circuit_info.rotation = 92°; rotating by -91° aligns the pit straight
@@ -69,45 +68,6 @@ const PIT_LANE_PATH = [
   [748, 4113],   [911, 4154],   [1052, 4172],  [1240, 4195],
   [1479, 4225],  [1634, 4244],
 ];
-
-// Compute a stylized pit lane offset perpendicular to the original path
-function computeOffsetPitLane(path, dist) {
-  const n = path.length;
-  const result = [];
-  const taperPts = 3; // smoothstep taper over first/last N points
-  for (let i = 0; i < n; i++) {
-    // Tangent: average of prev→cur and cur→next segment directions
-    let tx = 0, ty = 0;
-    if (i > 0) {
-      tx += path[i][0] - path[i - 1][0];
-      ty += path[i][1] - path[i - 1][1];
-    }
-    if (i < n - 1) {
-      tx += path[i + 1][0] - path[i][0];
-      ty += path[i + 1][1] - path[i][1];
-    }
-    const len = Math.sqrt(tx * tx + ty * ty) || 1;
-    tx /= len; ty /= len;
-    // Right-perpendicular normal: (ty, -tx)
-    const nx = ty, ny = -tx;
-    // Taper: smoothstep blend at entry/exit so path connects to original
-    let blend = 1;
-    if (i < taperPts) {
-      const t = i / taperPts;
-      blend = t * t * (3 - 2 * t); // smoothstep
-    } else if (i >= n - taperPts) {
-      const t = (n - 1 - i) / taperPts;
-      blend = t * t * (3 - 2 * t);
-    }
-    result.push([
-      path[i][0] + nx * dist * blend,
-      path[i][1] + ny * dist * blend,
-    ]);
-  }
-  return result;
-}
-
-const PIT_LANE_OFFSET_PATH = computeOffsetPitLane(PIT_LANE_PATH, PIT_OFFSET_DIST);
 
 let G = {
   // Raw data
@@ -386,8 +346,8 @@ function computeTrackBounds() {
     }
   }
 
-  // Include offset pit lane path in bounds
-  for (const [px, py] of PIT_LANE_OFFSET_PATH) {
+  // Include pit lane path in bounds
+  for (const [px, py] of PIT_LANE_PATH) {
     const [rx, ry] = rotatePoint(px, py);
     if (rx < minX) minX = rx; if (rx > maxX) maxX = rx;
     if (ry < minY) minY = ry; if (ry > maxY) maxY = ry;
@@ -565,9 +525,9 @@ function drawTrack(ctx) {
     ctx.restore();
   }
 
-  // 4. Pit lane — stylized offset path (drawn after checkerboard so it renders on top)
-  if (PIT_LANE_OFFSET_PATH.length >= 3) {
-    const plPts = PIT_LANE_OFFSET_PATH.map(p => G.toCanvas(p[0], p[1]));
+  // 4. Pit lane — solid, thinner line (drawn after checkerboard so it renders on top)
+  if (PIT_LANE_PATH.length >= 3) {
+    const plPts = PIT_LANE_PATH.map(p => G.toCanvas(p[0], p[1]));
     ctx.beginPath();
     ctx.moveTo(plPts[0][0], plPts[0][1]);
     // Smooth quadratic bezier through midpoints
@@ -586,10 +546,10 @@ function drawTrack(ctx) {
     ctx.stroke();
 
     // "PIT" label offset below the pit lane (flipped perpendicular)
-    const pitMid = Math.floor(PIT_LANE_OFFSET_PATH.length / 2);
-    const [pmx, pmy] = G.toCanvas(PIT_LANE_OFFSET_PATH[pitMid][0], PIT_LANE_OFFSET_PATH[pitMid][1]);
-    const [pa, pb]   = G.toCanvas(PIT_LANE_OFFSET_PATH[pitMid - 1][0], PIT_LANE_OFFSET_PATH[pitMid - 1][1]);
-    const [pc, pd]   = G.toCanvas(PIT_LANE_OFFSET_PATH[pitMid + 1][0], PIT_LANE_OFFSET_PATH[pitMid + 1][1]);
+    const pitMid = Math.floor(PIT_LANE_PATH.length / 2);
+    const [pmx, pmy] = G.toCanvas(PIT_LANE_PATH[pitMid][0], PIT_LANE_PATH[pitMid][1]);
+    const [pa, pb]   = G.toCanvas(PIT_LANE_PATH[pitMid - 1][0], PIT_LANE_PATH[pitMid - 1][1]);
+    const [pc, pd]   = G.toCanvas(PIT_LANE_PATH[pitMid + 1][0], PIT_LANE_PATH[pitMid + 1][1]);
     const pdx = pc - pa, pdy = pd - pb;
     const plen = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
     // Left-perpendicular (below the line, away from S/F side)
@@ -808,60 +768,6 @@ function getPosition(driverNum, t) {
 }
 
 /**
- * Projects a GPS position onto the offset pit lane.
- * Finds closest segment on the original PIT_LANE_PATH, then maps to the same
- * parametric position on PIT_LANE_OFFSET_PATH.
- */
-function projectOntoPitLane(pos) {
-  const orig = PIT_LANE_PATH;
-  const offset = PIT_LANE_OFFSET_PATH;
-  let bestDist = Infinity, bestSeg = 0, bestT = 0;
-  for (let i = 0; i < orig.length - 1; i++) {
-    const ax = orig[i][0], ay = orig[i][1];
-    const bx = orig[i + 1][0], by = orig[i + 1][1];
-    const dx = bx - ax, dy = by - ay;
-    const len2 = dx * dx + dy * dy;
-    let t = len2 > 0 ? ((pos.x - ax) * dx + (pos.y - ay) * dy) / len2 : 0;
-    t = Math.max(0, Math.min(1, t));
-    const px = ax + t * dx, py = ay + t * dy;
-    const d = (pos.x - px) * (pos.x - px) + (pos.y - py) * (pos.y - py);
-    if (d < bestDist) { bestDist = d; bestSeg = i; bestT = t; }
-  }
-  const oa = offset[bestSeg], ob = offset[bestSeg + 1];
-  return {
-    x: oa[0] + bestT * (ob[0] - oa[0]),
-    y: oa[1] + bestT * (ob[1] - oa[1]),
-  };
-}
-
-/**
- * Returns display position for a driver (offset to stylized pit lane during pit stops).
- * Smoothly blends between real position and offset pit lane over ~2s at entry/exit.
- */
-const PIT_BLEND_DURATION = 2; // seconds for smooth entry/exit transition
-function getDisplayPosition(driverNum, t) {
-  const raw = getPosition(driverNum, t);
-  if (!raw) return null;
-  // Check if driver is in a pit stop window
-  for (const ps of G.pitStops) {
-    if (ps.driver !== driverNum) continue;
-    if (t < ps.tStart || t > ps.tEnd) continue;
-    // Driver is in pit — compute blend factor for smooth entry/exit
-    const entryBlend = Math.min(1, (t - ps.tStart) / PIT_BLEND_DURATION);
-    const exitBlend = Math.min(1, (ps.tEnd - t) / PIT_BLEND_DURATION);
-    const blend = Math.min(entryBlend, exitBlend);
-    // Smoothstep for nicer easing
-    const s = blend * blend * (3 - 2 * blend);
-    const projected = projectOntoPitLane(raw);
-    return {
-      x: raw.x + (projected.x - raw.x) * s,
-      y: raw.y + (projected.y - raw.y) * s,
-    };
-  }
-  return raw;
-}
-
-/**
  * Returns interpolated telemetry for a given driver at time t.
  * Continuous values (speed, rpm, throttle) are linearly interpolated.
  * Discrete values (brake, gear, drs) use nearest-neighbor.
@@ -969,7 +875,7 @@ function renderFrame() {
 
   // Follow driver — smoothly zoom & pan to center on them
   if (G.followDriver) {
-    const fpos = getDisplayPosition(G.followDriver, G.currentT);
+    const fpos = getPosition(G.followDriver, G.currentT);
     if (fpos) {
       const [baseCx, baseCy] = G.toCanvasBase(fpos.x, fpos.y);
       const targetZoom = G.followZoom;
@@ -1021,7 +927,7 @@ function renderFrame() {
       const retLapT = G.lapStartMap[ds.retirementLap + 1] || G.lapStartMap[ds.retirementLap];
       if (retLapT != null && G.currentT > retLapT + 10) continue; // +10s grace period
     }
-    const pos = getDisplayPosition(num, G.currentT);
+    const pos = getPosition(num, G.currentT);
     if (!pos) continue;
     const [cx, cy] = G.toCanvas(pos.x, pos.y);
     carData.push({ num, cx, cy, pos });
@@ -2017,7 +1923,7 @@ function bindControls() {
         const retLapT = G.lapStartMap[ds.retirementLap + 1] || G.lapStartMap[ds.retirementLap];
         if (retLapT != null && G.currentT > retLapT + 10) continue;
       }
-      const pos = getDisplayPosition(num, G.currentT);
+      const pos = getPosition(num, G.currentT);
       if (!pos) continue;
       const [cx, cy] = G.toCanvas(pos.x, pos.y);
       const d = Math.hypot(cx - mx, cy - my);
@@ -2322,7 +2228,7 @@ function onCanvasHover(e) {
       const retLapT = G.lapStartMap[ds.retirementLap + 1] || G.lapStartMap[ds.retirementLap];
       if (retLapT != null && G.currentT > retLapT + 10) continue;
     }
-    const pos = getDisplayPosition(num, G.currentT);
+    const pos = getPosition(num, G.currentT);
     if (!pos) continue;
     const [cx, cy] = G.toCanvas(pos.x, pos.y);
     const d = Math.hypot(cx - cx2, cy - cy2);

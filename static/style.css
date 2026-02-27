@@ -590,17 +590,33 @@ body {
 /* ─── CAR TOOLTIP ────────────────────────────────────────────────────────── */
 .car-tooltip {
   position: absolute;
-  background: var(--bg-2);
-  border: 1px solid var(--border-2);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  background: #16171d;
+  border: 1px solid #272a35;
+  border-radius: 8px;
+  padding: 6px 10px;
   pointer-events: none;
   z-index: 100;
   white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
 }
-.tooltip-driver { font-size: 13px; font-weight: 700; }
-.tooltip-team   { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
-.tooltip-pos    { font-size: 11px; color: var(--text-dimmer); margin-top: 2px; }
+.tooltip-driver {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 12px; font-weight: 600;
+  color: #eaecf0;
+  line-height: 14px;
+}
+.tooltip-team {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 10px; font-weight: 400;
+  color: #838aa5;
+  line-height: 14px;
+}
+.tooltip-pos {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 10px; font-weight: 400;
+  color: #838aa5;
+  line-height: 14px;
+}
 
 /* ─── SEGMENTED CONTROL TAB BAR (inside right sidebar) ───────────────────── */
 .panel-tab-bar {

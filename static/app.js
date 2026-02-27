@@ -369,17 +369,18 @@ function setupCanvas() {
   function resize() {
     const dpr  = window.devicePixelRatio || 1;
     const rect = container.getBoundingClientRect();
-    // Round to integer CSS pixels to avoid subpixel positioning blur
-    const size = Math.round(Math.min(rect.width * 0.96, rect.height * 0.96));
+    // Fill the entire container (Google Maps-like behavior)
+    const w = Math.round(rect.width);
+    const h = Math.round(rect.height);
     // Physical pixel dimensions (retina-sharp)
-    G.canvas.width  = Math.round(size * dpr);
-    G.canvas.height = Math.round(size * dpr);
+    G.canvas.width  = Math.round(w * dpr);
+    G.canvas.height = Math.round(h * dpr);
     // CSS display size
-    G.canvas.style.width  = size + 'px';
-    G.canvas.style.height = size + 'px';
+    G.canvas.style.width  = w + 'px';
+    G.canvas.style.height = h + 'px';
     // Logical (CSS-pixel) size used by all coordinate math
-    G.canvasW = size;
-    G.canvasH = size;
+    G.canvasW = w;
+    G.canvasH = h;
     // Use setTransform instead of scale() so the matrix is always set to
     // exactly dpr — avoids accumulation if canvas.width didn't reset the
     // context (browsers may skip reset when the value is unchanged).
@@ -403,13 +404,18 @@ function buildToCanvasFn() {
   const dataH = maxY - minY || 1;
   const pad   = PADDING_FRAC;
 
+  // Fit track within canvas preserving aspect ratio (uniform scale)
+  const availW = G.canvasW * (1 - 2 * pad);
+  const availH = G.canvasH * (1 - 2 * pad);
+  const fitScale = Math.min(availW / dataW, availH / dataH);
+  const offX = (G.canvasW - dataW * fitScale) / 2;
+  const offY = (G.canvasH - dataH * fitScale) / 2;
+
   // Base transform: data coords → canvas pixels (no zoom/pan)
   G.toCanvasBase = function (x, y) {
     const [rx, ry] = rotatePoint(x, y);
-    const nx = (rx - minX) / dataW;
-    const ny = 1 - (ry - minY) / dataH;
-    const cx = (pad + nx * (1 - 2 * pad)) * G.canvasW;
-    const cy = (pad + ny * (1 - 2 * pad)) * G.canvasH;
+    const cx = offX + (rx - minX) * fitScale;
+    const cy = offY + (dataH - (ry - minY)) * fitScale;
     return [cx, cy];
   };
 
@@ -984,31 +990,6 @@ function renderFrame() {
   // Update telemetry panel when following a driver
   updateTelemetryPanel();
 
-  // Zoom / follow indicator
-  if (G.followDriver) {
-    ctx.save();
-    const abbr = G.drivers[G.followDriver]?.abbr || G.followDriver;
-    ctx.font = 'bold 11px Inter, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`Following ${abbr}`, W - 8, 8);
-    ctx.font = '9px Inter, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.fillText('click driver or dbl-click to stop', W - 8, 22);
-    ctx.restore();
-  } else if (G.zoom > 1.01) {
-    ctx.save();
-    ctx.font = 'bold 11px Inter, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`${G.zoom.toFixed(1)}x`, W - 8, 8);
-    ctx.font = '9px Inter, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.fillText('dbl-click to reset', W - 8, 22);
-    ctx.restore();
-  }
 }
 
 function drawCar(ctx, num, cx, cy) {
@@ -1925,6 +1906,38 @@ function bindControls() {
   G.canvas.addEventListener('mousemove', onCanvasHover);
   G.canvas.addEventListener('mouseleave', () => {
     document.getElementById('car-tooltip').classList.add('hidden');
+  });
+
+  // Canvas click → follow/unfollow driver (same as standings click)
+  G.canvas.addEventListener('click', (e) => {
+    // Ignore if this was a drag-to-pan gesture
+    if (G._dragMoved) return;
+    const rect = G.canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    let closest = null, closestDist = Infinity;
+    for (const num in G.drivers) {
+      const ds = G.driverStatus[num];
+      if (ds && ds.status === 'dns') continue;
+      if (ds && ds.status === 'dnf' && ds.retirementLap != null) {
+        const retLapT = G.lapStartMap[ds.retirementLap + 1] || G.lapStartMap[ds.retirementLap];
+        if (retLapT != null && G.currentT > retLapT + 10) continue;
+      }
+      const pos = getPosition(num, G.currentT);
+      if (!pos) continue;
+      const [cx, cy] = G.toCanvas(pos.x, pos.y);
+      const d = Math.hypot(cx - mx, cy - my);
+      if (d < closestDist) { closestDist = d; closest = num; }
+    }
+    const hitRadius = DRIVER_RADIUS * Math.pow(G.zoom, 0.4) + 8;
+    if (closest && closestDist < hitRadius) {
+      if (G.followDriver === closest) {
+        stopFollowing();
+      } else {
+        G.followDriver = closest;
+        renderStandings();
+      }
+    }
   });
 
   // Keyboard shortcuts

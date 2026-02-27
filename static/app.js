@@ -436,7 +436,7 @@ function drawTrack(ctx) {
   const scale = Math.max(0.5, G.canvasW / 720) * G.zoom;
   const trackW   = Math.max(4, 6 * scale);
   const centerW  = Math.max(1, 1.2 * scale);
-  const pitW     = 2;
+  const pitW     = Math.max(1, 2 * scale);
 
   // Helper: trace the full track path using smooth quadratic bezier curves
   // Each data point becomes a control point; endpoints are midpoints between them

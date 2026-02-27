@@ -32,7 +32,6 @@ const TYRE_SVG_MAP = {
   INTERMEDIATE: 'intermediate', WET: 'wet',
 };
 
-const TRAIL_LENGTH = 28;   // How many past positions to show as trail
 const DRIVER_RADIUS = 13;  // Car marker radius on canvas (base, scales with zoom)
 const PADDING_FRAC  = 0.08; // Canvas padding as fraction
 
@@ -119,11 +118,9 @@ let G = {
   _resettingZoom: false, // true while smoothly zooming back out
 
   // Options
-  showTrails: true,
   showLabels: true,
 
   // Trail history: { driverNum: [{cx, cy}] }
-  trails: {},
 
   // RAF handle
   rafId: null,
@@ -317,9 +314,6 @@ function setupDerivedData() {
 
   // ── Driver order init ────────────────────────────────────────────────────
   G.driverOrder = Object.keys(G.drivers);
-
-  // ── Init trails ─────────────────────────────────────────────────────────
-  for (const num in G.drivers) G.trails[num] = [];
 
   // Total time is shown in the player-time element via updateTimelineUI()
 }
@@ -581,8 +575,6 @@ function stopFollowing() {
 
 function applyZoomPan() {
   buildToCanvasFn();
-  // Clear trails — stale canvas coords
-  for (const num in G.trails) G.trails[num] = [];
 }
 
 function setupZoomPan() {
@@ -901,7 +893,6 @@ function renderFrame() {
       G._resettingZoom = false;
     }
     buildToCanvasFn();
-    for (const num in G.trails) G.trails[num] = [];
   }
 
   // Draw track directly (no offscreen buffer — avoids clipping when zoomed)
@@ -935,42 +926,11 @@ function renderFrame() {
   // Sort so cars lower on screen render last (on top)
   carData.sort((a, b) => a.cy - b.cy);
 
-  // Draw trails first (below everything)
-  if (G.showTrails) {
-    for (const { num, cx, cy } of carData) {
-      const trail = G.trails[num] || [];
-      if (trail.length < 2) continue;
-      const color = G.drivers[num]?.color || '#888';
-      ctx.save();
-      for (let i = 1; i < trail.length; i++) {
-        const alpha = (i / trail.length) * 0.45;
-        const width = (i / trail.length) * 4;
-        ctx.beginPath();
-        ctx.moveTo(trail[i - 1].cx, trail[i - 1].cy);
-        ctx.lineTo(trail[i].cx,     trail[i].cy);
-        ctx.strokeStyle = hexAlpha(color, alpha);
-        ctx.lineWidth   = width;
-        ctx.lineCap     = 'round';
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-  }
-
-  // Update trails
-  for (const { num, cx, cy } of carData) {
-    if (!G.trails[num]) G.trails[num] = [];
-    G.trails[num].push({ cx, cy });
-    if (G.trails[num].length > TRAIL_LENGTH) G.trails[num].shift();
-  }
-
-  // Draw cars — when following, draw others at 50% opacity first, then followed driver on top
+  // Draw cars — followed driver rendered last (on top)
   if (G.followDriver) {
     for (const { num, cx, cy } of carData) {
       if (num === G.followDriver) continue;
-      ctx.globalAlpha = 0.5;
       drawCar(ctx, num, cx, cy);
-      ctx.globalAlpha = 1;
     }
     const fd = carData.find(c => c.num === G.followDriver);
     if (fd) drawCar(ctx, fd.num, fd.cx, fd.cy);
@@ -1878,9 +1838,6 @@ function bindControls() {
     // Close speed if open
     speedDropdown.classList.add('hidden');
   });
-  document.getElementById('opt-trails').addEventListener('change', (e) => {
-    G.showTrails = e.target.checked;
-  });
   document.getElementById('opt-labels').addEventListener('change', (e) => {
     G.showLabels = e.target.checked;
   });
@@ -2078,8 +2035,6 @@ function updatePlayButton() {
 
 function seekToT(t) {
   G.currentT = Math.max(0, Math.min(t, G.maxT));
-  G.trails = {};
-  for (const num in G.drivers) G.trails[num] = [];
 }
 
 function jumpLap(delta) {

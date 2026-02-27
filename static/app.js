@@ -359,6 +359,22 @@ function setupDerivedData() {
     }
   }
 
+  // ── Pre-compute pit box distance along pit lane for each pit stop ───────
+  for (const ps of G.pitStops) {
+    const pd = G.positions[ps.driver];
+    if (!pd || !pd.t.length) { ps.boxDist = PIT_LANE_TOTAL * 0.5; continue; }
+    // Average the position samples during the stationary box phase
+    const si = bisect(pd.t, ps.boxStart);
+    const ei = Math.min(bisect(pd.t, ps.boxEnd), pd.t.length - 1);
+    let bx = 0, by = 0, cnt = 0;
+    for (let i = si; i <= ei; i++) { bx += pd.x[i]; by += pd.y[i]; cnt++; }
+    if (cnt > 0) {
+      ps.boxDist = projectOnPitLane(bx / cnt, by / cnt);
+    } else {
+      ps.boxDist = PIT_LANE_TOTAL * 0.5;
+    }
+  }
+
   // ── Track normalisation ──────────────────────────────────────────────────
   computeTrackBounds();
 
@@ -818,13 +834,23 @@ function getPosition(driverNum, t) {
   const t0 = pd.t[idx - 1], t1 = pd.t[idx];
   const frac = t1 === t0 ? 0 : (t - t0) / (t1 - t0);
 
-  // During pit stops, interpolate along the pit lane path curve instead of linearly
+  // During pit stops, use time-based interpolation along the pit lane curve
   if (G.pitStops) {
     for (const ps of G.pitStops) {
       if (ps.driver === driverNum && t >= ps.tStart && t <= ps.tEnd) {
-        const d0 = projectOnPitLane(pd.x[idx - 1], pd.y[idx - 1]);
-        const d1 = projectOnPitLane(pd.x[idx], pd.y[idx]);
-        const d = d0 + frac * (d1 - d0);
+        let d;
+        if (t <= ps.boxStart) {
+          // Driving into pit: 0 → boxDist
+          const f = (t - ps.tStart) / (ps.boxStart - ps.tStart || 1);
+          d = f * ps.boxDist;
+        } else if (t <= ps.boxEnd) {
+          // Stationary in box
+          d = ps.boxDist;
+        } else {
+          // Driving out of pit: boxDist → total
+          const f = (t - ps.boxEnd) / (ps.tEnd - ps.boxEnd || 1);
+          d = ps.boxDist + f * (PIT_LANE_TOTAL - ps.boxDist);
+        }
         return pitLanePosAt(d);
       }
     }

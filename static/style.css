@@ -799,7 +799,7 @@ body {
 .player-bar {
   display: flex; align-items: center; justify-content: space-between;
   height: 48px; flex-shrink: 0;
-  padding: 8px;
+  padding: 8px 12px;
   background: #0d0e12;
   border-top: 1px solid #272a35;
   overflow: visible;
@@ -956,7 +956,7 @@ body {
 .tl-lap-marker {
   position: absolute; top: 0;
   width: 1px; height: 8px;
-  background: rgba(255,255,255,.15);
+  background: #0d0e12;
 }
 .tl-events {
   height: 8px;
@@ -973,11 +973,9 @@ body {
 }
 .tl-event:hover { height: 4px; top: 2px; }
 .tl-event-sc      { background: #ff8904; }
-.tl-event-vsc     { background: #ff8904; opacity: .6; }
+.tl-event-vsc     { background: #ff8904; }
 .tl-event-red     { background: #e02c59; }
 .tl-event-yellow  { background: #fdc700; }
-.tl-event-sc:hover     { opacity: 1; }
-.tl-event-vsc:hover    { opacity: 1; }
 .tl-event-red:hover    { background: #ff3070; }
 .tl-event-yellow:hover { background: #ffe040; }
 
@@ -1087,6 +1085,7 @@ body {
   .player-play svg { width: 14px; height: 14px; }
   .player-time { font-size: 11px; }
   .player-right { gap: 8px; }
+  #btn-fullscreen { display: none; }
 
   /* Hide the nested desktop INSIGHTS/EVENTS tab bar — handled by mobile tabs */
   .panel-tab-bar { display: none; }

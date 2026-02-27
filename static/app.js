@@ -68,6 +68,56 @@ const PIT_LANE_PATH = [
   [1479, 4225],  [1634, 4244],
 ];
 
+// Pre-compute cumulative arc-length distances along the pit lane path
+const PIT_LANE_DISTS = [0];
+for (let i = 1; i < PIT_LANE_PATH.length; i++) {
+  const dx = PIT_LANE_PATH[i][0] - PIT_LANE_PATH[i - 1][0];
+  const dy = PIT_LANE_PATH[i][1] - PIT_LANE_PATH[i - 1][1];
+  PIT_LANE_DISTS.push(PIT_LANE_DISTS[i - 1] + Math.sqrt(dx * dx + dy * dy));
+}
+const PIT_LANE_TOTAL = PIT_LANE_DISTS[PIT_LANE_DISTS.length - 1];
+
+// Project a point (x,y) onto the nearest segment of PIT_LANE_PATH.
+// Returns the cumulative distance along the path at the projection point.
+function projectOnPitLane(x, y) {
+  let bestDistSq = Infinity, bestD = 0;
+  for (let i = 0; i < PIT_LANE_PATH.length - 1; i++) {
+    const ax = PIT_LANE_PATH[i][0], ay = PIT_LANE_PATH[i][1];
+    const bx = PIT_LANE_PATH[i + 1][0], by = PIT_LANE_PATH[i + 1][1];
+    const abx = bx - ax, aby = by - ay;
+    const segLenSq = abx * abx + aby * aby;
+    // Parameter t clamped to [0,1] for nearest point on segment
+    let t = segLenSq === 0 ? 0 : ((x - ax) * abx + (y - ay) * aby) / segLenSq;
+    t = Math.max(0, Math.min(1, t));
+    const px = ax + t * abx, py = ay + t * aby;
+    const dx = x - px, dy = y - py;
+    const dSq = dx * dx + dy * dy;
+    if (dSq < bestDistSq) {
+      bestDistSq = dSq;
+      const segLen = Math.sqrt(segLenSq);
+      bestD = PIT_LANE_DISTS[i] + t * segLen;
+    }
+  }
+  return bestD;
+}
+
+// Given a cumulative distance d along PIT_LANE_PATH, return interpolated {x, y}.
+function pitLanePosAt(d) {
+  d = Math.max(0, Math.min(PIT_LANE_TOTAL, d));
+  for (let i = 1; i < PIT_LANE_DISTS.length; i++) {
+    if (PIT_LANE_DISTS[i] >= d) {
+      const segD = PIT_LANE_DISTS[i] - PIT_LANE_DISTS[i - 1];
+      const frac = segD === 0 ? 0 : (d - PIT_LANE_DISTS[i - 1]) / segD;
+      return {
+        x: PIT_LANE_PATH[i - 1][0] + frac * (PIT_LANE_PATH[i][0] - PIT_LANE_PATH[i - 1][0]),
+        y: PIT_LANE_PATH[i - 1][1] + frac * (PIT_LANE_PATH[i][1] - PIT_LANE_PATH[i - 1][1]),
+      };
+    }
+  }
+  const last = PIT_LANE_PATH[PIT_LANE_PATH.length - 1];
+  return { x: last[0], y: last[1] };
+}
+
 let G = {
   // Raw data
   session: null,
@@ -767,6 +817,19 @@ function getPosition(driverNum, t) {
 
   const t0 = pd.t[idx - 1], t1 = pd.t[idx];
   const frac = t1 === t0 ? 0 : (t - t0) / (t1 - t0);
+
+  // During pit stops, interpolate along the pit lane path curve instead of linearly
+  if (G.pitStops) {
+    for (const ps of G.pitStops) {
+      if (ps.driver === driverNum && t >= ps.tStart && t <= ps.tEnd) {
+        const d0 = projectOnPitLane(pd.x[idx - 1], pd.y[idx - 1]);
+        const d1 = projectOnPitLane(pd.x[idx], pd.y[idx]);
+        const d = d0 + frac * (d1 - d0);
+        return pitLanePosAt(d);
+      }
+    }
+  }
+
   return {
     x: pd.x[idx - 1] + frac * (pd.x[idx] - pd.x[idx - 1]),
     y: pd.y[idx - 1] + frac * (pd.y[idx] - pd.y[idx - 1]),

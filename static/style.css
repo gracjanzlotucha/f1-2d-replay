@@ -801,7 +801,6 @@ body {
   height: 48px; flex-shrink: 0;
   padding: 8px 12px;
   background: #0d0e12;
-  border-top: 1px solid #272a35;
   overflow: visible;
 }
 .player-center {
@@ -941,6 +940,7 @@ body {
   background: #272a35;
   position: relative;
   cursor: pointer;
+  border-top: 1px solid #272a35;
 }
 .tl-progress {
   position: absolute; left: 0; top: 0;
@@ -956,7 +956,7 @@ body {
 .tl-lap-marker {
   position: absolute; top: 0;
   width: 1px; height: 8px;
-  background: transparent;
+  background: #535a73;
 }
 .tl-lap-marker.tl-lap-active {
   background: #0d0e12;

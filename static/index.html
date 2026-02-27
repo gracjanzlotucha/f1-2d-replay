@@ -194,8 +194,15 @@
       </div>
     </aside>
 
-    <!-- BOTTOM: PLAYER + TIMELINE + EVENTS -->
+    <!-- BOTTOM: TIMELINE + EVENTS + PLAYER -->
     <div class="timeline-bar">
+      <!-- Timeline -->
+      <div class="tl-track" id="tl-track">
+        <div class="tl-progress" id="tl-progress"></div>
+        <div class="tl-laps" id="tl-laps"></div>
+      </div>
+      <!-- Events -->
+      <div class="tl-events" id="tl-events"></div>
       <!-- Player controls row -->
       <div class="player-bar" id="player-bar">
         <span class="player-time" id="player-time">0:00:00 / 0:00:00</span>
@@ -244,13 +251,6 @@
           </button>
         </div>
       </div>
-      <!-- Timeline (thinner) -->
-      <div class="tl-track" id="tl-track">
-        <div class="tl-progress" id="tl-progress"></div>
-        <div class="tl-laps" id="tl-laps"></div>
-      </div>
-      <!-- Events (simplified) -->
-      <div class="tl-events" id="tl-events"></div>
     </div>
 
   </main>

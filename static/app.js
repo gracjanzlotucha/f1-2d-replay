@@ -1993,6 +1993,13 @@ function updateTimelineUI() {
   document.getElementById('tl-progress').style.width = pct + '%';
   document.getElementById('player-time').textContent = fmtRaceTime(G.currentT) + ' / ' + fmtRaceTime(G.maxT);
   document.getElementById('hdr-race-time').textContent = fmtRaceTime(G.currentT);
+
+  // Lap markers: dark only within progress area
+  const markers = document.querySelectorAll('.tl-lap-marker');
+  for (let i = 0; i < markers.length; i++) {
+    const pos = parseFloat(markers[i].style.left);
+    markers[i].classList.toggle('tl-lap-active', pos <= pct);
+  }
 }
 
 function buildLapMarkers() {

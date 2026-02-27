@@ -438,6 +438,9 @@ body {
   width: 360px;
   z-index: 50;
   pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 .tel-header {
   position: relative;
@@ -566,7 +569,7 @@ body {
   font-family: 'Geist', 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 500;
-  color: #fff;
+  color: #838aa5;
   text-align: center;
   line-height: 12px;
 }

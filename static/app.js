@@ -1011,7 +1011,7 @@ function drawCar(ctx, num, cx, cy) {
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.strokeStyle = hexAlpha(color, 0.15);
-  ctx.lineWidth   = Math.max(1.5, 2 * Math.pow(G.zoom, 0.4));
+  ctx.lineWidth   = Math.max(1.5, 2 * Math.pow(G.zoom, 0.6));
   ctx.stroke();
 
   ctx.restore();

@@ -436,7 +436,7 @@ function drawTrack(ctx) {
   const scale = Math.max(0.5, G.canvasW / 720) * G.zoom;
   const trackW   = Math.max(4, 6 * scale);
   const centerW  = Math.max(1, 1.2 * scale);
-  const pitW     = Math.max(2, 2.5 * scale);
+  const pitW     = 2;
 
   // Helper: trace the full track path using smooth quadratic bezier curves
   // Each data point becomes a control point; endpoints are midpoints between them
@@ -1777,9 +1777,9 @@ function bindControls() {
     return lap;
   }
 
-  tlTrack.addEventListener('mousemove', (e) => {
+  function updateTlTooltip(clientX) {
     const rect = tlTrack.getBoundingClientRect();
-    const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const hoverT = frac * G.maxT;
 
     // Hover highlight from current progress to mouse (or from mouse to progress)
@@ -1801,12 +1801,14 @@ function bindControls() {
 
     // Clamp tooltip so it stays within the timeline bounds
     const tipW = tlTooltip.offsetWidth;
-    const mouseX = e.clientX - rect.left;
+    const mouseX = clientX - rect.left;
     const minLeft = tipW / 2;
     const maxLeft = rect.width - tipW / 2;
     const clampedLeft = Math.max(minLeft, Math.min(maxLeft, mouseX));
     tlTooltip.style.left = clampedLeft + 'px';
-  });
+  }
+
+  tlTrack.addEventListener('mousemove', (e) => { updateTlTooltip(e.clientX); });
 
   tlTrack.addEventListener('mouseleave', () => {
     tlHover.style.width = '0';
@@ -1815,13 +1817,24 @@ function bindControls() {
   // Touch support for timeline
   tlTrack.addEventListener('touchstart', (e) => {
     tlDragging = true;
-    tlSeekFromEvent(e.touches[0]);
+    tlTooltip.classList.add('touch-active');
+    const touch = e.touches[0];
+    tlSeekFromEvent(touch);
+    updateTlTooltip(touch.clientX);
     e.preventDefault();
   }, { passive: false });
   document.addEventListener('touchmove', (e) => {
-    if (tlDragging) tlSeekFromEvent(e.touches[0]);
+    if (tlDragging) {
+      const touch = e.touches[0];
+      tlSeekFromEvent(touch);
+      updateTlTooltip(touch.clientX);
+    }
   });
-  document.addEventListener('touchend', () => { tlDragging = false; });
+  document.addEventListener('touchend', () => {
+    tlDragging = false;
+    tlTooltip.classList.remove('touch-active');
+    tlHover.style.width = '0';
+  });
 
   // Speed dropdown
   const speedBtn = document.getElementById('btn-speed');

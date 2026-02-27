@@ -1007,11 +1007,11 @@ function drawCar(ctx, num, cx, cy) {
   ctx.fillStyle = color;
   ctx.fill();
 
-  // Team-color border (2px at 0.15 opacity, no glow)
+  // Team-color border (scaled 2px at 0.15 opacity)
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.strokeStyle = hexAlpha(color, 0.15);
-  ctx.lineWidth   = 2;
+  ctx.lineWidth   = Math.max(1.5, 2 * Math.pow(G.zoom, 0.4));
   ctx.stroke();
 
   ctx.restore();
@@ -1019,8 +1019,8 @@ function drawCar(ctx, num, cx, cy) {
   // Abbreviation inside
   if (G.showLabels) {
     ctx.save();
-    ctx.font         = `600 ${Math.floor(r * 0.78)}px "JetBrains Mono", monospace`;
-    ctx.fillStyle    = isLightColor(color) ? '#000' : '#fff';
+    ctx.font         = `600 ${Math.floor(r * 0.72)}px "Clash Display", sans-serif`;
+    ctx.fillStyle    = '#000';
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(driver.abbr.slice(0, 3), cx, cy + 0.5);

@@ -473,46 +473,7 @@ function drawTrack(ctx) {
   ctx.lineJoin    = 'round';
   ctx.stroke();
 
-  // 3. Pit lane — solid, thinner line (path is the actual driver telemetry)
-  if (PIT_LANE_PATH.length >= 3) {
-    const plPts = PIT_LANE_PATH.map(p => G.toCanvas(p[0], p[1]));
-    ctx.beginPath();
-    ctx.moveTo(plPts[0][0], plPts[0][1]);
-    // Smooth quadratic bezier through midpoints
-    for (let i = 0; i < plPts.length - 2; i++) {
-      const mx = (plPts[i + 1][0] + plPts[i + 2][0]) / 2;
-      const my = (plPts[i + 1][1] + plPts[i + 2][1]) / 2;
-      ctx.quadraticCurveTo(plPts[i + 1][0], plPts[i + 1][1], mx, my);
-    }
-    // Final segment to last point
-    const last = plPts[plPts.length - 1];
-    ctx.lineTo(last[0], last[1]);
-    ctx.strokeStyle = '#272A35';
-    ctx.lineWidth   = pitW;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
-    ctx.stroke();
-
-    // "PIT" label offset below the pit lane (flipped perpendicular)
-    const pitMid = Math.floor(PIT_LANE_PATH.length / 2);
-    const [pmx, pmy] = G.toCanvas(PIT_LANE_PATH[pitMid][0], PIT_LANE_PATH[pitMid][1]);
-    const [pa, pb]   = G.toCanvas(PIT_LANE_PATH[pitMid - 1][0], PIT_LANE_PATH[pitMid - 1][1]);
-    const [pc, pd]   = G.toCanvas(PIT_LANE_PATH[pitMid + 1][0], PIT_LANE_PATH[pitMid + 1][1]);
-    const pdx = pc - pa, pdy = pd - pb;
-    const plen = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
-    // Left-perpendicular (below the line, away from S/F side)
-    const nx = -pdy / plen, ny = pdx / plen;
-    const labelDist = 8 + 4 * scale;
-    const fontSize  = Math.max(7, Math.round(6 + 3 * scale));
-
-    ctx.font      = `bold ${fontSize}px Inter, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.2)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('PIT', pmx + nx * labelDist, pmy + ny * labelDist);
-  }
-
-  // 4. Start/Finish checkerboard flag
+  // 3. Start/Finish checkerboard flag (drawn before pit lane so pit lane renders on top)
   if (tx.length > 10) {
     const midIdx = Math.floor(tx.length * 0.02);
     const [sfx, sfy] = G.toCanvas(tx[midIdx], ty[midIdx]);
@@ -556,6 +517,45 @@ function drawTrack(ctx) {
     }
 
     ctx.restore();
+  }
+
+  // 4. Pit lane — solid, thinner line (drawn after checkerboard so it renders on top)
+  if (PIT_LANE_PATH.length >= 3) {
+    const plPts = PIT_LANE_PATH.map(p => G.toCanvas(p[0], p[1]));
+    ctx.beginPath();
+    ctx.moveTo(plPts[0][0], plPts[0][1]);
+    // Smooth quadratic bezier through midpoints
+    for (let i = 0; i < plPts.length - 2; i++) {
+      const mx = (plPts[i + 1][0] + plPts[i + 2][0]) / 2;
+      const my = (plPts[i + 1][1] + plPts[i + 2][1]) / 2;
+      ctx.quadraticCurveTo(plPts[i + 1][0], plPts[i + 1][1], mx, my);
+    }
+    // Final segment to last point
+    const last = plPts[plPts.length - 1];
+    ctx.lineTo(last[0], last[1]);
+    ctx.strokeStyle = '#272A35';
+    ctx.lineWidth   = pitW;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.stroke();
+
+    // "PIT" label offset below the pit lane (flipped perpendicular)
+    const pitMid = Math.floor(PIT_LANE_PATH.length / 2);
+    const [pmx, pmy] = G.toCanvas(PIT_LANE_PATH[pitMid][0], PIT_LANE_PATH[pitMid][1]);
+    const [pa, pb]   = G.toCanvas(PIT_LANE_PATH[pitMid - 1][0], PIT_LANE_PATH[pitMid - 1][1]);
+    const [pc, pd]   = G.toCanvas(PIT_LANE_PATH[pitMid + 1][0], PIT_LANE_PATH[pitMid + 1][1]);
+    const pdx = pc - pa, pdy = pd - pb;
+    const plen = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
+    // Left-perpendicular (below the line, away from S/F side)
+    const nx = -pdy / plen, ny = pdx / plen;
+    const labelDist = 8 + 4 * scale;
+    const fontSize  = Math.max(7, Math.round(6 + 3 * scale));
+
+    ctx.font      = `bold ${fontSize}px Inter, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('PIT', pmx + nx * labelDist, pmy + ny * labelDist);
   }
 
   return true;

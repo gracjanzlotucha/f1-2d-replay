@@ -1887,6 +1887,7 @@ function bindControls() {
       stopFollowing();
     } else {
       G.followDriver = num;
+      G.followZoom = 3;
       renderStandings();
     }
   });
@@ -1924,6 +1925,7 @@ function bindControls() {
         stopFollowing();
       } else {
         G.followDriver = closest;
+        G.followZoom = 3;
         renderStandings();
       }
     }

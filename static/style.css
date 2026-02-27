@@ -1203,9 +1203,6 @@ body {
     padding: 8px;
     background: #16171d;
     border-top: 1px solid #0d0e12;
-    position: sticky;
-    /* When tel-active, track section is taller so we can't use a fixed value */
-    top: clamp(220px, 58vw, 360px);
     z-index: 10;
   }
   .mobile-seg {

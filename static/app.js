@@ -495,10 +495,10 @@ function drawTrack(ctx) {
     // Checkerboard dimensions (4 cols × 8 rows), scaled
     const cols = 4;
     const rows = 8;
-    const cellSize = Math.max(2, 2.5 * scale);
+    const cellSize = Math.max(1.5, 1.8 * scale);
     const boardW = cols * cellSize;
     const boardH = rows * cellSize;
-    const borderW = Math.max(2, 2.5 * scale);
+    const borderW = Math.max(1.5, 1.8 * scale);
 
     // Dark border around the checkerboard
     ctx.fillStyle = '#0D0E12';

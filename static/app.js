@@ -783,7 +783,7 @@ function getTelemetry(driverNum, t) {
     speed: lerp(pd.speed[idx - 1], pd.speed[idx]),
     rpm: lerp(pd.rpm[idx - 1], pd.rpm[idx]),
     throttle: lerp(pd.throttle[idx - 1], pd.throttle[idx]),
-    brake: pd.brake[near],
+    brake: lerp(pd.brake[idx - 1], pd.brake[idx]),
     gear: pd.gear[near],
     drs: pd.drs[near],
   };
@@ -1390,7 +1390,9 @@ function updateTelemetryPanel() {
   // Update live values every frame
   const speed = Math.round(telem.speed);
   const rpm = Math.round(telem.rpm);
-  const brakeVal = telem.brake ? (typeof telem.brake === 'boolean' ? 100 : Math.round(telem.brake)) : 0;
+  // Brake data is binary (0/1) from F1 telemetry — treat 1 as 100%
+  const rawBrake = telem.brake;
+  const brakeVal = rawBrake <= 1 ? Math.round(rawBrake * 100) : Math.round(rawBrake);
   const drsActive = telem.drs >= 10;
 
   document.getElementById('tel-speed').textContent = speed;

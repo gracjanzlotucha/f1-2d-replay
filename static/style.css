@@ -432,10 +432,10 @@ body {
 /* ─── TELEMETRY PANEL (follow mode) ──────────────────────────────────────── */
 .telemetry-panel {
   position: absolute;
-  bottom: 12px; left: 12px;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 320px;
-  border-radius: 12px;
-  overflow: hidden;
   z-index: 50;
   pointer-events: none;
 }
@@ -443,11 +443,10 @@ body {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   height: 48px;
   padding: 0 8px;
   border-radius: 12px 12px 0 0;
-  overflow: hidden;
+  overflow: visible;
 }
 .tel-driver-info {
   display: flex;
@@ -470,8 +469,10 @@ body {
 }
 .tel-driver-photo {
   position: absolute;
-  right: 0; top: -49px;
-  width: 116px; height: 96px;
+  right: 0;
+  bottom: 0;
+  width: 116px;
+  height: 96px;
   object-fit: cover;
   object-position: top;
   z-index: 0;

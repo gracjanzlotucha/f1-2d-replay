@@ -964,9 +964,20 @@ function renderFrame() {
     if (G.trails[num].length > TRAIL_LENGTH) G.trails[num].shift();
   }
 
-  // Draw cars
-  for (const { num, cx, cy } of carData) {
-    drawCar(ctx, num, cx, cy);
+  // Draw cars — when following, draw others at 50% opacity first, then followed driver on top
+  if (G.followDriver) {
+    for (const { num, cx, cy } of carData) {
+      if (num === G.followDriver) continue;
+      ctx.globalAlpha = 0.5;
+      drawCar(ctx, num, cx, cy);
+      ctx.globalAlpha = 1;
+    }
+    const fd = carData.find(c => c.num === G.followDriver);
+    if (fd) drawCar(ctx, fd.num, fd.cx, fd.cy);
+  } else {
+    for (const { num, cx, cy } of carData) {
+      drawCar(ctx, num, cx, cy);
+    }
   }
 
   // Draw pit stop timers above cars currently in pit

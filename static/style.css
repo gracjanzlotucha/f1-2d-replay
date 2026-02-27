@@ -441,6 +441,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  background: #0d0e12;
+  border-radius: 12px;
 }
 .tel-header {
   position: relative;

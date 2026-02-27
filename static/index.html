@@ -141,18 +141,24 @@
           <div class="tel-stats">
             <div class="tel-stat">
               <div class="tel-indicator"><div class="tel-indicator-fill" id="tel-speed-fill"></div></div>
-              <span class="tel-label">KMH</span>
               <span class="tel-value" id="tel-speed">0</span>
+              <span class="tel-label">KMH</span>
             </div>
             <div class="tel-stat">
-              <div class="tel-indicator"><div class="tel-indicator-fill" id="tel-rpm-fill"></div></div>
-              <span class="tel-label">RPM</span>
+              <div class="tel-indicator tel-indicator-dual">
+                <div class="tel-indicator-fill tel-throttle-fill" id="tel-throttle-fill"></div>
+                <div class="tel-indicator-fill tel-brake-fill" id="tel-brake-fill"></div>
+              </div>
               <span class="tel-value" id="tel-rpm">0</span>
+              <span class="tel-label">RPM</span>
             </div>
-            <div class="tel-stat">
-              <div class="tel-indicator"><div class="tel-indicator-fill" id="tel-brake-fill"></div></div>
-              <span class="tel-label">Brake</span>
-              <span class="tel-value" id="tel-brake">0%</span>
+            <div class="tel-stat tel-stat-gear">
+              <div class="tel-gear-window">
+                <div class="tel-gear-strip" id="tel-gear-strip">
+                  <span class="tel-gear-num">0</span><span class="tel-gear-num">1</span><span class="tel-gear-num">2</span><span class="tel-gear-num">3</span><span class="tel-gear-num">4</span><span class="tel-gear-num">5</span><span class="tel-gear-num">6</span><span class="tel-gear-num">7</span><span class="tel-gear-num">8</span>
+                </div>
+              </div>
+              <span class="tel-label">Gear</span>
             </div>
             <div class="tel-stat tel-stat-drs">
               <span class="tel-value tel-drs-value" id="tel-drs">DRS</span>

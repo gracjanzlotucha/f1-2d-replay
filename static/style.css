@@ -435,7 +435,7 @@ body {
   bottom: 24px;
   left: 0; right: 0;
   margin: 0 auto;
-  width: 320px;
+  width: 360px;
   z-index: 50;
   pointer-events: none;
 }
@@ -502,14 +502,17 @@ body {
   position: relative;
   overflow: hidden;
 }
+.tel-stat-gear {
+  flex: 0 0 56px;
+}
 .tel-stat-drs {
   flex: 0 0 auto;
   padding: 8px 12px;
 }
 .tel-indicator {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 2px;
+  top: 0; left: 4px; right: 4px;
+  height: 2px;
   border-radius: 0 0 2px 2px;
 }
 .tel-indicator-fill {
@@ -517,6 +520,47 @@ body {
   border-radius: 0 0 2px 2px;
   width: 0%;
   transition: width 0.15s ease;
+}
+/* Dual indicator (throttle + brake side by side in RPM column) */
+.tel-indicator-dual {
+  display: flex;
+  gap: 4px;
+}
+.tel-throttle-fill {
+  flex: 4;
+  background: rgba(61,131,234,0.15);
+}
+.tel-brake-fill {
+  flex: 1;
+  background: rgba(224,44,89,0.15);
+}
+/* Gear sliding animation */
+.tel-gear-window {
+  width: 56px;
+  height: 14px;
+  overflow: hidden;
+  position: relative;
+}
+.tel-gear-strip {
+  display: flex;
+  position: absolute;
+  top: 0;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+.tel-gear-num {
+  flex-shrink: 0;
+  width: 20px;
+  font-family: 'Clash Display', 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+  color: #535a73;
+  transition: color 0.25s ease;
+}
+.tel-gear-num.active {
+  color: #fff;
 }
 .tel-label {
   font-family: 'Geist', 'Inter', sans-serif;
@@ -1110,14 +1154,17 @@ body {
   }
 
   /* Smaller telemetry panel on mobile */
-  .telemetry-panel { width: 280px; }
+  .telemetry-panel { width: 300px; }
   .tel-header { height: 40px; }
   .tel-driver-name { font-size: 20px; line-height: 20px; }
   .tel-photo-wrap { width: 96px; height: 80px; }
   .tel-stat { padding: 6px 8px; }
+  .tel-stat-gear { flex: 0 0 48px; }
   .tel-label { font-size: 11px; }
   .tel-value { font-size: 12px; }
   .tel-drs-value { font-size: 12px; }
+  .tel-gear-window { width: 48px; }
+  .tel-gear-num { width: 18px; font-size: 12px; }
 
   /* Player bar: compact on mobile */
   .player-bar { height: 40px; padding: 4px 8px; }

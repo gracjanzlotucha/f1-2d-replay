@@ -1388,42 +1388,53 @@ function updateTelemetryPanel() {
     const photoEl = document.getElementById('tel-driver-photo');
     photoEl.src = `assets/drivers-hd/${driver.abbr}.png`;
 
-    // Indicator bar colors (team color for speed, blue for RPM, amber for brake)
+    // Speed indicator colors (team color)
     document.getElementById('tel-speed-fill').style.background = color;
-    document.getElementById('tel-rpm-fill').style.background = '#3d83ea';
-    document.getElementById('tel-brake-fill').style.background = '#ffb900';
-
-    // Indicator track backgrounds
     document.getElementById('tel-speed-fill').parentElement.style.background = hexAlpha(color, 0.15);
-    document.getElementById('tel-rpm-fill').parentElement.style.background = 'rgba(61,131,234,0.15)';
-    document.getElementById('tel-brake-fill').parentElement.style.background = 'rgba(255,185,0,0.15)';
   }
 
   // Update live values every frame
   const speed = Math.round(telem.speed);
   const rpm = Math.round(telem.rpm);
-  // Brake data is binary (0/1) from F1 telemetry — treat 1 as 100%
-  const rawBrake = telem.brake;
-  const brakeVal = rawBrake <= 1 ? Math.round(rawBrake * 100) : Math.round(rawBrake);
+  const brakeOn = telem.brake >= 0.5;
+  const throttlePct = Math.min(telem.throttle / 100, 1);
   const drsActive = telem.drs >= 10;
 
   document.getElementById('tel-speed').textContent = speed;
   document.getElementById('tel-rpm').textContent = rpm;
-  document.getElementById('tel-brake').textContent = brakeVal + '%';
 
   // DRS state
   const drsEl = document.getElementById('tel-drs');
-  if (drsActive) {
-    drsEl.classList.add('active');
-  } else {
-    drsEl.classList.remove('active');
-  }
+  drsEl.classList.toggle('active', drsActive);
 
-  // Indicator fill widths
-  const maxSpeed = 360, maxRpm = 15000;
+  // Speed indicator
+  const maxSpeed = 360;
   document.getElementById('tel-speed-fill').style.width = Math.min(speed / maxSpeed * 100, 100) + '%';
-  document.getElementById('tel-rpm-fill').style.width = Math.min(rpm / maxRpm * 100, 100) + '%';
-  document.getElementById('tel-brake-fill').style.width = brakeVal + '%';
+
+  // RPM dual indicators: throttle (blue) + brake (red)
+  const throttleFill = document.getElementById('tel-throttle-fill');
+  const brakeFill = document.getElementById('tel-brake-fill');
+  // Throttle: inner fill proportional to throttle %
+  throttleFill.style.background = throttlePct > 0.01
+    ? `linear-gradient(to right, #3d83ea ${throttlePct * 100}%, rgba(61,131,234,0.15) ${throttlePct * 100}%)`
+    : 'rgba(61,131,234,0.15)';
+  // Brake: solid fill when braking, dim track when not
+  brakeFill.style.background = brakeOn ? '#e02c59' : 'rgba(224,44,89,0.15)';
+
+  // Gear sliding animation
+  const gear = telem.gear;
+  const strip = document.getElementById('tel-gear-strip');
+  if (strip) {
+    const gearWidth = 20;
+    const windowWidth = 56;
+    const offset = -(gear * gearWidth) + (windowWidth / 2 - gearWidth / 2);
+    strip.style.transform = `translateX(${offset}px)`;
+    // Update active gear highlight
+    const nums = strip.querySelectorAll('.tel-gear-num');
+    for (let i = 0; i < nums.length; i++) {
+      nums[i].classList.toggle('active', i === gear);
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

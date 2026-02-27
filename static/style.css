@@ -941,13 +941,49 @@ body {
   background: #272a35;
   position: relative;
   cursor: pointer;
-  border-top: 1px solid #272a35;
 }
 .tl-progress {
   position: absolute; left: 0; top: 0;
   height: 100%; width: 0;
   background: #BFFF4A;
   pointer-events: none;
+}
+.tl-hover {
+  position: absolute; left: 0; top: 0;
+  height: 100%; width: 0;
+  background: rgba(255,255,255,0.08);
+  pointer-events: none;
+  display: none;
+}
+.tl-track:hover .tl-hover { display: block; }
+.tl-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  transform: translateX(-50%);
+  background: #16171d;
+  border: 1px solid #272a35;
+  border-radius: 8px;
+  padding: 6px 10px;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity .12s;
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+}
+.tl-track:hover .tl-tooltip { opacity: 1; }
+.tl-tooltip-time {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 12px; font-weight: 600;
+  color: #eaecf0;
+  line-height: 14px;
+}
+.tl-tooltip-lap {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 10px; font-weight: 400;
+  color: #838aa5;
+  line-height: 14px;
 }
 .tl-laps {
   position: absolute; top: 2px; left: 8px; right: 8px;

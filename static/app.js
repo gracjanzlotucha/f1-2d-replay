@@ -1770,6 +1770,56 @@ function bindControls() {
   });
   document.addEventListener('mouseup', () => { tlDragging = false; });
 
+  // Timeline hover: YouTube-style highlight + tooltip
+  const tlHover = document.getElementById('tl-hover');
+  const tlTooltip = document.getElementById('tl-tooltip');
+  const tlTooltipTime = document.getElementById('tl-tooltip-time');
+  const tlTooltipLap = document.getElementById('tl-tooltip-lap');
+
+  function getLapAtT(t) {
+    let lap = 1;
+    for (const entry of G.lapStartTimes) {
+      if (entry.t <= t) lap = entry.lap;
+      else break;
+    }
+    return lap;
+  }
+
+  tlTrack.addEventListener('mousemove', (e) => {
+    const rect = tlTrack.getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const hoverT = frac * G.maxT;
+
+    // Hover highlight from current progress to mouse (or from mouse to progress)
+    const progressPct = G.maxT > 0 ? (G.currentT / G.maxT) * 100 : 0;
+    const hoverPct = frac * 100;
+    if (hoverPct > progressPct) {
+      tlHover.style.left = progressPct + '%';
+      tlHover.style.width = (hoverPct - progressPct) + '%';
+    } else {
+      tlHover.style.left = hoverPct + '%';
+      tlHover.style.width = (progressPct - hoverPct) + '%';
+    }
+
+    // Tooltip position + content
+    const totalLaps = G.lapStartTimes.length > 0 ? G.lapStartTimes[G.lapStartTimes.length - 1].lap : 0;
+    const lap = getLapAtT(hoverT);
+    tlTooltipTime.textContent = fmtRaceTime(hoverT);
+    tlTooltipLap.textContent = 'Lap ' + lap + (totalLaps ? ' / ' + totalLaps : '');
+
+    // Clamp tooltip so it stays within the timeline bounds
+    const tipW = tlTooltip.offsetWidth;
+    const mouseX = e.clientX - rect.left;
+    const minLeft = tipW / 2;
+    const maxLeft = rect.width - tipW / 2;
+    const clampedLeft = Math.max(minLeft, Math.min(maxLeft, mouseX));
+    tlTooltip.style.left = clampedLeft + 'px';
+  });
+
+  tlTrack.addEventListener('mouseleave', () => {
+    tlHover.style.width = '0';
+  });
+
   // Touch support for timeline
   tlTrack.addEventListener('touchstart', (e) => {
     tlDragging = true;

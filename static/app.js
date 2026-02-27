@@ -973,13 +973,8 @@ function renderFrame() {
   // Update driver order (for standings) based on position at current time
   updateDriverOrder();
 
-  // Draw telemetry gauge when following a driver
-  if (G.followDriver) {
-    const telem = getTelemetry(G.followDriver, G.currentT);
-    if (telem) {
-      drawTelemetryGauge(ctx, W, H, telem, G.drivers[G.followDriver]);
-    }
-  }
+  // Update telemetry panel when following a driver
+  updateTelemetryPanel();
 
   // Zoom / follow indicator
   if (G.followDriver) {
@@ -1027,7 +1022,7 @@ function drawCar(ctx, num, cx, cy) {
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.strokeStyle = hexAlpha(color, 0.15);
-  ctx.lineWidth   = 2 * Math.pow(G.zoom, 0.3);
+  ctx.lineWidth   = 2;
   ctx.stroke();
 
   ctx.restore();
@@ -1329,6 +1324,92 @@ function hexAlpha(hex, alpha) {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ── Telemetry panel (DOM-based, replaces canvas gauge) ───────────────────
+
+let _telPanelDriver = null; // track which driver the panel is set up for
+
+function updateTelemetryPanel() {
+  const panel = document.getElementById('telemetry-panel');
+  if (!panel) return;
+
+  if (!G.followDriver) {
+    panel.classList.add('hidden');
+    _telPanelDriver = null;
+    return;
+  }
+
+  const driver = G.drivers[G.followDriver];
+  if (!driver) { panel.classList.add('hidden'); return; }
+
+  const telem = getTelemetry(G.followDriver, G.currentT);
+  if (!telem) { panel.classList.add('hidden'); return; }
+
+  panel.classList.remove('hidden');
+
+  const color = driver.color || '#888';
+
+  // Update driver info only when the followed driver changes
+  if (_telPanelDriver !== G.followDriver) {
+    _telPanelDriver = G.followDriver;
+
+    // Header gradient background
+    const header = document.getElementById('tel-header');
+    header.style.background = `linear-gradient(to right, ${hexAlpha(color, 0.15)}, ${hexAlpha(color, 0.08)})`;
+
+    // Team logo
+    const teamSlug = TEAM_LOGO_MAP[driver.team] || '';
+    const logoEl = document.getElementById('tel-team-logo');
+    logoEl.src = teamSlug ? `assets/teams/${teamSlug}.svg` : '';
+    logoEl.style.display = teamSlug ? '' : 'none';
+
+    // Driver name (last name only)
+    const nameEl = document.getElementById('tel-driver-name');
+    const parts = driver.name.split(' ');
+    nameEl.textContent = parts.length > 1 ? parts[parts.length - 1] : driver.name;
+    // Capitalize properly (data has "VERSTAPPEN" → "Verstappen")
+    nameEl.textContent = nameEl.textContent.charAt(0).toUpperCase()
+      + nameEl.textContent.slice(1).toLowerCase();
+
+    // Driver photo
+    const photoEl = document.getElementById('tel-driver-photo');
+    photoEl.src = `assets/drivers/${driver.abbr}.png`;
+
+    // Indicator bar colors (team color for speed, blue for RPM, amber for brake)
+    document.getElementById('tel-speed-fill').style.background = color;
+    document.getElementById('tel-rpm-fill').style.background = '#3d83ea';
+    document.getElementById('tel-brake-fill').style.background = '#ffb900';
+
+    // Indicator track backgrounds
+    document.getElementById('tel-speed-fill').parentElement.style.background = hexAlpha(color, 0.15);
+    document.getElementById('tel-rpm-fill').parentElement.style.background = 'rgba(61,131,234,0.15)';
+    document.getElementById('tel-brake-fill').parentElement.style.background = 'rgba(255,185,0,0.15)';
+  }
+
+  // Update live values every frame
+  const speed = Math.round(telem.speed);
+  const rpm = Math.round(telem.rpm);
+  const brakeVal = telem.brake ? (typeof telem.brake === 'boolean' ? 100 : Math.round(telem.brake)) : 0;
+  const drsActive = telem.drs >= 10;
+
+  document.getElementById('tel-speed').textContent = speed;
+  document.getElementById('tel-rpm').textContent = rpm;
+  document.getElementById('tel-brake').textContent = brakeVal + '%';
+
+  // DRS state
+  const drsEl = document.getElementById('tel-drs');
+  if (drsActive) {
+    drsEl.classList.add('active');
+  } else {
+    drsEl.classList.remove('active');
+  }
+
+  // Indicator fill widths
+  const maxSpeed = 360, maxRpm = 15000;
+  document.getElementById('tel-speed-fill').style.width = Math.min(speed / maxSpeed * 100, 100) + '%';
+  document.getElementById('tel-rpm-fill').style.width = Math.min(rpm / maxRpm * 100, 100) + '%';
+  document.getElementById('tel-brake-fill').style.width = brakeVal + '%';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

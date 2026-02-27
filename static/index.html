@@ -127,6 +127,36 @@
     <section class="track-section">
       <div class="track-container" id="track-container">
         <canvas id="track-canvas"></canvas>
+        <!-- Telemetry panel (follow mode) -->
+        <div id="telemetry-panel" class="telemetry-panel hidden">
+          <div class="tel-header" id="tel-header">
+            <div class="tel-driver-info">
+              <img class="tel-team-logo" id="tel-team-logo" src="" alt="" />
+              <span class="tel-driver-name" id="tel-driver-name">Hamilton</span>
+            </div>
+            <img class="tel-driver-photo" id="tel-driver-photo" src="" alt="" />
+          </div>
+          <div class="tel-stats">
+            <div class="tel-stat">
+              <div class="tel-indicator"><div class="tel-indicator-fill" id="tel-speed-fill"></div></div>
+              <span class="tel-label">KMH</span>
+              <span class="tel-value" id="tel-speed">0</span>
+            </div>
+            <div class="tel-stat">
+              <div class="tel-indicator"><div class="tel-indicator-fill" id="tel-rpm-fill"></div></div>
+              <span class="tel-label">RPM</span>
+              <span class="tel-value" id="tel-rpm">0</span>
+            </div>
+            <div class="tel-stat">
+              <div class="tel-indicator"><div class="tel-indicator-fill" id="tel-brake-fill"></div></div>
+              <span class="tel-label">Brake</span>
+              <span class="tel-value" id="tel-brake">0%</span>
+            </div>
+            <div class="tel-stat tel-stat-drs">
+              <span class="tel-value tel-drs-value" id="tel-drs">DRS</span>
+            </div>
+          </div>
+        </div>
         <!-- Speed tooltip -->
         <div id="car-tooltip" class="car-tooltip hidden">
           <div class="tooltip-driver"></div>

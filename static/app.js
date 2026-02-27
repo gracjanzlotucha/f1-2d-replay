@@ -465,7 +465,26 @@ function drawTrack(ctx) {
   ctx.lineJoin    = 'round';
   ctx.stroke();
 
-  // 2. Center line — thin dark line on top for edge definition
+  // 2. Pit lane — same surface color, drawn before center line so it merges seamlessly
+  if (PIT_LANE_PATH.length >= 3) {
+    const plPts = PIT_LANE_PATH.map(p => G.toCanvas(p[0], p[1]));
+    ctx.beginPath();
+    ctx.moveTo(plPts[0][0], plPts[0][1]);
+    for (let i = 0; i < plPts.length - 2; i++) {
+      const mx = (plPts[i + 1][0] + plPts[i + 2][0]) / 2;
+      const my = (plPts[i + 1][1] + plPts[i + 2][1]) / 2;
+      ctx.quadraticCurveTo(plPts[i + 1][0], plPts[i + 1][1], mx, my);
+    }
+    const last = plPts[plPts.length - 1];
+    ctx.lineTo(last[0], last[1]);
+    ctx.strokeStyle = '#272A35';
+    ctx.lineWidth   = pitW;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.stroke();
+  }
+
+  // 3. Center line — thin dark line on top for edge definition (covers both track + pit lane)
   tracePath();
   ctx.strokeStyle = '#0D0F13';
   ctx.lineWidth   = centerW;
@@ -473,7 +492,7 @@ function drawTrack(ctx) {
   ctx.lineJoin    = 'round';
   ctx.stroke();
 
-  // 3. Start/Finish checkerboard flag (drawn before pit lane so pit lane renders on top)
+  // 4. Start/Finish checkerboard flag
   if (tx.length > 10) {
     const midIdx = Math.floor(tx.length * 0.02);
     const [sfx, sfy] = G.toCanvas(tx[midIdx], ty[midIdx]);
@@ -519,40 +538,8 @@ function drawTrack(ctx) {
     ctx.restore();
   }
 
-  // 4. Pit lane — dual-stroke matching track style (road + center line)
+  // 5. "PIT" label
   if (PIT_LANE_PATH.length >= 3) {
-    const plPts = PIT_LANE_PATH.map(p => G.toCanvas(p[0], p[1]));
-
-    // Helper to trace the pit lane bezier path
-    function tracePitLane() {
-      ctx.beginPath();
-      ctx.moveTo(plPts[0][0], plPts[0][1]);
-      for (let i = 0; i < plPts.length - 2; i++) {
-        const mx = (plPts[i + 1][0] + plPts[i + 2][0]) / 2;
-        const my = (plPts[i + 1][1] + plPts[i + 2][1]) / 2;
-        ctx.quadraticCurveTo(plPts[i + 1][0], plPts[i + 1][1], mx, my);
-      }
-      const last = plPts[plPts.length - 1];
-      ctx.lineTo(last[0], last[1]);
-    }
-
-    // Road surface
-    tracePitLane();
-    ctx.strokeStyle = '#272A35';
-    ctx.lineWidth   = pitW;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
-    ctx.stroke();
-
-    // Center line for edge definition
-    tracePitLane();
-    ctx.strokeStyle = '#0D0F13';
-    ctx.lineWidth   = centerW;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
-    ctx.stroke();
-
-    // "PIT" label offset below the pit lane (perpendicular)
     const pitMid = Math.floor(PIT_LANE_PATH.length / 2);
     const [pmx, pmy] = G.toCanvas(PIT_LANE_PATH[pitMid][0], PIT_LANE_PATH[pitMid][1]);
     const [pa, pb]   = G.toCanvas(PIT_LANE_PATH[pitMid - 1][0], PIT_LANE_PATH[pitMid - 1][1]);

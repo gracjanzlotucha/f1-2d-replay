@@ -690,13 +690,14 @@ body {
   border-top: 1px solid #272a35;
   overflow: visible;
 }
-.player-left {
-  display: flex; align-items: center; gap: 2px;
-  width: 84px; flex-shrink: 0;
+.player-center {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
 }
 .player-right {
   display: flex; align-items: center; gap: 12px;
-  flex-shrink: 0;
+  justify-content: flex-end;
+  width: 100px; flex-shrink: 0;
 }
 .player-play {
   width: 32px; height: 32px;
@@ -713,7 +714,7 @@ body {
 .player-play:active { transform: scale(.94); }
 .player-play svg { width: 16px; height: 16px; }
 .player-nav-btn {
-  width: 16px; height: 16px;
+  width: 20px; height: 20px;
   background: none; border: none;
   color: #838aa5;
   cursor: pointer;
@@ -722,12 +723,13 @@ body {
   transition: color .12s;
 }
 .player-nav-btn:hover { color: #eaecf0; }
-.player-nav-btn svg { width: 16px; height: 16px; }
+.player-nav-btn svg { width: 20px; height: 20px; }
 .player-time {
   font-family: 'Geist', 'Inter', sans-serif;
   font-size: 12px; font-weight: 500;
   color: #838aa5;
   white-space: nowrap;
+  width: 100px; flex-shrink: 0;
 }
 
 /* Speed dropdown control */

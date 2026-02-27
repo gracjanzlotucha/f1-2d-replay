@@ -518,13 +518,12 @@ function drawTrack(ctx) {
     const [sfx, sfy] = G.toCanvas(tx[midIdx], ty[midIdx]);
     ctx.save();
 
-    // Calculate track direction angle at S/F point
-    const [rx1, ry1] = rotatePoint(tx[midIdx], ty[midIdx]);
-    const [rx2, ry2] = rotatePoint(tx[midIdx + 2], ty[midIdx + 2]);
-    const angle = Math.atan2(-(ry2 - ry1), rx2 - rx1);
+    // Calculate track direction angle from canvas coordinates
+    const [sx2, sy2] = G.toCanvas(tx[midIdx + 2], ty[midIdx + 2]);
+    const angle = Math.atan2(sy2 - sfy, sx2 - sfx);
 
     ctx.translate(sfx, sfy);
-    ctx.rotate(angle + Math.PI / 2);
+    ctx.rotate(angle);
 
     // Checkerboard dimensions (4 cols × 8 rows), scaled
     const cols = 4;
@@ -1016,10 +1015,7 @@ function drawCar(ctx, num, cx, cy) {
   // Scale radius with zoom — grows but not 1:1 (sqrt gives a nice feel)
   const r = DRIVER_RADIUS * Math.pow(G.zoom, 0.4);
 
-  // Outer glow
   ctx.save();
-  ctx.shadowColor = hexAlpha(color, 0.7);
-  ctx.shadowBlur  = 14 * Math.pow(G.zoom, 0.3);
 
   // Circle fill
   ctx.beginPath();
@@ -1027,9 +1023,7 @@ function drawCar(ctx, num, cx, cy) {
   ctx.fillStyle = color;
   ctx.fill();
 
-  ctx.shadowBlur = 0;
-
-  // Team-color border (matching Figma: 2px border at 0.15 opacity)
+  // Team-color border (2px at 0.15 opacity, no glow)
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.strokeStyle = hexAlpha(color, 0.15);

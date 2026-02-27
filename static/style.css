@@ -1064,27 +1064,22 @@ body {
     position: sticky; top: 0; z-index: 11;
     background: #0d0e12;
   }
-  /* When following: grow track section to fit telemetry below the canvas */
+  /* When following: expand track section to fit telemetry below */
   .track-section.tel-active {
-    height: auto;
-    max-height: none;
+    height: calc(58vw + 100px);
+    min-height: calc(220px + 100px);
+    max-height: calc(360px + 100px);
   }
-  .tel-active .track-container {
-    flex-direction: column;
-    height: auto;
-  }
-  .tel-active #track-canvas {
-    width: 100% !important;
-    height: auto !important;
-    aspect-ratio: 1;
-    max-height: 58vw;
-  }
-  .tel-active .telemetry-panel {
-    position: relative;
-    bottom: auto;
-    left: auto; right: auto;
-    margin: 8px auto 4px;
-  }
+
+  /* Smaller telemetry panel on mobile */
+  .telemetry-panel { width: 280px; }
+  .tel-header { height: 40px; }
+  .tel-driver-name { font-size: 20px; line-height: 20px; }
+  .tel-photo-wrap { width: 96px; height: 80px; }
+  .tel-stat { padding: 6px 8px; }
+  .tel-label { font-size: 11px; }
+  .tel-value { font-size: 12px; }
+  .tel-drs-value { font-size: 12px; }
 
   /* Player bar: compact on mobile */
   .player-bar { height: 40px; padding: 4px 8px; }

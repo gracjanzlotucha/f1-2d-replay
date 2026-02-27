@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --bg:          #090909;
+  --bg:          #0d0e12;
   --bg-2:        #111111;
   --bg-3:        #1a1a1a;
   --bg-4:        #222222;
@@ -1201,6 +1201,7 @@ body {
     order: 3;
     display: flex;
     padding: 8px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
     background: #16171d;
     border-top: 1px solid #0d0e12;
     z-index: 10;

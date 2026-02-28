@@ -105,13 +105,14 @@ async function init() {
         (loc.includes('bahrain') || loc.includes('sakhir') || country.includes('bahrain'));
     });
 
-    // Prefer sessions that already have data (date_start is in the past)
+    // Only consider sessions that already have data (date_start is in the past)
     const now = new Date().toISOString();
+    const pastTestSessions = testSessions.filter(s => s.date_start && s.date_start < now);
     const pastSessions = sessions.filter(s => s.date_start && s.date_start < now);
 
-    // Pick the most recent test session, or the most recent past session
-    const targetSession = testSessions.length > 0
-      ? testSessions[testSessions.length - 1]
+    // Pick the most recent PAST test session, or the most recent past session overall
+    const targetSession = pastTestSessions.length > 0
+      ? pastTestSessions[pastTestSessions.length - 1]
       : pastSessions.length > 0
         ? pastSessions[pastSessions.length - 1]
         : sessions[0];

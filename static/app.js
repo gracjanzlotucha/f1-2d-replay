@@ -43,9 +43,8 @@ const PADDING_FRAC  = 0.08; // Canvas padding as fraction
 // Track rotation — matches the standard Silverstone map orientation (SVG reference)
 // FastF1 circuit_info.rotation = 92°; rotating by -91° aligns the pit straight
 // horizontally with S/F at the top, matching the canonical track layout.
-// These defaults are for Silverstone; overridden from data.circuit_info if present.
-let TRACK_ROT_COS = -0.01745;  // cos(-91°)
-let TRACK_ROT_SIN = -0.99985;  // sin(-91°)
+const TRACK_ROT_COS = -0.01745;  // cos(-91°)
+const TRACK_ROT_SIN = -0.99985;  // sin(-91°)
 
 function rotatePoint(x, y) {
   return [
@@ -56,7 +55,7 @@ function rotatePoint(x, y) {
 
 // Pit lane path (extracted from position telemetry during Hulkenberg's lap-9 pit stop)
 // Includes full entry curve (diverging from track) through pit boxes to exit (rejoining track)
-let PIT_LANE_PATH = [
+const PIT_LANE_PATH = [
   // Pit entry — diverging from main track towards pit lane
   [-496, -716],  [-906, -280],  [-1025, -155], [-1094, -81],
   [-1146, -26],  [-1231, 63],   [-1396, 238],  [-1442, 286],
@@ -162,11 +161,9 @@ async function loadAllData() {
   msg.textContent = 'Loading race data…';
   bar.style.width = '10%';
 
-  const dataUrl = window.__F1_DATA_URLS?.data || './data.json';
-  const posUrl  = window.__F1_DATA_URLS?.positions || './positions.json';
   const [dataRes, posRes] = await Promise.all([
-    fetch(dataUrl),
-    fetch(posUrl),
+    fetch('./data.json'),
+    fetch('./positions.json'),
   ]);
 
   msg.textContent = 'Parsing data…';
@@ -186,17 +183,6 @@ async function loadAllData() {
   G.insights = data.insights;
   G.positions = positions;
   G.totalLaps = data.session.total_laps;
-
-  // Override circuit-specific constants from data if present
-  if (data.circuit_info?.rotation != null) {
-    const angle = -(data.circuit_info.rotation - 1);
-    const rad = angle * Math.PI / 180;
-    TRACK_ROT_COS = Math.cos(rad);
-    TRACK_ROT_SIN = Math.sin(rad);
-  }
-  if (data.pit_lane_path?.length) {
-    PIT_LANE_PATH = data.pit_lane_path;
-  }
 
   // Populate weather
   const w = data.session.weather;

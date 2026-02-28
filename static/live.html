@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#16171d">
-  <title>F1 2D Replay — British Grand Prix 2025</title>
+  <title>F1 Live Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -22,12 +22,30 @@
         <path d="M17.3067 3.63262C16.9522 5.5664 15.0771 7.11272 13.118 7.08724L12.904 8.25529C14.8629 8.28128 16.1636 9.86942 15.8095 11.8031L16.9918 11.8186C17.3464 9.88484 19.2223 8.33836 21.1815 8.36403L21.3956 7.19599C19.4363 7.17018 18.1348 5.58206 18.4891 3.64815L19.1308 0.145953L29.0355 0.27607C30.9949 0.301823 32.2962 1.89083 31.9418 3.82488L30.4446 11.9954L30.4006 12.1819C30.1376 13.1005 29.2186 13.8082 28.2617 13.7957L26.858 13.7772L26.6441 14.9443L28.1223 14.9637C29.0407 14.976 29.6696 15.675 29.5985 16.5591L29.5755 16.7381L28.1451 24.5441C27.7907 26.4781 25.9146 28.0254 23.9552 27.9997L14.0505 27.8696L14.6923 24.3674C15.0469 22.4335 16.9227 20.887 18.882 20.9128L19.096 19.7447C17.1368 19.719 15.8354 18.1307 16.1895 16.1969L15.0072 16.1813C14.6526 18.1152 12.7768 19.6617 10.8175 19.636L10.6035 20.804C12.5627 20.8297 13.8642 22.4179 13.5099 24.3518L12.8682 27.854L2.9645 27.7239C1.0051 27.6982 -0.296229 26.1092 0.0581828 24.1751L1.46186 16.5152L1.50345 16.3364C1.75595 15.4545 2.63819 14.7753 3.55678 14.7874L5.03499 14.8068L5.24885 13.6397L3.77065 13.6203C2.79101 13.6074 2.1404 12.8128 2.31749 11.8459L3.85494 3.4559C4.20935 1.52185 6.0854 -0.025424 8.04479 0.000316565L17.9485 0.130421L17.3067 3.63262Z" fill="#BFFF4A"/>
       </svg>
     </div>
-    <div class="loading-title">British Grand Prix 2025</div>
-    <div class="loading-subtitle">Silverstone Circuit</div>
+    <div class="loading-title" id="loading-title">Live Tracker</div>
+    <div class="loading-subtitle" id="loading-subtitle">Connecting...</div>
     <div class="loading-bar-wrap">
       <div id="loading-bar"></div>
     </div>
-    <div id="loading-msg" class="loading-msg">Initialising…</div>
+    <div id="loading-msg" class="loading-msg">Discovering live session...</div>
+  </div>
+</div>
+
+<!-- ═══ NO SESSION STATE ════════════════════════════════════════════════════ -->
+<div id="no-session" class="hidden">
+  <div class="no-session-inner">
+    <div class="f1-logo">
+      <svg width="72" height="63" viewBox="0 0 32 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.3067 3.63262C16.9522 5.5664 15.0771 7.11272 13.118 7.08724L12.904 8.25529C14.8629 8.28128 16.1636 9.86942 15.8095 11.8031L16.9918 11.8186C17.3464 9.88484 19.2223 8.33836 21.1815 8.36403L21.3956 7.19599C19.4363 7.17018 18.1348 5.58206 18.4891 3.64815L19.1308 0.145953L29.0355 0.27607C30.9949 0.301823 32.2962 1.89083 31.9418 3.82488L30.4446 11.9954L30.4006 12.1819C30.1376 13.1005 29.2186 13.8082 28.2617 13.7957L26.858 13.7772L26.6441 14.9443L28.1223 14.9637C29.0407 14.976 29.6696 15.675 29.5985 16.5591L29.5755 16.7381L28.1451 24.5441C27.7907 26.4781 25.9146 28.0254 23.9552 27.9997L14.0505 27.8696L14.6923 24.3674C15.0469 22.4335 16.9227 20.887 18.882 20.9128L19.096 19.7447C17.1368 19.719 15.8354 18.1307 16.1895 16.1969L15.0072 16.1813C14.6526 18.1152 12.7768 19.6617 10.8175 19.636L10.6035 20.804C12.5627 20.8297 13.8642 22.4179 13.5099 24.3518L12.8682 27.854L2.9645 27.7239C1.0051 27.6982 -0.296229 26.1092 0.0581828 24.1751L1.46186 16.5152L1.50345 16.3364C1.75595 15.4545 2.63819 14.7753 3.55678 14.7874L5.03499 14.8068L5.24885 13.6397L3.77065 13.6203C2.79101 13.6074 2.1404 12.8128 2.31749 11.8459L3.85494 3.4559C4.20935 1.52185 6.0854 -0.025424 8.04479 0.000316565L17.9485 0.130421L17.3067 3.63262Z" fill="#BFFF4A"/>
+      </svg>
+    </div>
+    <div class="no-session-title">No Live Session Active</div>
+    <div class="no-session-next" id="next-session-info"></div>
+    <div class="no-session-links">
+      <a href="/" class="hdr-btn">Silverstone Replay</a>
+      <a href="/test" class="hdr-btn">Asset Verification</a>
+    </div>
+    <button class="hdr-btn no-session-retry" id="btn-retry">Retry</button>
   </div>
 </div>
 
@@ -43,63 +61,25 @@
     </div>
     <div class="header-content">
       <div class="header-inner">
-        <div class="race-select" id="race-select">
-          <span class="race-select-label">British Grand Prix 2025</span>
-          <svg class="race-select-chevron" viewBox="0 0 11.1626 6.5635" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5.58759 6.5635C5.45425 6.5635 5.32925 6.5425 5.21259 6.5005C5.09592 6.45917 4.98759 6.3885 4.88759 6.2885L0.262587 1.6635C0.0792536 1.48017 -0.00807986 1.25084 0.000586805 0.975502C0.00858681 0.700835 0.104253 0.471835 0.287587 0.288502C0.47092 0.105169 0.704253 0.0135013 0.987587 0.0135013C1.27092 0.0135013 1.50425 0.105169 1.68759 0.288502L5.58759 4.1885L9.51259 0.263501C9.69592 0.0801679 9.92525 -0.00749826 10.2006 0.000501745C10.4753 0.00916841 10.7043 0.105169 10.8876 0.288502C11.0709 0.471835 11.1626 0.705168 11.1626 0.988502C11.1626 1.27183 11.0709 1.50517 10.8876 1.6885L6.28759 6.2885C6.18759 6.3885 6.07925 6.45917 5.96259 6.5005C5.84592 6.5425 5.72092 6.5635 5.58759 6.5635V6.5635Z" fill="#838AA5"/>
-          </svg>
-          <!-- Grand Prix dropdown -->
-          <div class="gp-dropdown hidden" id="gp-dropdown">
-            <div class="gp-dropdown-title">2025 SEASON</div>
-            <button class="gp-dropdown-item" data-gp="australian">Australian Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="chinese">Chinese Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="japanese">Japanese Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="bahrain">Bahrain Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="saudi-arabian">Saudi Arabian Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="miami">Miami Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="emilia-romagna">Emilia Romagna Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="monaco">Monaco Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="spanish">Spanish Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="canadian">Canadian Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="austrian">Austrian Grand Prix</button>
-            <button class="gp-dropdown-item active" data-gp="british">British Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="belgian">Belgian Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="hungarian">Hungarian Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="dutch">Dutch Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="italian">Italian Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="azerbaijan">Azerbaijan Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="singapore">Singapore Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="united-states">United States Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="mexico-city">Mexico City Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="sao-paulo">S&#227;o Paulo Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="las-vegas">Las Vegas Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="qatar">Qatar Grand Prix</button>
-            <button class="gp-dropdown-item" data-gp="abu-dhabi">Abu Dhabi Grand Prix</button>
-          </div>
+        <div class="live-header-title">
+          <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+          <span class="live-session-name" id="live-session-name"></span>
+          <span class="live-session-type" id="live-session-type"></span>
         </div>
         <div class="header-buttons">
-          <a href="/live" class="hdr-btn hdr-btn-live" id="btn-live">
-            <span class="live-dot"></span>
-            <span>Live</span>
+          <span class="connection-status" id="connection-status">
+            <span class="connection-dot connected"></span>
+            <span class="connection-text">Connected</span>
+          </span>
+          <a href="/" class="hdr-btn">
+            <span>Replay</span>
           </a>
-          <button class="hdr-btn" id="btn-share">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M12.3563 3.64365C11.0537 2.34101 8.94167 2.34101 7.63907 3.64365L7.63593 3.64675L7.13493 4.14116C6.87293 4.39979 6.45081 4.39702 6.19217 4.13496C5.93354 3.87291 5.93631 3.45081 6.19837 3.19217L6.69787 2.69923C8.52133 0.877493 11.4763 0.878033 13.2991 2.70085C15.122 4.52367 15.1225 7.47873 13.3007 9.3022L13.2991 9.3038L12.8078 9.8016C12.5492 10.0637 12.1271 10.0665 11.8651 9.8078C11.603 9.5492 11.6002 9.12707 11.8589 8.86507L12.3563 8.36093C13.659 7.05833 13.659 4.94631 12.3563 3.64365ZM4.13496 6.19217C4.39702 6.45081 4.39979 6.87293 4.14116 7.13493L3.64366 7.63907C2.34101 8.94167 2.34101 11.0537 3.64365 12.3563C4.94631 13.659 7.05833 13.659 8.36093 12.3563L8.36407 12.3533L8.86507 11.8589C9.12707 11.6002 9.5492 11.603 9.8078 11.8651C10.0665 12.1271 10.0637 12.5492 9.8016 12.8078L9.3038 13.2991L9.30213 13.3007C7.47867 15.1225 4.52366 15.1219 2.70085 13.2991C0.878033 11.4763 0.877493 8.52133 2.69924 6.6978L3.19217 6.19837C3.45081 5.93631 3.87291 5.93354 4.13496 6.19217ZM9.80473 6.19526C10.0651 6.45561 10.0651 6.87773 9.80473 7.13807L7.13807 9.80473C6.87773 10.0651 6.45561 10.0651 6.19526 9.80473C5.93491 9.5444 5.93491 9.12227 6.19526 8.86193L8.86193 6.19526C9.12227 5.93491 9.5444 5.93491 9.80473 6.19526Z" fill="#EAECF0"/>
-            </svg>
-            <span>Share</span>
-          </button>
         </div>
       </div>
     </div>
-    <!-- Hidden elements for JS compatibility -->
+    <!-- Hidden elements for compatibility -->
     <div class="hidden">
-      <span id="hdr-lap-cur">—</span>
-      <span id="hdr-lap-total">—</span>
-      <div id="hdr-status-badge" class="status-badge status-green">RACE</div>
-      <span id="weather-air">— °C</span>
-      <span id="weather-track">— °C Track</span>
-      <span id="hdr-race-time">0:00:00</span>
-      <div id="weather-box"></div>
+      <div id="hdr-status-badge" class="status-badge status-green">LIVE</div>
     </div>
   </header>
 
@@ -110,20 +90,23 @@
     <aside class="standings-panel">
       <div class="panel-header">
         <span class="panel-title">Standings</span>
-        <span class="panel-subtitle" id="standings-lap-label"><span id="standings-lap-cur">—</span> <span class="panel-subtitle-dim">/ <span id="standings-lap-total">—</span></span></span>
+        <span class="panel-subtitle" id="standings-lap-label">
+          <span id="standings-lap-cur">--</span>
+          <span class="panel-subtitle-dim">/ <span id="standings-lap-total">--</span></span>
+        </span>
       </div>
       <div class="standings-list" id="standings-list">
         <!-- populated by JS -->
       </div>
     </aside>
 
-    <!-- MOBILE PANEL TABS (hidden on desktop via CSS) -->
+    <!-- MOBILE PANEL TABS -->
     <div class="mobile-tab-bar">
       <div class="seg-control mobile-seg">
         <div class="seg-indicator"></div>
         <button class="seg-tab active" data-panel="standings">Standings</button>
-        <button class="seg-tab" data-panel="insights">Insights</button>
         <button class="seg-tab" data-panel="events">Events</button>
+        <button class="seg-tab" data-panel="insights">Insights</button>
         <button class="seg-tab" data-panel="track">Track</button>
       </div>
     </div>
@@ -170,81 +153,67 @@
             </div>
           </div>
         </div>
-        <!-- Speed tooltip -->
+        <!-- Car tooltip -->
         <div id="car-tooltip" class="car-tooltip hidden">
           <div class="tooltip-driver"></div>
           <div class="tooltip-team"></div>
           <div class="tooltip-pos"></div>
         </div>
       </div>
-
     </section>
 
-    <!-- RIGHT: INSIGHTS / EVENTS -->
+    <!-- RIGHT: EVENTS / INSIGHTS -->
     <aside class="insights-panel">
       <div class="panel-tab-bar">
         <div class="seg-control">
           <div class="seg-indicator"></div>
-          <button class="seg-tab active" data-tab="insights">Insights</button>
-          <button class="seg-tab" data-tab="events">Events</button>
+          <button class="seg-tab active" data-tab="events">Events</button>
+          <button class="seg-tab" data-tab="insights">Insights</button>
           <button class="seg-tab" data-tab="track">Track</button>
         </div>
       </div>
 
-      <!-- Curated race insights -->
-      <div class="insights-content" id="race-insights-content"></div>
-
-      <!-- Lap-by-lap events (previously "insights") -->
-      <div class="insights-content hidden" id="events-content">
-        <div class="insights-empty">Events will appear as the race progresses</div>
+      <!-- Live events feed -->
+      <div class="insights-content" id="events-content">
+        <div class="insights-empty" id="events-empty">Events will appear as the session progresses</div>
+        <div class="live-events-list" id="live-events-list"></div>
       </div>
 
-      <!-- Track info placeholder -->
+      <!-- Auto-generated insights -->
+      <div class="insights-content hidden" id="race-insights-content">
+        <div class="insights-empty" id="insights-empty">Insights will be generated from live data</div>
+      </div>
+
+      <!-- Track info -->
       <div class="insights-content hidden" id="track-content">
-        <div class="insights-empty">Track information coming soon</div>
+        <div class="insights-empty">Track information</div>
       </div>
     </aside>
 
-    <!-- BOTTOM: TIMELINE + EVENTS + PLAYER -->
-    <div class="timeline-bar">
-      <!-- Timeline -->
-      <div class="tl-track" id="tl-track">
-        <div class="tl-progress" id="tl-progress"></div>
-        <div class="tl-hover" id="tl-hover"></div>
-        <div class="tl-laps" id="tl-laps"></div>
-        <div class="tl-tooltip" id="tl-tooltip">
-          <div class="tl-tooltip-time" id="tl-tooltip-time"></div>
-          <div class="tl-tooltip-lap" id="tl-tooltip-lap"></div>
+    <!-- BOTTOM: LIVE INFO BAR -->
+    <div class="timeline-bar live-info-bar">
+      <div class="live-bar-content">
+        <div class="live-bar-left">
+          <div class="live-bar-item">
+            <span class="live-bar-label">Elapsed</span>
+            <span class="live-bar-value" id="live-elapsed">0:00:00</span>
+          </div>
+          <div class="live-bar-item">
+            <span class="live-bar-label">Lap</span>
+            <span class="live-bar-value"><span id="live-lap">--</span> / <span id="live-total-laps">--</span></span>
+          </div>
         </div>
-      </div>
-      <!-- Events -->
-      <div class="tl-events" id="tl-events"></div>
-      <!-- Player controls row -->
-      <div class="player-bar" id="player-bar">
-        <span class="player-time" id="player-time">0:00:00 / 0:00:00</span>
-        <div class="player-center">
-          <button class="player-nav-btn" id="btn-prev-lap" title="Previous lap (Shift+Left)">
-            <svg viewBox="0 0 16 16" fill="none"><path d="M3.333 2.667a.667.667 0 01.667.667v9.333a.667.667 0 01-1.333 0V3.334a.667.667 0 01.666-.667z" fill="currentColor"/><path d="M11.279 2.89c.877-.585 2.054.042 2.054 1.098v8.024c0 1.056-1.177 1.683-2.054 1.098L5.255 9.1c-.785-.523-.785-1.676 0-2.199l6.024-4.01z" fill="currentColor"/></svg>
-          </button>
-          <button class="player-play" id="btn-play" title="Play / Pause (Space)">
-            <svg class="player-icon-play" viewBox="0 0 20 20" fill="none"><path d="M7.703 1.973C6.178.986 4.167 2.08 4.167 3.897v12.206c0 1.816 2.012 2.91 3.536 1.924l9.432-5.848c1.396-.903 1.396-2.945 0-3.848L7.703 1.973z" fill="currentColor"/></svg>
-            <svg class="player-icon-pause hidden" viewBox="0 0 20 20" fill="none"><rect x="3.5" y="2" width="4.5" height="16" rx="1.5" fill="currentColor"/><rect x="12" y="2" width="4.5" height="16" rx="1.5" fill="currentColor"/></svg>
-          </button>
-          <button class="player-nav-btn" id="btn-next-lap" title="Next lap (Shift+Right)">
-            <svg viewBox="0 0 16 16" fill="none"><path d="M2.667 3.989c0-1.056 1.177-1.683 2.054-1.099l6.024 4.011c.785.523.785 1.676 0 2.199l-6.024 4.01c-.877.585-2.054-.041-2.054-1.098V3.989z" fill="currentColor"/><path d="M12.667 2.667a.667.667 0 01.666.667v9.333a.667.667 0 01-1.333 0V3.334a.667.667 0 01.667-.667z" fill="currentColor"/></svg>
-          </button>
+        <div class="live-bar-center">
+          <div id="live-track-status" class="status-badge status-green">GREEN</div>
         </div>
-        <div class="player-right">
-          <div class="speed-control" id="speed-control">
-            <button class="player-speed-btn" id="btn-speed" title="Playback speed">1x</button>
-            <div class="speed-dropdown hidden" id="speed-dropdown">
-              <button class="speed-option active" data-speed="1">1x</button>
-              <button class="speed-option" data-speed="2">2x</button>
-              <button class="speed-option" data-speed="4">4x</button>
-              <button class="speed-option" data-speed="8">8x</button>
-              <button class="speed-option" data-speed="16">16x</button>
-              <button class="speed-option" data-speed="32">32x</button>
-            </div>
+        <div class="live-bar-right">
+          <div class="live-bar-item">
+            <span class="live-bar-label">Air</span>
+            <span class="live-bar-value" id="live-air-temp">-- C</span>
+          </div>
+          <div class="live-bar-item">
+            <span class="live-bar-label">Track</span>
+            <span class="live-bar-value" id="live-track-temp">-- C</span>
           </div>
           <div class="settings-control" id="settings-control">
             <button class="player-icon-btn" id="btn-player-settings" title="Settings">
@@ -269,6 +238,6 @@
 
 </div>
 
-<script src="app.js"></script>
+<script src="live.js"></script>
 </body>
 </html>

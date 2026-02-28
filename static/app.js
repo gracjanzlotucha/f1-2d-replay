@@ -2018,13 +2018,16 @@ function bindControls() {
   bindGpDropdown();
 
   // Header: Share button
-  document.getElementById('btn-share').addEventListener('click', () => {
-    navigator.clipboard.writeText(window.location.href).then(() => {
-      showShareToast('Link copied to clipboard');
-    }).catch(() => {
-      showShareToast('Could not copy link');
+  const btnShare = document.getElementById('btn-share');
+  if (btnShare) {
+    btnShare.addEventListener('click', () => {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        showShareToast('Link copied to clipboard');
+      }).catch(() => {
+        showShareToast('Could not copy link');
+      });
     });
-  });
+  }
 }
 
 function moveSegIndicator(tab) {
@@ -2071,6 +2074,7 @@ function bindMobileTabs() {
 function bindGpDropdown() {
   const select = document.getElementById('race-select');
   const dropdown = document.getElementById('gp-dropdown');
+  if (!select || !dropdown) return;
 
   select.addEventListener('click', (e) => {
     if (e.target.closest('.gp-dropdown')) return;
@@ -2381,7 +2385,9 @@ function showApp() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 init().catch(err => {
-  document.getElementById('loading-msg').textContent = `Error: ${err.message}`;
-  document.getElementById('loading-bar').style.background = '#BFFF4A';
+  const msgEl = document.getElementById('loading-msg');
+  const barEl = document.getElementById('loading-bar');
+  if (msgEl) msgEl.textContent = `Error: ${err.message}`;
+  if (barEl) barEl.style.background = '#BFFF4A';
   console.error('F1 Replay init error:', err);
 });

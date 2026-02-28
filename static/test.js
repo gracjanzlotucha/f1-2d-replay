@@ -48,12 +48,18 @@ const TEAM_COLORS = {
 
 async function api(endpoint, params = {}) {
   const qs = new URLSearchParams({ endpoint, ...params }).toString();
-  const resp = await fetch(`/api/f1?${qs}`);
+  const url = `/api/f1?${qs}`;
+  console.log('API request:', url);
+  const resp = await fetch(url);
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
-    throw new Error(err.error || `API ${endpoint}: ${resp.status}`);
+    console.error('API error:', endpoint, resp.status, err);
+    const detail = err.detail ? ` — ${err.detail}` : '';
+    throw new Error((err.error || `API ${endpoint}: ${resp.status}`) + detail);
   }
-  return resp.json();
+  const data = await resp.json();
+  console.log(`API ${endpoint}: ${Array.isArray(data) ? data.length + ' items' : 'object'}`);
+  return data;
 }
 
 // ─── Loading helpers ────────────────────────────────────────────────────────
@@ -90,23 +96,30 @@ async function init() {
     const sessions = await api('sessions', { year: '2026' });
 
     // Find pre-season testing sessions (Bahrain)
-    const testSessions = sessions.filter(s =>
-      s.session_type === 'Practice' &&
-      s.session_name &&
-      (s.session_name.toLowerCase().includes('test') ||
-       s.location?.toLowerCase().includes('bahrain') ||
-       s.location?.toLowerCase().includes('sakhir'))
-    );
+    // Don't filter by session_type — testing sessions may be 'Testing', 'Practice', etc.
+    const testSessions = sessions.filter(s => {
+      const name = (s.session_name || '').toLowerCase();
+      const loc = (s.location || '').toLowerCase();
+      const country = (s.country_name || '').toLowerCase();
+      return name.includes('test') ||
+        (loc.includes('bahrain') || loc.includes('sakhir') || country.includes('bahrain'));
+    });
 
-    // Also get the first race sessions for broader driver coverage
-    const allPracticeSessions = sessions.filter(s =>
-      s.session_type === 'Practice' || s.session_type === 'Race'
-    );
+    // Prefer sessions that already have data (date_start is in the past)
+    const now = new Date().toISOString();
+    const pastSessions = sessions.filter(s => s.date_start && s.date_start < now);
 
-    // Pick the most recent session that likely has data
+    // Pick the most recent test session, or the most recent past session
     const targetSession = testSessions.length > 0
       ? testSessions[testSessions.length - 1]
-      : allPracticeSessions[0];
+      : pastSessions.length > 0
+        ? pastSessions[pastSessions.length - 1]
+        : sessions[0];
+
+    console.log('All 2026 sessions:', sessions.length);
+    console.log('Test sessions found:', testSessions.length, testSessions.map(s =>
+      `${s.session_key}: ${s.session_name} @ ${s.location} (${s.session_type})`));
+    console.log('Selected session:', targetSession);
 
     if (!targetSession) {
       setLoading('No 2026 sessions found in API', 100);
@@ -118,8 +131,9 @@ async function init() {
       `${targetSession.session_name || 'Pre-Season Testing'} — ${targetSession.location || 'Bahrain'}`;
 
     // 2. Fetch drivers
-    setLoading('Fetching drivers...', 30);
-    const rawDrivers = await api('drivers', { session_key: sessionKey });
+    setLoading(`Fetching drivers for session ${sessionKey}...`, 30);
+    console.log(`Fetching drivers for session_key=${sessionKey}`);
+    const rawDrivers = await api('drivers', { session_key: String(sessionKey) });
 
     // Deduplicate drivers by number (API may return multiple entries)
     const driversMap = {};
@@ -256,7 +270,7 @@ async function init() {
     setLoading('Fetching track data...', 90);
     try {
       const locations = await api('location', {
-        session_key: sessionKey,
+        session_key: String(sessionKey),
         driver_number: String(drivers[0].driver_number),
       });
 

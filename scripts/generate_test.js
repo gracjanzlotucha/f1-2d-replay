@@ -390,7 +390,8 @@ async function main() {
     let pitIn = null, pitOut = null, stopDuration = null;
     for (const pit of rawPits) {
       if (String(pit.driver_number) === dn && pit.lap_number === lapNum) {
-        pitIn = lapStart;
+        // Use actual pit event timestamp, not lap start
+        pitIn = pit.date ? parseISO(pit.date) - globalMinT : lapStart;
         stopDuration = pit.pit_duration;
         pitOut = pitIn != null && stopDuration ? pitIn + stopDuration : null;
         break;
@@ -429,15 +430,24 @@ async function main() {
   // Insights
   const insights = computeInsights(lapsList, drivers, totalLaps);
 
-  // 6. Circuit info
+  // 6. Circuit info + track outline from Multiviewer
   console.log('[6/7] Fetching circuit info…');
   let circuitInfo = null;
   try {
     const circuitKey = session.circuit_key;
+    const year = session.year || new Date(session.date_start).getFullYear();
     if (circuitKey) {
-      const resp = await fetch(`https://api.multiviewer.app/api/v1/circuits/${circuitKey}`);
-      if (resp.ok) {
-        const cd = await resp.json();
+      // Try year-specific first, then fall back to adjacent years
+      let cd = null;
+      for (const tryYear of [year, year - 1, year + 1]) {
+        const resp = await fetch(`https://api.multiviewer.app/api/v1/circuits/${circuitKey}/${tryYear}`);
+        if (resp.ok) {
+          cd = await resp.json();
+          console.log(`  Found Multiviewer data for ${tryYear}`);
+          break;
+        }
+      }
+      if (cd) {
         circuitInfo = {
           rotation: cd.rotation || 0,
           corners: (cd.corners || []).map(c => ({
@@ -447,6 +457,13 @@ async function main() {
           })),
         };
         console.log(`  Rotation: ${circuitInfo.rotation}°, ${circuitInfo.corners.length} corners`);
+
+        // Use Multiviewer track outline if available (cleaner than GPS trace)
+        if (cd.x?.length > 10 && cd.y?.length > 10) {
+          trackX = cd.x.map(v => Math.round(v * 10) / 10);
+          trackY = cd.y.map(v => Math.round(v * 10) / 10);
+          console.log(`  Using Multiviewer track outline: ${trackX.length} points`);
+        }
       }
     }
   } catch (e) {

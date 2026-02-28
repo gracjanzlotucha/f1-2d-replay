@@ -4,16 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#16171d">
-  <title>F1 2026 — Asset Verification</title>
+  <title>F1 2D Replay — Pre-Season Testing 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
   <link href="https://api.fontshare.com/v2/css?f[]=clash-display@600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@500;600&family=Geist+Mono:wght@500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<!-- LOADING -->
+<!-- ═══ LOADING SCREEN ══════════════════════════════════════════════════════ -->
 <div id="loading-screen">
   <div class="loading-inner">
     <div class="f1-logo">
@@ -21,17 +22,19 @@
         <path d="M17.3067 3.63262C16.9522 5.5664 15.0771 7.11272 13.118 7.08724L12.904 8.25529C14.8629 8.28128 16.1636 9.86942 15.8095 11.8031L16.9918 11.8186C17.3464 9.88484 19.2223 8.33836 21.1815 8.36403L21.3956 7.19599C19.4363 7.17018 18.1348 5.58206 18.4891 3.64815L19.1308 0.145953L29.0355 0.27607C30.9949 0.301823 32.2962 1.89083 31.9418 3.82488L30.4446 11.9954L30.4006 12.1819C30.1376 13.1005 29.2186 13.8082 28.2617 13.7957L26.858 13.7772L26.6441 14.9443L28.1223 14.9637C29.0407 14.976 29.6696 15.675 29.5985 16.5591L29.5755 16.7381L28.1451 24.5441C27.7907 26.4781 25.9146 28.0254 23.9552 27.9997L14.0505 27.8696L14.6923 24.3674C15.0469 22.4335 16.9227 20.887 18.882 20.9128L19.096 19.7447C17.1368 19.719 15.8354 18.1307 16.1895 16.1969L15.0072 16.1813C14.6526 18.1152 12.7768 19.6617 10.8175 19.636L10.6035 20.804C12.5627 20.8297 13.8642 22.4179 13.5099 24.3518L12.8682 27.854L2.9645 27.7239C1.0051 27.6982 -0.296229 26.1092 0.0581828 24.1751L1.46186 16.5152L1.50345 16.3364C1.75595 15.4545 2.63819 14.7753 3.55678 14.7874L5.03499 14.8068L5.24885 13.6397L3.77065 13.6203C2.79101 13.6074 2.1404 12.8128 2.31749 11.8459L3.85494 3.4559C4.20935 1.52185 6.0854 -0.025424 8.04479 0.000316565L17.9485 0.130421L17.3067 3.63262Z" fill="#BFFF4A"/>
       </svg>
     </div>
-    <div class="loading-title">2026 Asset Verification</div>
-    <div class="loading-subtitle">Pre-Season Testing — Bahrain</div>
+    <div class="loading-title">Pre-Season Testing 2026</div>
+    <div class="loading-subtitle">Bahrain International Circuit</div>
     <div class="loading-bar-wrap">
       <div id="loading-bar"></div>
     </div>
-    <div id="loading-msg" class="loading-msg">Connecting to OpenF1...</div>
+    <div id="loading-msg" class="loading-msg">Connecting to OpenF1…</div>
   </div>
 </div>
 
-<!-- MAIN -->
+<!-- ═══ MAIN APP ════════════════════════════════════════════════════════════ -->
 <div id="app" class="hidden">
+
+  <!-- HEADER -->
   <header class="header">
     <div class="header-logo-wrap">
       <svg width="32" height="28" viewBox="0 0 32 28" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -40,43 +43,199 @@
     </div>
     <div class="header-content">
       <div class="header-inner">
-        <div class="test-header-title">
-          <span class="test-badge">TEST</span>
-          <span id="session-name">2026 Pre-Season Testing</span>
+        <div class="race-select" id="race-select">
+          <span class="race-select-label" id="hdr-race-name">Pre-Season Testing 2026</span>
         </div>
         <div class="header-buttons">
           <a href="/" class="hdr-btn">
             <span>Replay</span>
           </a>
-          <a href="/live" class="hdr-btn">
+          <a href="/live" class="hdr-btn hdr-btn-live" id="btn-live">
+            <span class="live-dot"></span>
             <span>Live</span>
           </a>
         </div>
       </div>
     </div>
+    <!-- Hidden elements for JS compatibility -->
+    <div class="hidden">
+      <span id="hdr-lap-cur">—</span>
+      <span id="hdr-lap-total">—</span>
+      <div id="hdr-status-badge" class="status-badge status-green">TEST</div>
+      <span id="weather-air">— °C</span>
+      <span id="weather-track">— °C Track</span>
+      <span id="hdr-race-time">0:00:00</span>
+      <div id="weather-box"></div>
+    </div>
   </header>
 
-  <main class="test-main">
-    <!-- Summary -->
-    <div class="test-summary" id="test-summary"></div>
+  <!-- MAIN GRID -->
+  <main class="main-grid">
 
-    <!-- Driver grid -->
-    <div class="test-section">
-      <h2 class="test-section-title">Drivers & Teams</h2>
-      <div class="test-grid" id="driver-grid"></div>
-    </div>
-
-    <!-- Track preview -->
-    <div class="test-section">
-      <h2 class="test-section-title">Track Data Preview</h2>
-      <div class="test-track-wrap">
-        <canvas id="test-track-canvas" width="800" height="500"></canvas>
+    <!-- LEFT: STANDINGS -->
+    <aside class="standings-panel">
+      <div class="panel-header">
+        <span class="panel-title">Standings</span>
+        <span class="panel-subtitle" id="standings-lap-label"><span id="standings-lap-cur">—</span> <span class="panel-subtitle-dim">/ <span id="standings-lap-total">—</span></span></span>
       </div>
-      <div class="test-track-info" id="track-info"></div>
+      <div class="standings-list" id="standings-list">
+        <!-- populated by JS -->
+      </div>
+    </aside>
+
+    <!-- MOBILE PANEL TABS (hidden on desktop via CSS) -->
+    <div class="mobile-tab-bar">
+      <div class="seg-control mobile-seg">
+        <div class="seg-indicator"></div>
+        <button class="seg-tab active" data-panel="standings">Standings</button>
+        <button class="seg-tab" data-panel="insights">Insights</button>
+        <button class="seg-tab" data-panel="events">Events</button>
+        <button class="seg-tab" data-panel="track">Track</button>
+      </div>
     </div>
+
+    <!-- CENTER: TRACK CANVAS -->
+    <section class="track-section">
+      <div class="track-container" id="track-container">
+        <canvas id="track-canvas"></canvas>
+        <!-- Telemetry panel (follow mode) -->
+        <div id="telemetry-panel" class="telemetry-panel hidden">
+          <div class="tel-header" id="tel-header">
+            <div class="tel-driver-info">
+              <img class="tel-team-logo" id="tel-team-logo" src="" alt="" />
+              <span class="tel-driver-name" id="tel-driver-name"></span>
+            </div>
+            <div class="tel-photo-wrap">
+              <img class="tel-driver-photo" id="tel-driver-photo" src="" alt="" />
+            </div>
+          </div>
+          <div class="tel-stats">
+            <div class="tel-stat">
+              <div class="tel-indicator"><div class="tel-indicator-fill" id="tel-speed-fill"></div></div>
+              <span class="tel-value" id="tel-speed">0</span>
+              <span class="tel-label">KMH</span>
+            </div>
+            <div class="tel-stat">
+              <div class="tel-indicator tel-indicator-dual">
+                <div class="tel-indicator-fill tel-throttle-fill" id="tel-throttle-fill"></div>
+                <div class="tel-indicator-fill tel-brake-fill" id="tel-brake-fill"></div>
+              </div>
+              <span class="tel-value" id="tel-rpm">0</span>
+              <span class="tel-label">RPM</span>
+            </div>
+            <div class="tel-stat tel-stat-gear">
+              <div class="tel-gear-window">
+                <div class="tel-gear-strip" id="tel-gear-strip">
+                  <span class="tel-gear-num">0</span><span class="tel-gear-num">1</span><span class="tel-gear-num">2</span><span class="tel-gear-num">3</span><span class="tel-gear-num">4</span><span class="tel-gear-num">5</span><span class="tel-gear-num">6</span><span class="tel-gear-num">7</span><span class="tel-gear-num">8</span>
+                </div>
+              </div>
+              <span class="tel-label">Gear</span>
+            </div>
+            <div class="tel-stat tel-stat-drs">
+              <span class="tel-value tel-drs-value" id="tel-drs">DRS</span>
+            </div>
+          </div>
+        </div>
+        <!-- Speed tooltip -->
+        <div id="car-tooltip" class="car-tooltip hidden">
+          <div class="tooltip-driver"></div>
+          <div class="tooltip-team"></div>
+          <div class="tooltip-pos"></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT: INSIGHTS / EVENTS -->
+    <aside class="insights-panel">
+      <div class="panel-tab-bar">
+        <div class="seg-control">
+          <div class="seg-indicator"></div>
+          <button class="seg-tab active" data-tab="insights">Insights</button>
+          <button class="seg-tab" data-tab="events">Events</button>
+          <button class="seg-tab" data-tab="track">Track</button>
+        </div>
+      </div>
+
+      <!-- Curated race insights -->
+      <div class="insights-content" id="race-insights-content"></div>
+
+      <!-- Lap-by-lap events (previously "insights") -->
+      <div class="insights-content hidden" id="events-content">
+        <div class="insights-empty">Events will appear as the session progresses</div>
+      </div>
+
+      <!-- Track info placeholder -->
+      <div class="insights-content hidden" id="track-content">
+        <div class="insights-empty">Track information coming soon</div>
+      </div>
+    </aside>
+
+    <!-- BOTTOM: TIMELINE + EVENTS + PLAYER -->
+    <div class="timeline-bar">
+      <!-- Timeline -->
+      <div class="tl-track" id="tl-track">
+        <div class="tl-progress" id="tl-progress"></div>
+        <div class="tl-hover" id="tl-hover"></div>
+        <div class="tl-laps" id="tl-laps"></div>
+        <div class="tl-tooltip" id="tl-tooltip">
+          <div class="tl-tooltip-time" id="tl-tooltip-time"></div>
+          <div class="tl-tooltip-lap" id="tl-tooltip-lap"></div>
+        </div>
+      </div>
+      <!-- Events -->
+      <div class="tl-events" id="tl-events"></div>
+      <!-- Player controls row -->
+      <div class="player-bar" id="player-bar">
+        <span class="player-time" id="player-time">0:00:00 / 0:00:00</span>
+        <div class="player-center">
+          <button class="player-nav-btn" id="btn-prev-lap" title="Previous lap (Shift+Left)">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M3.333 2.667a.667.667 0 01.667.667v9.333a.667.667 0 01-1.333 0V3.334a.667.667 0 01.666-.667z" fill="currentColor"/><path d="M11.279 2.89c.877-.585 2.054.042 2.054 1.098v8.024c0 1.056-1.177 1.683-2.054 1.098L5.255 9.1c-.785-.523-.785-1.676 0-2.199l6.024-4.01z" fill="currentColor"/></svg>
+          </button>
+          <button class="player-play" id="btn-play" title="Play / Pause (Space)">
+            <svg class="player-icon-play" viewBox="0 0 20 20" fill="none"><path d="M7.703 1.973C6.178.986 4.167 2.08 4.167 3.897v12.206c0 1.816 2.012 2.91 3.536 1.924l9.432-5.848c1.396-.903 1.396-2.945 0-3.848L7.703 1.973z" fill="currentColor"/></svg>
+            <svg class="player-icon-pause hidden" viewBox="0 0 20 20" fill="none"><rect x="3.5" y="2" width="4.5" height="16" rx="1.5" fill="currentColor"/><rect x="12" y="2" width="4.5" height="16" rx="1.5" fill="currentColor"/></svg>
+          </button>
+          <button class="player-nav-btn" id="btn-next-lap" title="Next lap (Shift+Right)">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M2.667 3.989c0-1.056 1.177-1.683 2.054-1.099l6.024 4.011c.785.523.785 1.676 0 2.199l-6.024 4.01c-.877.585-2.054-.041-2.054-1.098V3.989z" fill="currentColor"/><path d="M12.667 2.667a.667.667 0 01.666.667v9.333a.667.667 0 01-1.333 0V3.334a.667.667 0 01.667-.667z" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <div class="player-right">
+          <div class="speed-control" id="speed-control">
+            <button class="player-speed-btn" id="btn-speed" title="Playback speed">1x</button>
+            <div class="speed-dropdown hidden" id="speed-dropdown">
+              <button class="speed-option active" data-speed="1">1x</button>
+              <button class="speed-option" data-speed="2">2x</button>
+              <button class="speed-option" data-speed="4">4x</button>
+              <button class="speed-option" data-speed="8">8x</button>
+              <button class="speed-option" data-speed="16">16x</button>
+              <button class="speed-option" data-speed="32">32x</button>
+            </div>
+          </div>
+          <div class="settings-control" id="settings-control">
+            <button class="player-icon-btn" id="btn-player-settings" title="Settings">
+              <svg viewBox="0 0 16 16" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M6.62524 2.06908C6.93167 1.60943 7.44753 1.33333 8 1.33333C8.55247 1.33333 9.06833 1.60943 9.37473 2.06908L9.7548 2.63917C9.94707 2.92758 10.2978 3.06685 10.6356 2.98891L11.1044 2.88071C11.6689 2.75045 12.2606 2.92017 12.6702 3.32978C13.0799 3.7394 13.2495 4.33113 13.1193 4.89559L13.0111 5.36443C12.9331 5.70218 13.0724 6.05291 13.3609 6.24519L13.9309 6.62524C14.3906 6.93167 14.6667 7.44753 14.6667 8C14.6667 8.55247 14.3906 9.06833 13.9309 9.37473L13.3609 9.7548C13.0724 9.94707 12.9331 10.2978 13.0111 10.6356L13.1193 11.1044C13.2495 11.6689 13.0799 12.2606 12.6702 12.6702C12.2606 13.0799 11.6689 13.2495 11.1044 13.1193L10.6356 13.0111C10.2978 12.9331 9.94707 13.0724 9.7548 13.3609L9.37473 13.9309C9.06833 14.3906 8.55247 14.6667 8 14.6667C7.44753 14.6667 6.93167 14.3906 6.62524 13.9309L6.24519 13.3609C6.05291 13.0724 5.70218 12.9331 5.36443 13.0111L4.89559 13.1193C4.33113 13.2495 3.7394 13.0799 3.32978 12.6702C2.92017 12.2606 2.75045 11.6689 2.88071 11.1044L2.98891 10.6356C3.06685 10.2978 2.92758 9.94707 2.63917 9.7548L2.06908 9.37473C1.60943 9.06833 1.33333 8.55247 1.33333 8C1.33333 7.44753 1.60943 6.93167 2.06908 6.62524L2.63917 6.24519C2.92758 6.05291 3.06685 5.70218 2.98891 5.36443L2.88071 4.89559C2.75045 4.33114 2.92016 3.7394 3.32978 3.32978C3.7394 2.92016 4.33113 2.75045 4.89559 2.88071L5.36443 2.98891C5.70218 3.06685 6.05291 2.92758 6.24519 2.63917L6.62524 2.06908ZM5.91667 8C5.91667 6.8494 6.8494 5.91667 8 5.91667C9.1506 5.91667 10.0833 6.8494 10.0833 8C10.0833 9.1506 9.1506 10.0833 8 10.0833C6.8494 10.0833 5.91667 9.1506 5.91667 8Z" fill="currentColor"/></svg>
+            </button>
+            <div class="settings-popup hidden" id="settings-popup">
+              <label class="settings-row">
+                <span>Show labels</span>
+                <input type="checkbox" id="opt-labels" checked />
+              </label>
+            </div>
+          </div>
+          <button class="player-icon-btn" id="btn-fullscreen" title="Fullscreen (F)">
+            <svg class="fs-expand" viewBox="0 0 20 20" fill="none"><path d="M1.66667 14.1667V12.5C1.66667 12.0397 2.03977 11.6667 2.5 11.6667C2.96023 11.6667 3.33333 12.0397 3.33333 12.5V14.1667C3.33333 14.6269 3.70643 15 4.16667 15H5.83333C6.29357 15 6.66667 15.3731 6.66667 15.8333C6.66667 16.2936 6.29357 16.6667 5.83333 16.6667H4.16667C2.78596 16.6667 1.66667 15.5474 1.66667 14.1667ZM16.6667 14.1667V12.5C16.6667 12.0397 17.0397 11.6667 17.5 11.6667C17.9602 11.6667 18.3333 12.0397 18.3333 12.5V14.1667C18.3333 15.5474 17.2141 16.6667 15.8333 16.6667H14.1667C13.7064 16.6667 13.3333 16.2936 13.3333 15.8333C13.3333 15.3731 13.7064 15 14.1667 15H15.8333C16.2936 15 16.6667 14.6269 16.6667 14.1667ZM1.66667 7.5V5.83333C1.66667 4.45262 2.78596 3.33333 4.16667 3.33333H5.83333C6.29357 3.33333 6.66667 3.70643 6.66667 4.16667C6.66667 4.6269 6.29357 5 5.83333 5H4.16667C3.70643 5 3.33333 5.3731 3.33333 5.83333V7.5C3.33333 7.96023 2.96023 8.33333 2.5 8.33333C2.03977 8.33333 1.66667 7.96023 1.66667 7.5ZM16.6667 7.5V5.83333C16.6667 5.3731 16.2936 5 15.8333 5H14.1667C13.7064 5 13.3333 4.6269 13.3333 4.16667C13.3333 3.70643 13.7064 3.33333 14.1667 3.33333H15.8333C17.2141 3.33333 18.3333 4.45262 18.3333 5.83333V7.5C18.3333 7.96023 17.9602 8.33333 17.5 8.33333C17.0397 8.33333 16.6667 7.96023 16.6667 7.5Z" fill="currentColor"/></svg>
+            <svg class="fs-compress hidden" viewBox="0 0 20 20" fill="none"><path d="M5.83333 11.6667C7.21404 11.6667 8.33333 12.7859 8.33333 14.1667V16.6667C8.33333 17.1269 7.96023 17.5 7.5 17.5C7.03977 17.5 6.66667 17.1269 6.66667 16.6667V14.1667C6.66667 13.7064 6.29357 13.3333 5.83333 13.3333H3.33333C2.8731 13.3333 2.5 12.9602 2.5 12.5C2.5 12.0397 2.8731 11.6667 3.33333 11.6667H5.83333Z" fill="currentColor"/><path d="M16.6667 11.6667C17.1269 11.6667 17.5 12.0397 17.5 12.5C17.5 12.9602 17.1269 13.3333 16.6667 13.3333H14.1667C13.7064 13.3333 13.3333 13.7064 13.3333 14.1667V16.6667C13.3333 17.1269 12.9602 17.5 12.5 17.5C12.0397 17.5 11.6667 17.1269 11.6667 16.6667V14.1667C11.6667 12.7859 12.7859 11.6667 14.1667 11.6667H16.6667Z" fill="currentColor"/><path d="M7.5 2.5C7.96023 2.5 8.33333 2.8731 8.33333 3.33333V5.83333C8.33333 7.21404 7.21404 8.33333 5.83333 8.33333H3.33333C2.8731 8.33333 2.5 7.96023 2.5 7.5C2.5 7.03977 2.8731 6.66667 3.33333 6.66667H5.83333C6.29357 6.66667 6.66667 6.29357 6.66667 5.83333V3.33333C6.66667 2.8731 7.03977 2.5 7.5 2.5Z" fill="currentColor"/><path d="M12.5 2.5C12.9602 2.5 13.3333 2.8731 13.3333 3.33333V5.83333C13.3333 6.29357 13.7064 6.66667 14.1667 6.66667H16.6667C17.1269 6.66667 17.5 7.03977 17.5 7.5C17.5 7.96023 17.1269 8.33333 16.6667 8.33333H14.1667C12.7859 8.33333 11.6667 7.21404 11.6667 5.83333V3.33333C11.6667 2.8731 12.0397 2.5 12.5 2.5Z" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
   </main>
+
 </div>
 
+<!-- test.js fetches API data, processes it, then dynamically loads app.js -->
 <script src="test.js"></script>
 </body>
 </html>

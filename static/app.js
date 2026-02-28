@@ -1447,13 +1447,21 @@ function renderStandings() {
   updateDriverOrder();
   const posAtT = G._posAtT || {};
   const list   = document.getElementById('standings-list');
-  list.innerHTML = '';
 
   // Update lap counter in header
   document.getElementById('standings-lap-cur').textContent = G.currentLap || '—';
 
   // Compute gaps — use lap time as delta if available
   const leaderLapTime = posAtT[G.driverOrder[0]]?.lap_time;
+
+  // Build a map of existing rows keyed by driver number for reuse
+  const existingRows = {};
+  for (const row of Array.from(list.children)) {
+    existingRows[row.dataset.driver] = row;
+  }
+
+  // Build ordered list of rows, reusing existing DOM elements
+  const orderedRows = [];
 
   G.driverOrder.forEach((num, idx) => {
     const driver = G.drivers[num];
@@ -1511,37 +1519,77 @@ function renderStandings() {
     const tyreSvg = TYRE_SVG_MAP[compound] || 'soft';
     const tyreImgSrc = `assets/tyres/${tyreSvg}.svg`;
 
-    // Driver photo
-    const photoSrc = `assets/drivers/${driver.abbr}.png`;
-
     // Team color bar + logo
     const teamColor = driver.color || '#555';
     const teamSlug = TEAM_LOGO_MAP[driver.team] || '';
     const teamLogoSrc = teamSlug ? `assets/teams/${teamSlug}.svg` : '';
 
-    const row = document.createElement('div');
-    row.className = 'driver-row' + (isRetired ? ' retired' : '') + (num === G.followDriver ? ' following' : '');
-    row.dataset.driver = num;
+    const wantClass = 'driver-row' + (isRetired ? ' retired' : '') + (num === G.followDriver ? ' following' : '');
 
-    row.innerHTML = `
-      <div class="dr-pos">
-        ${pos}
-        <div class="dr-color-bar" style="background:${teamColor}"></div>
-      </div>
-      <div class="dr-driver">
-        <div class="dr-photo" style="background-color:${teamColor}"><img src="${photoSrc}" alt="${driver.abbr}" /></div>
-        <span class="dr-abbr">${driver.abbr}</span>
-      </div>
-      <div class="dr-team-logo">
-        ${teamLogoSrc ? `<img src="${teamLogoSrc}" alt="${driver.team}" />` : ''}
-      </div>
-      <div class="dr-gap">${gapHtml}</div>
-      <div class="dr-tyre">
-        <img src="${tyreImgSrc}" alt="${compound}" />
-      </div>
-    `;
+    let row = existingRows[num];
+    if (row) {
+      // Reuse existing row — patch only what changed
+      if (row.className !== wantClass) row.className = wantClass;
 
-    list.appendChild(row);
+      // Position number + color bar
+      const posEl = row.querySelector('.dr-pos');
+      const posText = posEl.firstChild;
+      if (posText.nodeType === 3) {
+        const trimmed = posText.textContent.trim();
+        if (trimmed !== String(pos)) posText.textContent = '\n        ' + pos + '\n        ';
+      }
+
+      // Gap
+      const gapEl = row.querySelector('.dr-gap');
+      if (gapEl.innerHTML !== gapHtml) gapEl.innerHTML = gapHtml;
+
+      // Tyre
+      const tyreImg = row.querySelector('.dr-tyre img');
+      if (tyreImg && tyreImg.getAttribute('src') !== tyreImgSrc) {
+        tyreImg.src = tyreImgSrc;
+        tyreImg.alt = compound;
+      }
+
+      delete existingRows[num];
+    } else {
+      // Create new row (first render or new driver)
+      row = document.createElement('div');
+      row.className = wantClass;
+      row.dataset.driver = num;
+
+      const photoSrc = `assets/drivers/${driver.abbr}.png`;
+      row.innerHTML = `
+        <div class="dr-pos">
+          ${pos}
+          <div class="dr-color-bar" style="background:${teamColor}"></div>
+        </div>
+        <div class="dr-driver">
+          <div class="dr-photo" style="background-color:${teamColor}"><img src="${photoSrc}" alt="${driver.abbr}" /></div>
+          <span class="dr-abbr">${driver.abbr}</span>
+        </div>
+        <div class="dr-team-logo">
+          ${teamLogoSrc ? `<img src="${teamLogoSrc}" alt="${driver.team}" />` : ''}
+        </div>
+        <div class="dr-gap">${gapHtml}</div>
+        <div class="dr-tyre">
+          <img src="${tyreImgSrc}" alt="${compound}" />
+        </div>
+      `;
+    }
+
+    orderedRows.push(row);
+  });
+
+  // Remove rows for drivers no longer in the order
+  for (const num in existingRows) {
+    existingRows[num].remove();
+  }
+
+  // Reorder DOM to match current standings (only moves what changed)
+  orderedRows.forEach((row, i) => {
+    if (list.children[i] !== row) {
+      list.insertBefore(row, list.children[i] || null);
+    }
   });
 }
 

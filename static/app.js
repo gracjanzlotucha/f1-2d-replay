@@ -1399,8 +1399,9 @@ function updateTelemetryPanel() {
   const gear = telem.gear;
   const strip = document.getElementById('tel-gear-strip');
   if (strip) {
-    const gearWidth = 20;
-    const windowWidth = 56;
+    const gearNum = strip.querySelector('.tel-gear-num');
+    const gearWidth = gearNum ? gearNum.offsetWidth : 20;
+    const windowWidth = strip.parentElement ? strip.parentElement.offsetWidth : 56;
     const offset = -(gear * gearWidth) + (windowWidth / 2 - gearWidth / 2);
     strip.style.transform = `translateX(${offset}px)`;
     // Update active gear highlight

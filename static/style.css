@@ -311,7 +311,8 @@ body {
 /* Team color bar (left edge of position cell — only visible when following) */
 .dr-color-bar {
   position: absolute;
-  left: 0; top: 10px;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
   width: 2px; height: 20px;
   border-radius: 0 2px 2px 0;
   display: none;

@@ -33,6 +33,7 @@ const TEAM_LOGO_MAP = {
   'Sauber': 'kick-sauber',
   'Cadillac': 'cadillac',
   'Cadillac F1 Team': 'cadillac',
+  'Audi': 'audi',
 };
 
 const TEAM_COLORS = {
@@ -52,6 +53,7 @@ const TEAM_COLORS = {
   'Visa Cash App RB': '#6692FF',
   'Cadillac': '#C0C0C0',
   'Cadillac F1 Team': '#C0C0C0',
+  'Audi': '#52E252',
 };
 
 const TYRE_SVG_MAP = {

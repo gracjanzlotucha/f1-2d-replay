@@ -25,6 +25,11 @@ const TEAM_LOGO_MAP = {
   'Racing Bulls': 'racing-bulls',
   'Williams': 'williams',
   'Kick Sauber': 'kick-sauber',
+  'Sauber': 'kick-sauber',
+  'Audi': 'audi',
+  'Cadillac': 'cadillac',
+  'Cadillac F1 Team': 'cadillac',
+  'Haas': 'haas',
 };
 
 const TYRE_SVG_MAP = {

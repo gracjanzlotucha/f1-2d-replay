@@ -59,7 +59,9 @@
       "Bash(git push --force)",
       "Bash(python:*)",
       "WebFetch(domain:stuffandnonsense.co.uk)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(file \"/c/Users/Gracjan/Desktop/f1-2d-replay/static/assets/drivers/\"*.png)",
+      "Bash(file \"/c/Users/Gracjan/Desktop/f1-2d-replay/static/assets/drivers-hd/\"*.png)"
     ]
   }
 }

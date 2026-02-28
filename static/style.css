@@ -1232,7 +1232,7 @@ body {
     grid-template-columns: 28px 1fr 36px 60px 36px;
   }
   .dr-driver { min-width: 0; }
-  .dr-pos { padding: 8px 4px; font-size: 13px; }
+  .dr-pos { padding: 8px 4px; font-size: 13px; align-self: stretch; display: flex; align-items: center; justify-content: center; }
   .dr-gap { padding: 8px; font-size: 11px; }
   /* .mobile-active overrides display:none above AND the 900px rule */
   .standings-panel.mobile-active,

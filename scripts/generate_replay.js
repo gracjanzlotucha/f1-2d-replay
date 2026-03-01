@@ -52,11 +52,11 @@ async function getToken() {
 async function apiFetch(endpoint, params = {}) {
   const qs = new URLSearchParams(params).toString();
   const url = `${BASE}/${endpoint}${qs ? '?' + qs : ''}`;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 6; attempt++) {
     const tok = await getToken();
     const resp = await fetch(url, { headers: { Authorization: `Bearer ${tok}` } });
     if (resp.status === 429) {
-      const wait = (attempt + 1) * 5000;
+      const wait = (attempt + 1) * 10000;
       console.log(`  Rate limited, waiting ${wait / 1000}s…`);
       await new Promise(r => setTimeout(r, wait));
       continue;
@@ -68,7 +68,7 @@ async function apiFetch(endpoint, params = {}) {
     }
     return resp.json();
   }
-  throw new Error(`API ${endpoint}: failed after 3 retries`);
+  throw new Error(`API ${endpoint}: failed after 6 retries`);
 }
 
 function parseISO(s) { return s ? new Date(s).getTime() / 1000 : null; }

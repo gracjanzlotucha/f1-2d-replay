@@ -161,9 +161,11 @@ async function loadAllData() {
   msg.textContent = 'Loading race data…';
   bar.style.width = '10%';
 
+  const dataUrl = window.__F1_DATA_URLS?.data || './data.json';
+  const posUrl  = window.__F1_DATA_URLS?.positions || './positions.json';
   const [dataRes, posRes] = await Promise.all([
-    fetch('./data.json'),
-    fetch('./positions.json'),
+    fetch(dataUrl),
+    fetch(posUrl),
   ]);
 
   msg.textContent = 'Parsing data…';

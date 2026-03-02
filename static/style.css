@@ -826,8 +826,8 @@ body {
   display: flex; align-items: center; justify-content: space-between;
 }
 .ev-lap-title {
-  font-family: 'Geist', 'Inter', sans-serif;
-  font-size: 14px; font-weight: 500; color: #eaecf0; line-height: 16px;
+  font-family: 'Clash Display', 'Geist', 'Inter', sans-serif;
+  font-size: 16px; font-weight: 600; color: #eaecf0; line-height: 20px;
 }
 .ev-badge {
   font-family: 'Geist', 'Inter', sans-serif;
@@ -852,7 +852,7 @@ body {
 }
 .ev-text {
   font-family: 'Geist', 'Inter', sans-serif;
-  font-size: 14px; font-weight: 500; color: #eaecf0; line-height: 16px;
+  font-size: 12px; font-weight: 500; color: #eaecf0; line-height: 12px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 

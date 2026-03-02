@@ -1948,12 +1948,12 @@ function renderEvents(lap) {
     for (const ev of driverEvs) {
       const driver = ev.driver ? G.drivers[ev.driver] : null;
       const photoSrc = driver ? `assets/drivers/${driver.abbr}.png` : '';
-      const borderColor = ev.color || '#272a35';
+      const teamColor = ev.color || '#272a35';
       const text = ev.detail ? `${ev.title} - ${ev.detail}` : ev.title;
 
       if (driver) {
         html += `<div class="ev-row">
-          <div class="ev-photo" style="border-color:${borderColor}"><img src="${photoSrc}" alt="${driver.abbr}" /></div>
+          <div class="ev-photo" style="background-color:${teamColor}"><img src="${photoSrc}" alt="${driver.abbr}" /></div>
           <span class="ev-text">${text}</span>
         </div>`;
       } else {

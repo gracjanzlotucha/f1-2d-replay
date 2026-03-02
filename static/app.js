@@ -187,9 +187,10 @@ async function loadAllData() {
   G.totalLaps = data.session.total_laps;
 
   // Override circuit-specific constants from data if present
-  // Multiviewer rotation = CCW degrees to canonical orientation
+  // rotation = degrees the raw track is offset from canonical view;
+  // negate to rotate back to canonical orientation (CW).
   if (data.circuit_info?.rotation != null) {
-    const rad = data.circuit_info.rotation * Math.PI / 180;
+    const rad = -data.circuit_info.rotation * Math.PI / 180;
     TRACK_ROT_COS = Math.cos(rad);
     TRACK_ROT_SIN = Math.sin(rad);
   }

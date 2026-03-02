@@ -187,6 +187,8 @@ async function loadAllData() {
   G.insights = data.insights;
   G.positions = positions;
   G.totalLaps = data.session.total_laps;
+  G.weatherTimeline = data.weather_timeline || null;
+  G._lastWeatherIdx = -1; // tracks which reading we last displayed
 
   // Override circuit-specific constants from data if present
   // rotation = degrees the raw track is offset from canonical view;
@@ -200,14 +202,18 @@ async function loadAllData() {
     PIT_LANE_PATH = data.pit_lane_path;
   }
 
-  // Populate weather
-  const w = data.session.weather;
-  if (w) {
-    document.getElementById('weather-air').textContent   = `${w.air_temp}°C Air`;
-    document.getElementById('weather-track').textContent = `${w.track_temp}°C Track`;
-    if (w.rainfall) {
-      document.getElementById('hdr-status-badge').textContent = 'WET';
-      document.getElementById('hdr-status-badge').className = 'status-badge status-yellow';
+  // Populate weather — use timeline's first reading if available, else static snapshot
+  if (G.weatherTimeline && G.weatherTimeline.length) {
+    // Dynamic weather: initial display will be set by updateWeather() on first frame
+  } else {
+    const w = data.session.weather;
+    if (w) {
+      document.getElementById('weather-air').textContent   = `${w.air_temp}°C Air`;
+      document.getElementById('weather-track').textContent = `${w.track_temp}°C Track`;
+      if (w.rainfall) {
+        document.getElementById('hdr-status-badge').textContent = 'WET';
+        document.getElementById('hdr-status-badge').className = 'status-badge status-yellow';
+      }
     }
   }
 
@@ -775,6 +781,70 @@ function bisect(arr, t) {
 }
 
 /**
+ * Returns the weather reading at time t (step function — most recent reading).
+ * Returns null if no timeline is available.
+ */
+function getWeather(t) {
+  const wt = G.weatherTimeline;
+  if (!wt || !wt.length) return null;
+  // Find last reading at or before t
+  let lo = 0, hi = wt.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (wt[mid].t <= t) lo = mid + 1; else hi = mid;
+  }
+  const idx = lo - 1;
+  if (idx < 0) return { idx: 0, ...wt[0] };
+  return { idx, ...wt[idx] };
+}
+
+/**
+ * Updates weather display elements if the reading has changed.
+ * Called from the RAF loop.
+ */
+function updateWeather() {
+  const w = getWeather(G.currentT);
+  if (!w || w.idx === G._lastWeatherIdx) return;
+  G._lastWeatherIdx = w.idx;
+
+  // Header elements
+  const airEl = document.getElementById('weather-air');
+  const trkEl = document.getElementById('weather-track');
+  const badge = document.getElementById('hdr-status-badge');
+  if (airEl) airEl.textContent = `${w.air_temp}°C Air`;
+  if (trkEl) trkEl.textContent = `${w.track_temp}°C Track`;
+  if (badge) {
+    if (w.rainfall) {
+      badge.textContent = 'WET';
+      badge.className = 'status-badge status-yellow';
+    } else {
+      badge.textContent = 'DRY';
+      badge.className = 'status-badge status-green';
+    }
+  }
+
+  // Update Track tab conditions if visible
+  updateTrackWeather(w);
+}
+
+/**
+ * Updates the weather values inside the Track tab's Conditions section.
+ */
+function updateTrackWeather(w) {
+  const airEl = document.getElementById('track-weather-air');
+  const trkEl = document.getElementById('track-weather-track');
+  const humEl = document.getElementById('track-weather-humidity');
+  const conEl = document.getElementById('track-weather-cond');
+  if (airEl) airEl.textContent = `${w.air_temp}°C`;
+  if (trkEl) trkEl.textContent = `${w.track_temp}°C`;
+  if (humEl) humEl.textContent = `${w.humidity}%`;
+  if (conEl) {
+    conEl.textContent = w.rainfall ? 'Wet' : 'Dry';
+    conEl.className = `track-stat-val ${w.rainfall ? 'rain' : 'dry'}`;
+  }
+}
+
+/**
  * Returns interpolated { x, y } for a given driver at time t.
  * Returns null if no data available.
  */
@@ -852,6 +922,7 @@ function startRaf() {
     }
 
     updateCurrentLap();
+    updateWeather();
     renderFrame();
     updateTimelineUI();
     G.rafId = requestAnimationFrame(loop);
@@ -1702,15 +1773,17 @@ function renderTrackInfo() {
   html += '</div></div>';
 
   // ── Conditions ───────────────────────────────────────────────────────
-  const w = s.weather;
+  // Use current weather from timeline if available, else static snapshot
+  const wNow = G.weatherTimeline ? getWeather(G.currentT) : null;
+  const w = wNow || s.weather;
   if (w) {
     html += '<div class="track-section">';
     html += '<div class="track-section-label">Conditions</div>';
     html += '<div class="track-stat-grid">';
-    html += `<div class="track-stat"><div class="track-stat-key">Air temp</div><div class="track-stat-val mono">${w.air_temp}°C</div></div>`;
-    html += `<div class="track-stat"><div class="track-stat-key">Track temp</div><div class="track-stat-val mono">${w.track_temp}°C</div></div>`;
-    html += `<div class="track-stat"><div class="track-stat-key">Humidity</div><div class="track-stat-val mono">${w.humidity}%</div></div>`;
-    html += `<div class="track-stat"><div class="track-stat-key">Conditions</div><div class="track-stat-val ${w.rainfall ? 'rain' : 'dry'}">${w.rainfall ? 'Wet' : 'Dry'}</div></div>`;
+    html += `<div class="track-stat"><div class="track-stat-key">Air temp</div><div class="track-stat-val mono" id="track-weather-air">${w.air_temp}°C</div></div>`;
+    html += `<div class="track-stat"><div class="track-stat-key">Track temp</div><div class="track-stat-val mono" id="track-weather-track">${w.track_temp}°C</div></div>`;
+    html += `<div class="track-stat"><div class="track-stat-key">Humidity</div><div class="track-stat-val mono" id="track-weather-humidity">${w.humidity}%</div></div>`;
+    html += `<div class="track-stat"><div class="track-stat-key">Conditions</div><div class="track-stat-val ${w.rainfall ? 'rain' : 'dry'}" id="track-weather-cond">${w.rainfall ? 'Wet' : 'Dry'}</div></div>`;
     html += '</div></div>';
   }
 

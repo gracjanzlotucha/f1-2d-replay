@@ -325,7 +325,7 @@ async function main() {
 
   const totalLaps = lapsList.reduce((max, l) => Math.max(max, l.lap || 0), 0) || 1;
 
-  // Weather
+  // Weather (averaged snapshot for backward compat + full timeline)
   let weather = { air_temp: 0, track_temp: 0, humidity: 0, rainfall: false };
   if (rawWeather.length) {
     const avg = (arr) => arr.length ? Math.round(arr.reduce((a, b) => a + b) / arr.length * 10) / 10 : 0;
@@ -336,6 +336,18 @@ async function main() {
       rainfall: rawWeather.some(w => w.rainfall > 0),
     };
   }
+  const weatherTimeline = rawWeather
+    .filter(w => w.date)
+    .map(w => ({
+      t: Math.round((parseISO(w.date) - globalMinT) * 10) / 10,
+      air_temp: Math.round((w.air_temperature || 0) * 10) / 10,
+      track_temp: Math.round((w.track_temperature || 0) * 10) / 10,
+      humidity: Math.round((w.humidity || 0) * 10) / 10,
+      rainfall: (w.rainfall || 0) > 0,
+    }))
+    .filter(w => w.t >= 0 && w.t <= tDuration)
+    .sort((a, b) => a.t - b.t);
+  console.log(`  ${weatherTimeline.length} weather readings`);
 
   // Insights
   const insights = {};
@@ -424,6 +436,7 @@ async function main() {
     pit_lane_path: [],
     laps: lapsList,
     insights,
+    weather_timeline: weatherTimeline,
   };
 
   const dataPath = path.join(outDir, 'data.json');

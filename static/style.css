@@ -858,8 +858,11 @@ body {
 
 /* ─── TRACK INFO TAB ──────────────────────────────────────────────────────── */
 #track-content {
-  display: flex; flex-direction: column; gap: 1px;
+  display: flex; flex-direction: column;
   background: #16171d;
+}
+.trk-section + .trk-section {
+  border-top: 1px solid #0d0e12;
 }
 .trk-section {
   padding: 12px;

@@ -418,64 +418,6 @@ async function main() {
     console.log(`  Could not fetch circuit info: ${e.message}`);
   }
 
-  // 6b. Extract pit lane path from a driver's pit stop telemetry
-  let pitLanePath = [];
-  const pitLaps = lapsList.filter(l => l.pit_in != null && l.pit_out != null);
-  if (pitLaps.length && trackX.length > 10) {
-    // Pick the first pit stop with position data
-    let bestLap = null;
-    for (const pl of pitLaps) {
-      if (positions[pl.driver]) { bestLap = pl; break; }
-    }
-    if (bestLap) {
-      const pd = positions[bestLap.driver];
-      const margin = 5; // seconds before/after pit window
-      const tA = bestLap.pit_in - margin;
-      const tB = bestLap.pit_out + margin;
-
-      // Extract raw positions during pit window
-      const rawPitPts = [];
-      for (let i = 0; i < pd.t.length; i++) {
-        if (pd.t[i] >= tA && pd.t[i] <= tB) {
-          rawPitPts.push([pd.x[i], pd.y[i]]);
-        }
-      }
-
-      // Compute distance from each point to nearest track point
-      const distToTrack = rawPitPts.map(p => {
-        let minD = Infinity;
-        for (let j = 0; j < trackX.length; j++) {
-          const dx = p[0] - trackX[j], dy = p[1] - trackY[j];
-          const d = dx * dx + dy * dy; // squared distance is fine for comparison
-          if (d < minD) minD = d;
-        }
-        return Math.sqrt(minD);
-      });
-
-      // Find divergence: first point where distance > threshold, and convergence: last such point
-      const THRESH = 80;
-      let divIdx = -1, convIdx = -1;
-      for (let i = 0; i < distToTrack.length; i++) {
-        if (distToTrack[i] > THRESH) {
-          if (divIdx === -1) divIdx = i;
-          convIdx = i;
-        }
-      }
-
-      if (divIdx > 0 && convIdx > divIdx) {
-        // Include 2 overlap points before divergence and after convergence for smooth rendering
-        const startIdx = Math.max(0, divIdx - 2);
-        const endIdx = Math.min(rawPitPts.length - 1, convIdx + 2);
-        pitLanePath = rawPitPts.slice(startIdx, endIdx + 1).map(p => [
-          Math.round(p[0] * 10) / 10,
-          Math.round(p[1] * 10) / 10,
-        ]);
-        console.log(`  Pit lane path: ${pitLanePath.length} points from driver ${bestLap.driver} lap ${bestLap.lap} (div=${divIdx}, conv=${convIdx})`);
-      }
-    }
-  }
-  if (!pitLanePath.length) console.log('  No pit lane path extracted (no pit stops or no track data)');
-
   // 7. Write files
   console.log('[7/7] Writing files…');
 
@@ -491,7 +433,7 @@ async function main() {
     drivers,
     track: { x: trackX, y: trackY },
     circuit_info: circuitInfo,
-    pit_lane_path: pitLanePath,
+    pit_lane_path: [],
     laps: lapsList,
     insights,
     weather_timeline: weatherTimeline,

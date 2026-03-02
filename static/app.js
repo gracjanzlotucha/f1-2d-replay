@@ -336,9 +336,6 @@ function setupDerivedData() {
     }
   }
 
-  // ── Pit lane path cumulative distances ──────────────────────────────────
-  computePitLaneDists();
-
   // ── Track normalisation ──────────────────────────────────────────────────
   computeTrackBounds();
 
@@ -847,42 +844,11 @@ function updateTrackWeather(w) {
   }
 }
 
-// ── Pit lane path helpers ─────────────────────────────────────────────────
-
-/** Pre-compute cumulative distances along PIT_LANE_PATH. */
-function computePitLaneDists() {
-  if (PIT_LANE_PATH.length < 2) { G.pitLaneDists = null; return; }
-  const d = [0];
-  for (let i = 1; i < PIT_LANE_PATH.length; i++) {
-    const dx = PIT_LANE_PATH[i][0] - PIT_LANE_PATH[i - 1][0];
-    const dy = PIT_LANE_PATH[i][1] - PIT_LANE_PATH[i - 1][1];
-    d.push(d[i - 1] + Math.sqrt(dx * dx + dy * dy));
-  }
-  G.pitLaneDists = d;
-  G.pitLaneTotal = d[d.length - 1];
-}
-
-/** Return {x,y} at a given progress (0–1) along PIT_LANE_PATH. */
-function getPitLanePosition(progress) {
-  const p = Math.max(0, Math.min(1, progress));
-  const target = p * G.pitLaneTotal;
-  const dists = G.pitLaneDists;
-  // Binary search for the segment
-  let lo = 0, hi = dists.length - 1;
-  while (lo < hi - 1) {
-    const mid = (lo + hi) >> 1;
-    if (dists[mid] <= target) lo = mid; else hi = mid;
-  }
-  const segLen = dists[hi] - dists[lo];
-  const frac = segLen > 0 ? (target - dists[lo]) / segLen : 0;
-  return {
-    x: PIT_LANE_PATH[lo][0] + frac * (PIT_LANE_PATH[hi][0] - PIT_LANE_PATH[lo][0]),
-    y: PIT_LANE_PATH[lo][1] + frac * (PIT_LANE_PATH[hi][1] - PIT_LANE_PATH[lo][1]),
-  };
-}
-
-/** Raw position interpolation (no pit lane snapping). */
-function _getRawPosition(driverNum, t) {
+/**
+ * Returns interpolated { x, y } for a given driver at time t.
+ * Returns null if no data available.
+ */
+function getPosition(driverNum, t) {
   const pd = G.positions[driverNum];
   if (!pd || !pd.t.length) return null;
 
@@ -896,54 +862,6 @@ function _getRawPosition(driverNum, t) {
     x: pd.x[idx - 1] + frac * (pd.x[idx] - pd.x[idx - 1]),
     y: pd.y[idx - 1] + frac * (pd.y[idx] - pd.y[idx - 1]),
   };
-}
-
-/**
- * Returns interpolated { x, y } for a given driver at time t.
- * During pit stops, snaps driver to PIT_LANE_PATH for smooth animation.
- */
-function getPosition(driverNum, t) {
-  if (G.pitLaneDists) {
-    for (const ps of G.pitStops) {
-      if (ps.driver !== driverNum) continue;
-      const BLEND = 1.5; // seconds to blend entry/exit transitions
-      if (t < ps.tStart - BLEND || t > ps.tEnd + BLEND) continue;
-
-      const BOX_PROGRESS = 0.5; // pit boxes roughly at midpoint of path
-      const easeOut = v => 1 - (1 - v) * (1 - v); // decelerate into pit
-      const easeIn  = v => v * v;                    // accelerate out of pit
-
-      if (t < ps.tStart) {
-        // Blend from raw position toward pit lane entry
-        const raw = _getRawPosition(driverNum, t);
-        if (!raw) break;
-        const pit = getPitLanePosition(0);
-        const blend = (t - (ps.tStart - BLEND)) / BLEND; // 0→1
-        return { x: raw.x + blend * (pit.x - raw.x), y: raw.y + blend * (pit.y - raw.y) };
-      }
-      if (t <= ps.boxStart) {
-        // Drive-in: progress 0 → BOX_PROGRESS with deceleration
-        const frac = (t - ps.tStart) / (ps.boxStart - ps.tStart || 1);
-        return getPitLanePosition(easeOut(frac) * BOX_PROGRESS);
-      }
-      if (t <= ps.boxEnd) {
-        // In box: stationary at midpoint
-        return getPitLanePosition(BOX_PROGRESS);
-      }
-      if (t <= ps.tEnd) {
-        // Drive-out: BOX_PROGRESS → 1.0 with acceleration
-        const frac = (t - ps.boxEnd) / (ps.tEnd - ps.boxEnd || 1);
-        return getPitLanePosition(BOX_PROGRESS + easeIn(frac) * (1 - BOX_PROGRESS));
-      }
-      // Post-exit blend: pit lane exit → raw position
-      const pit = getPitLanePosition(1);
-      const raw = _getRawPosition(driverNum, t);
-      if (!raw) break;
-      const blend = (t - ps.tEnd) / BLEND; // 0→1
-      return { x: pit.x + blend * (raw.x - pit.x), y: pit.y + blend * (raw.y - pit.y) };
-    }
-  }
-  return _getRawPosition(driverNum, t);
 }
 
 /**

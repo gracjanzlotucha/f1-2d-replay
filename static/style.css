@@ -867,22 +867,27 @@ body {
   display: flex; flex-direction: column; gap: 12px;
 }
 .track-section-title {
-  font-family: 'ClashDisplay', 'Geist', sans-serif;
+  font-family: 'Clash Display', sans-serif;
   font-size: 16px; font-weight: 600; line-height: 20px;
   color: #eaecf0;
 }
-.track-row { display: flex; flex-direction: column; gap: 2px; }
-.track-cols {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+.track-row {
+  display: flex; flex-direction: column; gap: 4px;
 }
+.track-cols {
+  display: flex; gap: 12px;
+}
+.track-cols > .track-row { flex: 1 0 0; min-width: 0; }
 .track-cols.gap16 { gap: 16px; }
 .track-label {
   font-family: 'Geist', 'Inter', sans-serif;
-  font-size: 12px; font-weight: 500; color: #838aa5; line-height: 12px;
+  font-size: 12px; font-weight: 500; color: #838aa5;
+  line-height: 12px; height: 16px;
+  display: flex; align-items: center;
 }
 .track-value {
   font-family: 'Geist', 'Inter', sans-serif;
-  font-size: 14px; font-weight: 500; color: #eaecf0; line-height: 20px;
+  font-size: 14px; font-weight: 500; color: #eaecf0; line-height: 16px;
 }
 .track-value.rain { color: #47c8ff; }
 .track-value.dry  { color: #22e278; }

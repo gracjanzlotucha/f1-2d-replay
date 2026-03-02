@@ -840,7 +840,7 @@ function updateTrackWeather(w) {
   if (humEl) humEl.textContent = `${w.humidity}%`;
   if (conEl) {
     conEl.textContent = w.rainfall ? 'Wet' : 'Dry';
-    conEl.className = `track-stat-val ${w.rainfall ? 'rain' : 'dry'}`;
+    conEl.className = `track-value ${w.rainfall ? 'rain' : 'dry'}`;
   }
 }
 
@@ -1754,85 +1754,35 @@ function renderTrackInfo() {
 
   const s = G.session;
   const ci = G.session._circuitInfo;
-  const driverCount = Object.keys(G.drivers).length;
   let html = '';
 
-  // ── Circuit & session ────────────────────────────────────────────────
+  // ── Overview ─────────────────────────────────────────────────────────
   html += '<div class="track-section">';
-  html += '<div class="track-section-label">Circuit</div>';
-  html += '<div class="track-stat-grid">';
-  html += `<div class="track-stat full"><div class="track-stat-key">Name</div><div class="track-stat-val">${s.circuit}</div></div>`;
-  html += `<div class="track-stat full"><div class="track-stat-key">Event</div><div class="track-stat-val">${s.name}</div></div>`;
+  html += '<div class="track-section-title">Overview</div>';
+  html += `<div class="track-row"><div class="track-label">Name</div><div class="track-value">${s.circuit}</div></div>`;
+  html += `<div class="track-row"><div class="track-label">Event</div><div class="track-value">${s.name}</div></div>`;
+  html += '<div class="track-cols gap16">';
   if (ci && ci.corners && ci.corners.length) {
-    html += `<div class="track-stat"><div class="track-stat-key">Turns</div><div class="track-stat-val mono">${ci.corners.length}</div></div>`;
+    html += `<div class="track-row"><div class="track-label">Turns</div><div class="track-value">${ci.corners.length}</div></div>`;
   }
-  html += `<div class="track-stat"><div class="track-stat-key">Drivers</div><div class="track-stat-val mono">${driverCount}</div></div>`;
   if (s.total_laps) {
-    html += `<div class="track-stat"><div class="track-stat-key">Total laps</div><div class="track-stat-val mono">${s.total_laps}</div></div>`;
+    html += `<div class="track-row"><div class="track-label">Total Laps</div><div class="track-value">${s.total_laps}</div></div>`;
   }
   html += '</div></div>';
 
-  // ── Conditions ───────────────────────────────────────────────────────
-  // Use current weather from timeline if available, else static snapshot
+  // ── Weather ──────────────────────────────────────────────────────────
   const wNow = G.weatherTimeline ? getWeather(G.currentT) : null;
   const w = wNow || s.weather;
   if (w) {
     html += '<div class="track-section">';
-    html += '<div class="track-section-label">Conditions</div>';
-    html += '<div class="track-stat-grid">';
-    html += `<div class="track-stat"><div class="track-stat-key">Air temp</div><div class="track-stat-val mono" id="track-weather-air">${w.air_temp}°C</div></div>`;
-    html += `<div class="track-stat"><div class="track-stat-key">Track temp</div><div class="track-stat-val mono" id="track-weather-track">${w.track_temp}°C</div></div>`;
-    html += `<div class="track-stat"><div class="track-stat-key">Humidity</div><div class="track-stat-val mono" id="track-weather-humidity">${w.humidity}%</div></div>`;
-    html += `<div class="track-stat"><div class="track-stat-key">Conditions</div><div class="track-stat-val ${w.rainfall ? 'rain' : 'dry'}" id="track-weather-cond">${w.rainfall ? 'Wet' : 'Dry'}</div></div>`;
-    html += '</div></div>';
-  }
-
-  // ── Fastest laps ─────────────────────────────────────────────────────
-  const bestByDriver = {};
-  for (const lap of G.laps) {
-    if (!lap.lap_time || lap.lap_time <= 0) continue;
-    const d = lap.driver;
-    if (!bestByDriver[d] || lap.lap_time < bestByDriver[d].lap_time) {
-      bestByDriver[d] = lap;
-    }
-  }
-  const topLaps = Object.values(bestByDriver)
-    .sort((a, b) => a.lap_time - b.lap_time)
-    .slice(0, 5);
-
-  if (topLaps.length) {
-    html += '<div class="track-section">';
-    html += '<div class="track-section-label">Fastest laps</div>';
-    topLaps.forEach((lap, i) => {
-      const driver = G.drivers[lap.driver];
-      if (!driver) return;
-      const photoSrc = `assets/drivers/${driver.abbr}.png`;
-      const mins = Math.floor(lap.lap_time / 60);
-      const secs = (lap.lap_time % 60).toFixed(3).padStart(6, '0');
-      const timeStr = mins > 0 ? `${mins}:${secs}` : secs;
-      html += `<div class="track-fastest-row">
-        <span class="track-fastest-pos">${i + 1}</span>
-        <div class="track-fastest-photo" style="border-color:${driver.color}"><img src="${photoSrc}" alt="${driver.abbr}" /></div>
-        <div class="track-fastest-info">
-          <div class="track-fastest-name">${driver.abbr}</div>
-          <div class="track-fastest-team">${driver.team}</div>
-        </div>
-        <span class="track-fastest-time">${timeStr}</span>
-        <span class="track-fastest-lap-num">L${lap.lap}</span>
-      </div>`;
-    });
+    html += '<div class="track-section-title">Weather</div>';
+    html += '<div class="track-cols">';
+    html += `<div class="track-row"><div class="track-label">Air temp.</div><div class="track-value" id="track-weather-air">${w.air_temp}°C</div></div>`;
+    html += `<div class="track-row"><div class="track-label">Track temp.</div><div class="track-value" id="track-weather-track">${w.track_temp}°C</div></div>`;
     html += '</div>';
-  }
-
-  // ── Corners ──────────────────────────────────────────────────────────
-  if (ci && ci.corners && ci.corners.length) {
-    html += '<div class="track-section">';
-    html += '<div class="track-section-label">Corners</div>';
-    html += '<div class="track-corners-grid">';
-    const sorted = [...ci.corners].sort((a, b) => a.number - b.number);
-    for (const c of sorted) {
-      html += `<span class="track-corner-badge">T${c.number}</span>`;
-    }
+    html += '<div class="track-cols">';
+    html += `<div class="track-row"><div class="track-label">Humidity</div><div class="track-value" id="track-weather-humidity">${w.humidity}%</div></div>`;
+    html += `<div class="track-row"><div class="track-label">Conditions</div><div class="track-value ${w.rainfall ? 'rain' : 'dry'}" id="track-weather-cond">${w.rainfall ? 'Wet' : 'Dry'}</div></div>`;
     html += '</div></div>';
   }
 

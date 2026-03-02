@@ -150,6 +150,7 @@ async function init() {
   buildEventMarkers();
   renderStandings();
   renderRaceInsights();
+  renderTrackInfo();
   renderEvents(1);
   startRaf();
 }
@@ -179,6 +180,7 @@ async function loadAllData() {
   bar.style.width = '100%';
 
   G.session  = data.session;
+  G.session._circuitInfo = data.circuit_info || null;
   G.drivers  = data.drivers;
   G.track    = data.track;
   G.laps     = data.laps;
@@ -1674,6 +1676,103 @@ const RACE_INSIGHTS = [
 const WEATHER_SVG = '<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.917 1.667c-2.992 0-5.417 2.425-5.417 5.416 0 2.992 2.425 5.417 5.417 5.417h5.416c2.301 0 4.167-1.866 4.167-4.167s-1.866-4.166-4.167-4.166c-.19 0-.378.012-.562.037a.356.356 0 01-.355-.137C11.446 2.621 9.793 1.667 7.917 1.667z" fill="#47C8FF"/><path d="M6.162 15.373a.833.833 0 00-1.49-.746l-.834 1.667a.833.833 0 001.49.746l.834-1.667zM10.329 15.373a.833.833 0 00-1.49-.746l-.834 1.667a.833.833 0 001.49.746l.834-1.667zM14.495 15.373a.833.833 0 00-1.49-.746l-.834 1.667a.833.833 0 001.49.746l.834-1.667z" fill="#47C8FF"/></svg>';
 
 const PLAY_SVG = '<svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.622 1.184C3.707.592 2.5 1.249 2.5 2.338v7.324c0 1.09 1.207 1.746 2.122 1.154l5.66-3.662c.837-.542.837-1.767 0-2.308L4.622 1.184z" fill="currentColor"/></svg>';
+
+function renderTrackInfo() {
+  const el = document.getElementById('track-content');
+  if (!el) return;
+
+  const s = G.session;
+  const ci = G.session._circuitInfo; // set from data.circuit_info in loadAllData
+  const driverCount = Object.keys(G.drivers).length;
+  let html = '';
+
+  // ── Circuit section ──────────────────────────────────────────────────
+  html += '<div class="track-section">';
+  html += '<div class="track-section-label">Circuit</div>';
+  html += `<div class="track-stat-row"><span class="track-stat-key">Name</span><span class="track-stat-val">${s.circuit}</span></div>`;
+  if (ci && ci.corners && ci.corners.length) {
+    html += `<div class="track-stat-row"><span class="track-stat-key">Turns</span><span class="track-stat-val">${ci.corners.length}</span></div>`;
+  }
+  html += `<div class="track-stat-row"><span class="track-stat-key">Drivers</span><span class="track-stat-val">${driverCount}</span></div>`;
+  html += '</div>';
+
+  // ── Session section ──────────────────────────────────────────────────
+  html += '<div class="track-section">';
+  html += '<div class="track-section-label">Session</div>';
+  html += `<div class="track-stat-row"><span class="track-stat-key">Event</span><span class="track-stat-val">${s.name}</span></div>`;
+  if (s.total_laps) {
+    html += `<div class="track-stat-row"><span class="track-stat-key">Total laps</span><span class="track-stat-val">${s.total_laps}</span></div>`;
+  }
+  html += '</div>';
+
+  // ── Weather section ──────────────────────────────────────────────────
+  const w = s.weather;
+  if (w) {
+    html += '<div class="track-section">';
+    html += '<div class="track-section-label">Conditions</div>';
+    html += `<div class="track-stat-row"><span class="track-stat-key">Air temp</span><span class="track-stat-val">${w.air_temp}°C</span></div>`;
+    html += `<div class="track-stat-row"><span class="track-stat-key">Track temp</span><span class="track-stat-val">${w.track_temp}°C</span></div>`;
+    html += `<div class="track-stat-row"><span class="track-stat-key">Humidity</span><span class="track-stat-val">${w.humidity}%</span></div>`;
+    html += `<div class="track-stat-row"><span class="track-stat-key">Conditions</span><span class="track-stat-val ${w.rainfall ? 'rain' : 'dry'}">${w.rainfall ? 'Wet' : 'Dry'}</span></div>`;
+    html += '</div>';
+  }
+
+  // ── Fastest laps section ─────────────────────────────────────────────
+  // Find the single fastest valid lap per driver, then rank top 5
+  const bestByDriver = {};
+  for (const lap of G.laps) {
+    if (!lap.lap_time || lap.lap_time <= 0) continue;
+    const d = lap.driver;
+    if (!bestByDriver[d] || lap.lap_time < bestByDriver[d].lap_time) {
+      bestByDriver[d] = lap;
+    }
+  }
+  const topLaps = Object.values(bestByDriver)
+    .sort((a, b) => a.lap_time - b.lap_time)
+    .slice(0, 5);
+
+  if (topLaps.length) {
+    html += '<div class="track-section">';
+    html += '<div class="track-section-label">Fastest laps</div>';
+    topLaps.forEach((lap, i) => {
+      const driver = G.drivers[lap.driver];
+      if (!driver) return;
+      const photoSrc = `assets/drivers/${driver.abbr}.png`;
+      const mins = Math.floor(lap.lap_time / 60);
+      const secs = (lap.lap_time % 60).toFixed(3).padStart(6, '0');
+      const timeStr = mins > 0 ? `${mins}:${secs}` : secs;
+      html += `<div class="track-fastest-row">
+        <span class="track-fastest-pos">${i + 1}</span>
+        <div class="track-fastest-photo" style="border-color:${driver.color}"><img src="${photoSrc}" alt="${driver.abbr}" /></div>
+        <div class="track-fastest-info">
+          <div class="track-fastest-name">${driver.abbr}</div>
+          <div class="track-fastest-team">${driver.team}</div>
+        </div>
+        <span class="track-fastest-time">${timeStr}</span>
+        <span class="track-fastest-lap-num">L${lap.lap}</span>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // ── Corners section ──────────────────────────────────────────────────
+  if (ci && ci.corners && ci.corners.length) {
+    html += '<div class="track-section">';
+    html += '<div class="track-section-label">Corners</div>';
+    const sorted = [...ci.corners].sort((a, b) => a.number - b.number);
+    for (const c of sorted) {
+      const angle = Math.abs(Math.round(c.angle));
+      const dir = c.angle < 0 ? 'R' : 'L';
+      html += `<div class="track-corner-row">
+        <span class="track-corner-num">T${c.number}</span>
+        <span class="track-corner-angle">${angle}° ${dir}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
+}
 
 function renderRaceInsights() {
   const container = document.getElementById('race-insights-content');

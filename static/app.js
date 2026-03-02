@@ -840,7 +840,7 @@ function updateTrackWeather(w) {
   if (humEl) humEl.textContent = `${w.humidity}%`;
   if (conEl) {
     conEl.textContent = w.rainfall ? 'Wet' : 'Dry';
-    conEl.className = `track-value ${w.rainfall ? 'rain' : 'dry'}`;
+    conEl.className = `trk-val ${w.rainfall ? 'rain' : 'dry'}`;
   }
 }
 
@@ -1757,16 +1757,16 @@ function renderTrackInfo() {
   let html = '';
 
   // ── Overview ─────────────────────────────────────────────────────────
-  html += '<div class="track-section">';
-  html += '<div class="track-section-title">Overview</div>';
-  html += `<div class="track-row"><div class="track-label">Name</div><div class="track-value">${s.circuit}</div></div>`;
-  html += `<div class="track-row"><div class="track-label">Event</div><div class="track-value">${s.name}</div></div>`;
-  html += '<div class="track-cols gap16">';
+  html += '<div class="trk-section">';
+  html += '<div class="trk-title">Overview</div>';
+  html += `<div class="trk-row"><div class="trk-label">Name</div><div class="trk-val">${s.circuit}</div></div>`;
+  html += `<div class="trk-row"><div class="trk-label">Event</div><div class="trk-val">${s.name}</div></div>`;
+  html += '<div class="trk-cols gap16">';
   if (ci && ci.corners && ci.corners.length) {
-    html += `<div class="track-row"><div class="track-label">Turns</div><div class="track-value">${ci.corners.length}</div></div>`;
+    html += `<div class="trk-row"><div class="trk-label">Turns</div><div class="trk-val">${ci.corners.length}</div></div>`;
   }
   if (s.total_laps) {
-    html += `<div class="track-row"><div class="track-label">Total Laps</div><div class="track-value">${s.total_laps}</div></div>`;
+    html += `<div class="trk-row"><div class="trk-label">Total Laps</div><div class="trk-val">${s.total_laps}</div></div>`;
   }
   html += '</div></div>';
 
@@ -1774,15 +1774,15 @@ function renderTrackInfo() {
   const wNow = G.weatherTimeline ? getWeather(G.currentT) : null;
   const w = wNow || s.weather;
   if (w) {
-    html += '<div class="track-section">';
-    html += '<div class="track-section-title">Weather</div>';
-    html += '<div class="track-cols">';
-    html += `<div class="track-row"><div class="track-label">Air temp.</div><div class="track-value" id="track-weather-air">${w.air_temp}°C</div></div>`;
-    html += `<div class="track-row"><div class="track-label">Track temp.</div><div class="track-value" id="track-weather-track">${w.track_temp}°C</div></div>`;
+    html += '<div class="trk-section">';
+    html += '<div class="trk-title">Weather</div>';
+    html += '<div class="trk-cols">';
+    html += `<div class="trk-row"><div class="trk-label">Air temp.</div><div class="trk-val" id="track-weather-air">${w.air_temp}°C</div></div>`;
+    html += `<div class="trk-row"><div class="trk-label">Track temp.</div><div class="trk-val" id="track-weather-track">${w.track_temp}°C</div></div>`;
     html += '</div>';
-    html += '<div class="track-cols">';
-    html += `<div class="track-row"><div class="track-label">Humidity</div><div class="track-value" id="track-weather-humidity">${w.humidity}%</div></div>`;
-    html += `<div class="track-row"><div class="track-label">Conditions</div><div class="track-value ${w.rainfall ? 'rain' : 'dry'}" id="track-weather-cond">${w.rainfall ? 'Wet' : 'Dry'}</div></div>`;
+    html += '<div class="trk-cols">';
+    html += `<div class="trk-row"><div class="trk-label">Humidity</div><div class="trk-val" id="track-weather-humidity">${w.humidity}%</div></div>`;
+    html += `<div class="trk-row"><div class="trk-label">Conditions</div><div class="trk-val ${w.rainfall ? 'rain' : 'dry'}" id="track-weather-cond">${w.rainfall ? 'Wet' : 'Dry'}</div></div>`;
     html += '</div></div>';
   }
 

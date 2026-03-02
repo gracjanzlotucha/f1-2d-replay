@@ -861,36 +861,37 @@ body {
   display: flex; flex-direction: column; gap: 1px;
   background: #0d0e12;
 }
-.track-section {
+.trk-section {
   padding: 12px;
   background: #16171d;
   display: flex; flex-direction: column; gap: 12px;
+  text-align: left;
 }
-.track-section-title {
+.trk-title {
   font-family: 'Clash Display', sans-serif;
   font-size: 16px; font-weight: 600; line-height: 20px;
   color: #eaecf0;
 }
-.track-row {
+.trk-row {
   display: flex; flex-direction: column; gap: 4px;
 }
-.track-cols {
+.trk-cols {
   display: flex; gap: 12px;
 }
-.track-cols > .track-row { flex: 1 0 0; min-width: 0; }
-.track-cols.gap16 { gap: 16px; }
-.track-label {
+.trk-cols > .trk-row { flex: 1 0 0; min-width: 0; }
+.trk-cols.gap16 { gap: 16px; }
+.trk-label {
   font-family: 'Geist', 'Inter', sans-serif;
   font-size: 12px; font-weight: 500; color: #838aa5;
   line-height: 12px; height: 16px;
   display: flex; align-items: center;
 }
-.track-value {
+.trk-val {
   font-family: 'Geist', 'Inter', sans-serif;
   font-size: 14px; font-weight: 500; color: #eaecf0; line-height: 16px;
 }
-.track-value.rain { color: #47c8ff; }
-.track-value.dry  { color: #22e278; }
+.trk-val.rain { color: #47c8ff; }
+.trk-val.dry  { color: #22e278; }
 
 /* ─── PLAYER BAR (integrated bottom bar) ─────────────────────────────────── */
 .player-bar {

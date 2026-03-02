@@ -1682,43 +1682,39 @@ function renderTrackInfo() {
   if (!el) return;
 
   const s = G.session;
-  const ci = G.session._circuitInfo; // set from data.circuit_info in loadAllData
+  const ci = G.session._circuitInfo;
   const driverCount = Object.keys(G.drivers).length;
   let html = '';
 
-  // ── Circuit section ──────────────────────────────────────────────────
+  // ── Circuit & session ────────────────────────────────────────────────
   html += '<div class="track-section">';
   html += '<div class="track-section-label">Circuit</div>';
-  html += `<div class="track-stat-row"><span class="track-stat-key">Name</span><span class="track-stat-val">${s.circuit}</span></div>`;
+  html += '<div class="track-stat-grid">';
+  html += `<div class="track-stat full"><div class="track-stat-key">Name</div><div class="track-stat-val">${s.circuit}</div></div>`;
+  html += `<div class="track-stat full"><div class="track-stat-key">Event</div><div class="track-stat-val">${s.name}</div></div>`;
   if (ci && ci.corners && ci.corners.length) {
-    html += `<div class="track-stat-row"><span class="track-stat-key">Turns</span><span class="track-stat-val">${ci.corners.length}</span></div>`;
+    html += `<div class="track-stat"><div class="track-stat-key">Turns</div><div class="track-stat-val mono">${ci.corners.length}</div></div>`;
   }
-  html += `<div class="track-stat-row"><span class="track-stat-key">Drivers</span><span class="track-stat-val">${driverCount}</span></div>`;
-  html += '</div>';
-
-  // ── Session section ──────────────────────────────────────────────────
-  html += '<div class="track-section">';
-  html += '<div class="track-section-label">Session</div>';
-  html += `<div class="track-stat-row"><span class="track-stat-key">Event</span><span class="track-stat-val">${s.name}</span></div>`;
+  html += `<div class="track-stat"><div class="track-stat-key">Drivers</div><div class="track-stat-val mono">${driverCount}</div></div>`;
   if (s.total_laps) {
-    html += `<div class="track-stat-row"><span class="track-stat-key">Total laps</span><span class="track-stat-val">${s.total_laps}</span></div>`;
+    html += `<div class="track-stat"><div class="track-stat-key">Total laps</div><div class="track-stat-val mono">${s.total_laps}</div></div>`;
   }
-  html += '</div>';
+  html += '</div></div>';
 
-  // ── Weather section ──────────────────────────────────────────────────
+  // ── Conditions ───────────────────────────────────────────────────────
   const w = s.weather;
   if (w) {
     html += '<div class="track-section">';
     html += '<div class="track-section-label">Conditions</div>';
-    html += `<div class="track-stat-row"><span class="track-stat-key">Air temp</span><span class="track-stat-val">${w.air_temp}°C</span></div>`;
-    html += `<div class="track-stat-row"><span class="track-stat-key">Track temp</span><span class="track-stat-val">${w.track_temp}°C</span></div>`;
-    html += `<div class="track-stat-row"><span class="track-stat-key">Humidity</span><span class="track-stat-val">${w.humidity}%</span></div>`;
-    html += `<div class="track-stat-row"><span class="track-stat-key">Conditions</span><span class="track-stat-val ${w.rainfall ? 'rain' : 'dry'}">${w.rainfall ? 'Wet' : 'Dry'}</span></div>`;
-    html += '</div>';
+    html += '<div class="track-stat-grid">';
+    html += `<div class="track-stat"><div class="track-stat-key">Air temp</div><div class="track-stat-val mono">${w.air_temp}°C</div></div>`;
+    html += `<div class="track-stat"><div class="track-stat-key">Track temp</div><div class="track-stat-val mono">${w.track_temp}°C</div></div>`;
+    html += `<div class="track-stat"><div class="track-stat-key">Humidity</div><div class="track-stat-val mono">${w.humidity}%</div></div>`;
+    html += `<div class="track-stat"><div class="track-stat-key">Conditions</div><div class="track-stat-val ${w.rainfall ? 'rain' : 'dry'}">${w.rainfall ? 'Wet' : 'Dry'}</div></div>`;
+    html += '</div></div>';
   }
 
-  // ── Fastest laps section ─────────────────────────────────────────────
-  // Find the single fastest valid lap per driver, then rank top 5
+  // ── Fastest laps ─────────────────────────────────────────────────────
   const bestByDriver = {};
   for (const lap of G.laps) {
     if (!lap.lap_time || lap.lap_time <= 0) continue;
@@ -1755,20 +1751,16 @@ function renderTrackInfo() {
     html += '</div>';
   }
 
-  // ── Corners section ──────────────────────────────────────────────────
+  // ── Corners ──────────────────────────────────────────────────────────
   if (ci && ci.corners && ci.corners.length) {
     html += '<div class="track-section">';
     html += '<div class="track-section-label">Corners</div>';
+    html += '<div class="track-corners-grid">';
     const sorted = [...ci.corners].sort((a, b) => a.number - b.number);
     for (const c of sorted) {
-      const angle = Math.abs(Math.round(c.angle));
-      const dir = c.angle < 0 ? 'R' : 'L';
-      html += `<div class="track-corner-row">
-        <span class="track-corner-num">T${c.number}</span>
-        <span class="track-corner-angle">${angle}° ${dir}</span>
-      </div>`;
+      html += `<span class="track-corner-badge">T${c.number}</span>`;
     }
-    html += '</div>';
+    html += '</div></div>';
   }
 
   el.innerHTML = html;

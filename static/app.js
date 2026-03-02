@@ -1922,30 +1922,46 @@ function renderEvents(lap) {
   let html = '';
   let hasContent = false;
 
+  const STATUS_TYPES = new Set(['safety_car', 'red_flag', 'vsc', 'yellow']);
+  const BADGE_CLASS = { safety_car: 'yellow', red_flag: 'red', vsc: 'yellow', yellow: 'yellow' };
+
   for (let i = lapsToShow.length - 1; i >= 0; i--) {
     const l = lapsToShow[i];
     const events = G.insights[String(l)];
     if (!events || !events.length) continue;
     hasContent = true;
 
-    const isCurrentLap = l === lap;
-    html += `<div class="insights-lap-header">${isCurrentLap ? '▶ ' : ''}LAP ${l}</div>`;
+    // Separate status events (shown as badge) from driver events
+    const statusEvs = events.filter(e => STATUS_TYPES.has(e.type));
+    const driverEvs = events.filter(e => !STATUS_TYPES.has(e.type));
 
-    for (const ev of events) {
-      const colorBar = ev.color
-        ? `<div class="insight-color-bar" style="background:${ev.color}"></div>`
-        : '<div class="insight-color-bar" style="background:transparent"></div>';
-      html += `
-        <div class="insight-item ${ev.type}">
-          <div class="insight-icon">${ev.icon}</div>
-          <div class="insight-body">
-            <div class="insight-title">${ev.title}</div>
-            ${ev.detail ? `<div class="insight-detail">${ev.detail}</div>` : ''}
-          </div>
-          ${colorBar}
-        </div>
-      `;
+    // Build badge HTML from status events
+    let badgeHtml = '';
+    for (const se of statusEvs) {
+      badgeHtml += `<span class="ev-badge ${BADGE_CLASS[se.type] || 'yellow'}">${se.title}</span>`;
     }
+
+    html += `<div class="ev-lap-group">`;
+    html += `<div class="ev-lap-header"><span class="ev-lap-title">Lap ${l}</span><div>${badgeHtml}</div></div>`;
+    html += `<div class="ev-items">`;
+
+    for (const ev of driverEvs) {
+      const driver = ev.driver ? G.drivers[ev.driver] : null;
+      const photoSrc = driver ? `assets/drivers/${driver.abbr}.png` : '';
+      const borderColor = ev.color || '#272a35';
+      const text = ev.detail ? `${ev.title} - ${ev.detail}` : ev.title;
+
+      if (driver) {
+        html += `<div class="ev-row">
+          <div class="ev-photo" style="border-color:${borderColor}"><img src="${photoSrc}" alt="${driver.abbr}" /></div>
+          <span class="ev-text">${text}</span>
+        </div>`;
+      } else {
+        html += `<div class="ev-row"><span class="ev-text">${text}</span></div>`;
+      }
+    }
+
+    html += `</div></div>`;
   }
 
   if (!hasContent) {

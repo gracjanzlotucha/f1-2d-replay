@@ -684,6 +684,7 @@ body {
   font-family: 'Geist', 'Inter', sans-serif;
   font-size: 12px; text-align: center;
   line-height: 1.6;
+  background: #16171d;
 }
 
 /* ─── RACE INSIGHT STORY CARDS ───────────────────────────────────────────── */
@@ -811,54 +812,48 @@ body {
   color: #838aa5; line-height: 16px;
 }
 
-/* ─── LAP EVENTS (formerly "insights") ─────────────────────────────────── */
-.insight-item {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  animation: insight-fade .4s ease;
+/* ─── LAP EVENTS ──────────────────────────────────────────────────────────── */
+#events-content {
+  display: flex; flex-direction: column; gap: 1px;
+  background: #0d0e12;
 }
-.insight-item:last-child { border-bottom: none; }
-@keyframes insight-fade {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+.ev-lap-group {
+  background: #16171d;
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 16px;
 }
-
-.insight-icon {
-  font-size: 16px; line-height: 1;
-  flex-shrink: 0; margin-top: 1px;
-  width: 22px; text-align: center;
+.ev-lap-header {
+  display: flex; align-items: center; justify-content: space-between;
 }
-.insight-body { flex: 1; min-width: 0; }
-.insight-title {
-  font-size: 12px; font-weight: 600;
+.ev-lap-title {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 14px; font-weight: 500; color: #eaecf0; line-height: 16px;
+}
+.ev-badge {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 12px; font-weight: 500; line-height: 12px;
+  padding: 4px 8px; border-radius: 9999px;
+}
+.ev-badge.yellow  { color: #fdc700; background: rgba(253,199,0,.1); }
+.ev-badge.red     { color: #e8002d; background: rgba(232,0,45,.1); }
+.ev-badge.green   { color: var(--green); background: rgba(57,181,74,.1); }
+.ev-items {
+  display: flex; flex-direction: column;
+}
+.ev-row {
+  display: flex; align-items: center; gap: 8px;
+}
+.ev-photo {
+  width: 32px; height: 32px; border-radius: 9999px;
+  overflow: hidden; flex-shrink: 0; border: 2px solid #16171d;
+}
+.ev-photo img {
+  width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block;
+}
+.ev-text {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 14px; font-weight: 500; color: #eaecf0; line-height: 16px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.insight-detail {
-  font-size: 11px; color: var(--text-dim);
-  font-family: 'JetBrains Mono', monospace;
-  margin-top: 2px;
-}
-.insight-color-bar {
-  width: 3px; height: 34px;
-  border-radius: 2px; flex-shrink: 0;
-}
-
-/* Type-specific accent colors */
-.insight-item.fastest_lap   .insight-title { color: #a855f7; }
-.insight-item.personal_best .insight-title { color: #a855f7; }
-.insight-item.pit_stop      .insight-title { color: var(--yellow); }
-.insight-item.safety_car    .insight-title { color: var(--yellow); }
-.insight-item.vsc           .insight-title { color: var(--yellow); }
-.insight-item.yellow        .insight-title { color: var(--yellow); }
-.insight-item.position_change.insight-title { color: var(--text); }
-
-/* Lap divider inside events */
-.insights-lap-header {
-  padding: 8px 14px 4px;
-  font-size: 9px; font-weight: 700; letter-spacing: .12em;
-  color: var(--text-dimmer);
-  text-transform: uppercase;
 }
 
 /* ─── TRACK INFO TAB ──────────────────────────────────────────────────────── */

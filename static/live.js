@@ -96,6 +96,11 @@ let L = {
   // Standings
   standings: [],
   driverOrder: [],
+  timeBasedStandings: [],  // practice/qualifying: [{ driver_number, bestTime, delta, position }]
+
+  // Qualifying
+  qualiSegment: null,            // 'Q1' | 'Q2' | 'Q3'
+  eliminatedDrivers: new Set(),  // driver numbers knocked out
 
   // Lap data
   laps: {},
@@ -718,10 +723,38 @@ function updateElapsedTime() {
 // STANDINGS
 // ═══════════════════════════════════════════════════════════════════════════
 
+function isTimedSession() {
+  const t = L.sessionType;
+  return t.includes('Practice') || t.includes('Qualifying') || t.includes('Shootout');
+}
+
+function computeTimeBasedStandings() {
+  const withTime = [];
+  const noTime = [];
+  for (const num in L.drivers) {
+    const best = insightState.driverBestTimes[num];
+    if (best != null && best > 0) {
+      withTime.push({ driver_number: num, bestTime: best });
+    } else {
+      noTime.push({ driver_number: num, bestTime: null });
+    }
+  }
+  withTime.sort((a, b) => a.bestTime - b.bestTime);
+  const leaderTime = withTime.length ? withTime[0].bestTime : null;
+  L.timeBasedStandings = [
+    ...withTime.map((d, i) => ({ ...d, position: i + 1, delta: i === 0 ? null : d.bestTime - leaderTime })),
+    ...noTime.map((d, i) => ({ ...d, position: withTime.length + i + 1, delta: null })),
+  ];
+}
+
 function updateDriverOrder() {
-  // Sort by position from standings data
-  const ordered = [...L.standings].sort((a, b) => a.position - b.position);
-  L.driverOrder = ordered.map(s => String(s.driver_number));
+  if (isTimedSession() && L.timeBasedStandings.length) {
+    L.driverOrder = L.timeBasedStandings.map(s => String(s.driver_number));
+  } else {
+    // Race: sort by position from standings data
+    const ordered = [...L.standings].sort((a, b) => a.position - b.position);
+    L.driverOrder = ordered.map(s => String(s.driver_number));
+  }
 
   // Add any drivers not in standings
   for (const num in L.drivers) {
@@ -736,11 +769,26 @@ function renderStandings() {
   const list = document.getElementById('standings-list');
   if (!list) return;
 
-  // Update lap counter
+  // Update header: lap counter for race, segment for qualifying, label for practice
   const curEl = document.getElementById('standings-lap-cur');
   const totalEl = document.getElementById('standings-lap-total');
-  if (curEl) curEl.textContent = L.currentLap || '--';
-  if (totalEl) totalEl.textContent = L.totalLaps || '--';
+  const segBadge = document.getElementById('quali-segment-badge');
+  const timed = isTimedSession();
+
+  if (timed) {
+    if (curEl) curEl.textContent = L.sessionType.includes('Qualifying') ? (L.qualiSegment || 'Q1') : L.sessionType;
+    if (totalEl) totalEl.textContent = '';
+    if (segBadge && L.sessionType.includes('Qualifying')) {
+      segBadge.textContent = L.qualiSegment || 'Q1';
+      segBadge.classList.remove('hidden');
+    }
+    list.classList.add('timed-session');
+  } else {
+    if (curEl) curEl.textContent = L.currentLap || '--';
+    if (totalEl) totalEl.textContent = L.totalLaps || '--';
+    if (segBadge) segBadge.classList.add('hidden');
+    list.classList.remove('timed-session');
+  }
 
   const existingRows = {};
   for (const row of Array.from(list.children)) {
@@ -759,15 +807,26 @@ function renderStandings() {
     const latestStint = driverStints[driverStints.length - 1];
     const compound = (latestStint?.compound || 'UNKNOWN').toUpperCase();
 
-    // Gap (from position data)
+    // Gap display
     let gapHtml = '';
-    const standingEntry = L.standings.find(s => String(s.driver_number) === num);
-    if (idx === 0) {
-      gapHtml = '<span class="dr-gap-label">Leader</span>';
-    } else if (standingEntry?.interval) {
-      gapHtml = `+${Number(standingEntry.interval).toFixed(3)}`;
+    if (timed) {
+      const tbEntry = L.timeBasedStandings.find(s => String(s.driver_number) === num);
+      if (idx === 0 && tbEntry?.bestTime) {
+        gapHtml = `<span class="dr-gap-time">${fmtLapTime(tbEntry.bestTime)}</span>`;
+      } else if (tbEntry?.delta != null) {
+        gapHtml = `+${tbEntry.delta.toFixed(3)}`;
+      } else {
+        gapHtml = '<span class="dr-gap-label">--</span>';
+      }
     } else {
-      gapHtml = '<span class="dr-gap-label">--</span>';
+      const standingEntry = L.standings.find(s => String(s.driver_number) === num);
+      if (idx === 0) {
+        gapHtml = '<span class="dr-gap-label">Leader</span>';
+      } else if (standingEntry?.interval) {
+        gapHtml = `+${Number(standingEntry.interval).toFixed(3)}`;
+      } else {
+        gapHtml = '<span class="dr-gap-label">--</span>';
+      }
     }
 
     const tyreSvg = TYRE_SVG_MAP[compound] || 'soft';
@@ -833,11 +892,44 @@ function renderStandings() {
 
   for (const num in existingRows) existingRows[num].remove();
 
+  // Remove old elimination lines
+  list.querySelectorAll('.elimination-line').forEach(el => el.remove());
+
   orderedRows.forEach((row, i) => {
     if (list.children[i] !== row) {
       list.insertBefore(row, list.children[i] || null);
     }
   });
+
+  // Qualifying: elimination line + row styling
+  if (L.sessionType.includes('Qualifying')) {
+    const cutoff = L.qualiSegment === 'Q1' ? 15 : L.qualiSegment === 'Q2' ? 10 : null;
+
+    // Apply eliminated / danger-zone classes
+    orderedRows.forEach((row, i) => {
+      const dNum = row.dataset.driver;
+      const isElim = L.eliminatedDrivers.has(dNum);
+      row.classList.toggle('eliminated', isElim);
+      row.classList.toggle('danger-zone', !isElim && cutoff != null && i >= cutoff);
+    });
+
+    // Insert elimination line
+    if (cutoff && orderedRows.length > cutoff) {
+      const line = document.createElement('div');
+      line.className = 'elimination-line';
+      line.innerHTML = '<span>ELIMINATION ZONE</span>';
+      // Insert after the cutoff-th driver row
+      const refRow = orderedRows[cutoff];
+      if (refRow && refRow.parentNode === list) {
+        list.insertBefore(line, refRow);
+      }
+    }
+  } else {
+    // Clear qualifying classes in race mode
+    orderedRows.forEach(row => {
+      row.classList.remove('eliminated', 'danger-zone');
+    });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -894,6 +986,11 @@ function processNewLaps(lapData) {
       insightState.driverBestTimes[num] = lap.lap_duration;
     }
   }
+  // Recompute time-based standings for practice/qualifying
+  if (isTimedSession()) {
+    computeTimeBasedStandings();
+    renderStandings();
+  }
 }
 
 function processPositionChanges(positionData) {
@@ -936,7 +1033,23 @@ function processRaceControl(events) {
         L.trackStatus = 'GREEN';
         addInsight('safety_car_end', 'Safety Car ending', message, '#2EE86B', null, evt.lap_number);
       }
-    } else if (category === 'Flag') {
+    }
+
+    // Qualifying segment detection
+    if (L.sessionType.includes('Qualifying')) {
+      const msgUp = message.toUpperCase();
+      if (msgUp.includes('Q3') && (msgUp.includes('GREEN') || msgUp.includes('START'))) {
+        setQualiSegment('Q3');
+      } else if (msgUp.includes('Q2') && (msgUp.includes('GREEN') || msgUp.includes('START'))) {
+        setQualiSegment('Q2');
+      } else if (msgUp.includes('Q1') && (msgUp.includes('GREEN') || msgUp.includes('START'))) {
+        setQualiSegment('Q1');
+      }
+      if (msgUp.includes('END OF Q1')) finalizeQualiSegment('Q1');
+      else if (msgUp.includes('END OF Q2')) finalizeQualiSegment('Q2');
+    }
+
+    if (category === 'Flag') {
       if (flag === 'RED') {
         L.trackStatus = 'RED';
         addInsight('red_flag', 'Red Flag', message, '#E8002D', null, evt.lap_number);
@@ -950,6 +1063,25 @@ function processRaceControl(events) {
   }
 
   updateTrackStatusBadge();
+}
+
+function setQualiSegment(segment) {
+  if (L.qualiSegment === segment) return;
+  L.qualiSegment = segment;
+  addInsight('quali_segment', `${segment} has started`, '', '#BFFF4A');
+  renderStandings();
+}
+
+function finalizeQualiSegment(segment) {
+  const cutoff = segment === 'Q1' ? 15 : segment === 'Q2' ? 10 : 20;
+  // Mark drivers below cutoff as eliminated
+  L.timeBasedStandings.forEach((entry, idx) => {
+    if (idx >= cutoff) {
+      L.eliminatedDrivers.add(String(entry.driver_number));
+    }
+  });
+  addInsight('quali_segment_end', `${segment} has ended`, '', '#838AA5');
+  renderStandings();
 }
 
 function updateTrackStatusBadge() {
@@ -1218,10 +1350,15 @@ async function pollStints() {
 
 function startPolling() {
   // Stagger polls to spread load
+  // Timed sessions (practice/qualifying) poll laps & race control faster
+  const timed = isTimedSession();
+  const lapInterval = timed ? 5000 : 10000;
+  const rcInterval = timed ? 5000 : 10000;
+
   L.pollTimers.location = setInterval(pollLocation, 3000);
   setTimeout(() => { L.pollTimers.position = setInterval(pollStandings, 5000); }, 1500);
-  setTimeout(() => { L.pollTimers.laps = setInterval(pollLaps, 10000); }, 3000);
-  setTimeout(() => { L.pollTimers.raceControl = setInterval(pollRaceControl, 10000); }, 4500);
+  setTimeout(() => { L.pollTimers.laps = setInterval(pollLaps, lapInterval); }, 3000);
+  setTimeout(() => { L.pollTimers.raceControl = setInterval(pollRaceControl, rcInterval); }, 4500);
   setTimeout(() => { L.pollTimers.weather = setInterval(pollWeather, 30000); }, 6000);
   setTimeout(() => { L.pollTimers.stints = setInterval(pollStints, 60000); }, 8000);
 }
@@ -1432,6 +1569,11 @@ async function init() {
     // Race control
     processRaceControl(rawRaceControl);
 
+    // Default qualifying segment if none detected from race control history
+    if (L.sessionType.includes('Qualifying') && !L.qualiSegment) {
+      L.qualiSegment = 'Q1';
+    }
+
     // 3. Fetch initial location data
     setLoading('Loading positions...', 60);
     const firstDriver = Object.keys(L.drivers)[0];
@@ -1485,6 +1627,16 @@ async function init() {
       }
     } catch (err) {
       console.warn('Could not fetch initial standings:', err);
+    }
+
+    // For timed sessions, fetch initial laps to populate standings immediately
+    if (isTimedSession()) {
+      try {
+        const laps = await api('laps', { session_key: L.sessionKey });
+        if (laps.length) processNewLaps(laps);
+      } catch (err) {
+        console.warn('Could not fetch initial laps:', err);
+      }
     }
 
     // Determine total laps if it's a race

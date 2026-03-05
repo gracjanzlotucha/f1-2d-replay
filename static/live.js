@@ -133,6 +133,7 @@ let L = {
   pollTimers: {},
   connected: false,
   lastPollTs: {},
+  discoveryTimer: null,
 
   // Follow mode / drag state
   _dragging: false,
@@ -189,6 +190,24 @@ function showNoSession(nextInfo) {
   if (nextInfo) {
     document.getElementById('next-session-info').textContent = nextInfo;
   }
+  startSessionDiscovery();
+}
+
+function startSessionDiscovery() {
+  if (L.discoveryTimer) return;
+  L.discoveryTimer = setInterval(async () => {
+    try {
+      const sessions = await api('sessions', { year: '2026' });
+      const liveSession = findLiveSession(sessions);
+      if (liveSession) {
+        clearInterval(L.discoveryTimer);
+        L.discoveryTimer = null;
+        document.getElementById('no-session').classList.add('hidden');
+        document.getElementById('loading-screen').classList.remove('hidden');
+        init();
+      }
+    } catch (_) { /* silent retry */ }
+  }, 30000);
 }
 
 function setConnectionStatus(status) {
@@ -1517,6 +1536,12 @@ function bindControls() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function init() {
+  // Clear discovery polling if running
+  if (L.discoveryTimer) {
+    clearInterval(L.discoveryTimer);
+    L.discoveryTimer = null;
+  }
+
   try {
     // 1. Find live session
     setLoading('Discovering live session...', 10);

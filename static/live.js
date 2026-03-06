@@ -640,62 +640,43 @@ function setupZoomPan() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function updateLivePositions(locationData) {
-  // Collect all points per driver (sorted by date from API)
-  const byDriver = {};
+  // Keep only the latest point per driver
+  const latest = {};
   for (const pt of locationData) {
-    const key = String(pt.driver_number);
-    if (!byDriver[key]) byDriver[key] = [];
-    byDriver[key].push(pt);
+    latest[pt.driver_number] = pt;
   }
 
-  const now = Date.now();
-  for (const key in byDriver) {
-    const points = byDriver[key];
-    // Use the last two points to get velocity for extrapolation
-    const last = points[points.length - 1];
-    const prev = points.length >= 2 ? points[points.length - 2] : null;
-
+  for (const num in latest) {
+    const pt = latest[num];
+    const key = String(num);
     if (!L.livePositions[key]) {
+      // First time seeing this driver — place at target immediately
       L.livePositions[key] = {
-        x: last.x, y: last.y,
-        vx: 0, vy: 0,
-        ts: now,
+        targetX: pt.x, targetY: pt.y,
+        displayX: pt.x, displayY: pt.y,
       };
     } else {
-      const pos = L.livePositions[key];
-      if (prev) {
-        // Compute velocity from the last two API data points
-        const dt = (new Date(last.date) - new Date(prev.date)) / 1000;
-        if (dt > 0) {
-          pos.vx = (last.x - prev.x) / dt;
-          pos.vy = (last.y - prev.y) / dt;
-        }
-      } else {
-        // Single point — estimate velocity from previous known position
-        const dtSec = (now - pos.ts) / 1000;
-        if (dtSec > 0) {
-          pos.vx = (last.x - pos.x) / dtSec;
-          pos.vy = (last.y - pos.y) / dtSec;
-        }
-      }
-      pos.x = last.x;
-      pos.y = last.y;
-      pos.ts = now;
+      // Update target — display will smoothly catch up in render loop
+      L.livePositions[key].targetX = pt.x;
+      L.livePositions[key].targetY = pt.y;
     }
+  }
+}
+
+function lerpPositions() {
+  // Called every frame — smoothly move display positions toward targets
+  const lerpFactor = 0.12; // ~90% in 18 frames (~300ms at 60fps)
+  for (const key in L.livePositions) {
+    const pos = L.livePositions[key];
+    pos.displayX += (pos.targetX - pos.displayX) * lerpFactor;
+    pos.displayY += (pos.targetY - pos.displayY) * lerpFactor;
   }
 }
 
 function getDriverPosition(num) {
   const pos = L.livePositions[num];
   if (!pos) return null;
-  // Extrapolate from last known position using velocity
-  const dtSec = (Date.now() - pos.ts) / 1000;
-  // Fade out extrapolation: full for 0.5s, then decay to zero by 2s
-  const fade = dtSec < 0.5 ? 1 : Math.max(0, 1 - (dtSec - 0.5) / 1.5);
-  return {
-    x: pos.x + pos.vx * dtSec * fade,
-    y: pos.y + pos.vy * dtSec * fade,
-  };
+  return { x: pos.displayX, y: pos.displayY };
 }
 
 function getDriverScreenPos(num) {
@@ -720,6 +701,9 @@ function renderFrame() {
   const ctx = L.ctx;
   if (!ctx) return;
   ctx.clearRect(0, 0, L.canvasW, L.canvasH);
+
+  // Smooth position updates
+  lerpPositions();
 
   // Follow driver mode
   if (L.followDriver && L.livePositions[L.followDriver]) {
@@ -1535,7 +1519,7 @@ function startPolling() {
   const lapInterval = timed ? 5000 : 10000;
   const rcInterval = timed ? 5000 : 10000;
 
-  L.pollTimers.location = setInterval(pollLocation, 2000);
+  L.pollTimers.location = setInterval(pollLocation, 3000);
   setTimeout(() => { L.pollTimers.position = setInterval(pollStandings, 5000); }, 1500);
   setTimeout(() => { L.pollTimers.laps = setInterval(pollLaps, lapInterval); }, 3000);
   setTimeout(() => { L.pollTimers.raceControl = setInterval(pollRaceControl, rcInterval); }, 4500);

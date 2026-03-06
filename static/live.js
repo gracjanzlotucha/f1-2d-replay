@@ -1535,7 +1535,7 @@ function startPolling() {
   const lapInterval = timed ? 5000 : 10000;
   const rcInterval = timed ? 5000 : 10000;
 
-  L.pollTimers.location = setInterval(pollLocation, 1000);
+  L.pollTimers.location = setInterval(pollLocation, 2000);
   setTimeout(() => { L.pollTimers.position = setInterval(pollStandings, 5000); }, 1500);
   setTimeout(() => { L.pollTimers.laps = setInterval(pollLaps, lapInterval); }, 3000);
   setTimeout(() => { L.pollTimers.raceControl = setInterval(pollRaceControl, rcInterval); }, 4500);
@@ -1760,21 +1760,20 @@ async function init() {
       L.qualiSegment = 'Q1';
     }
 
-    // 3. Fetch initial location data
+    // 3. Fetch initial location data for all drivers (last 10s)
     setLoading('Loading positions...', 60);
-    const firstDriver = Object.keys(L.drivers)[0];
-    if (firstDriver) {
-      try {
-        const locations = await api('location', {
-          session_key: L.sessionKey,
-          driver_number: firstDriver,
-        });
-        if (locations.length > 0) {
-          buildTrackFromLocations(locations);
-        }
-      } catch (err) {
-        console.warn('Could not fetch initial location data:', err);
+    try {
+      const since = new Date(Date.now() - 10000).toISOString();
+      const locations = await api('location', {
+        session_key: L.sessionKey,
+        'date>': since,
+      });
+      if (locations.length > 0) {
+        updateLivePositions(locations);
+        L.lastPollTs.location = locations[locations.length - 1].date;
       }
+    } catch (err) {
+      console.warn('Could not fetch initial location data:', err);
     }
 
     // Fetch track rotation from Multiviewer if possible
@@ -1850,8 +1849,6 @@ async function init() {
 
     // 7. Start polling
     startPolling();
-    // Do an immediate poll for all data
-    pollLocation();
 
     setConnectionStatus('connected');
 

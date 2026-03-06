@@ -1442,15 +1442,9 @@ function updateTelemetryPanel() {
   const driver = L.drivers[L.followDriver];
   if (!driver) { panel.classList.add('hidden'); if (trackSection) trackSection.classList.remove('tel-active'); return; }
 
-  const t = L.telemetry;
-  if (!t || t.speed == null) { panel.classList.add('hidden'); if (trackSection) trackSection.classList.remove('tel-active'); return; }
-
-  panel.classList.remove('hidden');
-  if (trackSection) trackSection.classList.add('tel-active');
-
   const color = driver.color || '#888';
 
-  // Update driver info only when followed driver changes
+  // Start polling and set up driver info when followed driver changes
   if (L._telPanelDriver !== L.followDriver) {
     L._telPanelDriver = L.followDriver;
 
@@ -1479,6 +1473,14 @@ function updateTelemetryPanel() {
     pollTelemetry();
     L.pollTimers.telemetry = setInterval(pollTelemetry, 1000);
   }
+
+  // Show the panel (driver info is set above, data fills in once polling returns)
+  panel.classList.remove('hidden');
+  if (trackSection) trackSection.classList.add('tel-active');
+
+  // Update live telemetry values (skip if no data yet)
+  const t = L.telemetry;
+  if (!t || t.speed == null) return;
 
   const speed = Math.round(t.speed);
   const rpm = Math.round(t.rpm);

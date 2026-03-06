@@ -690,11 +690,11 @@ function getDriverPosition(num) {
   if (!pos) return null;
   // Extrapolate from last known position using velocity
   const dtSec = (Date.now() - pos.ts) / 1000;
-  // Cap extrapolation to 3 seconds to avoid overshooting
-  const t = Math.min(dtSec, 3);
+  // Fade out extrapolation: full for 0.5s, then decay to zero by 2s
+  const fade = dtSec < 0.5 ? 1 : Math.max(0, 1 - (dtSec - 0.5) / 1.5);
   return {
-    x: pos.x + pos.vx * t,
-    y: pos.y + pos.vy * t,
+    x: pos.x + pos.vx * dtSec * fade,
+    y: pos.y + pos.vy * dtSec * fade,
   };
 }
 
@@ -1414,9 +1414,12 @@ async function pollStints() {
 async function pollTelemetry() {
   if (!L.followDriver) return;
   try {
+    // Only fetch last few seconds of data to keep response fast
+    const since = new Date(Date.now() - 10000).toISOString();
     const data = await api('car_data', {
       session_key: L.sessionKey,
       driver_number: L.followDriver,
+      'date>': since,
     });
     if (data.length > 0) {
       const latest = data[data.length - 1];

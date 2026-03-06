@@ -629,6 +629,7 @@ function setupZoomPan() {
         L.followDriver = closest;
         L._resettingZoom = false;
         renderStandings();
+        updateTelemetryPanel();
       }
     } else if (L.followDriver) {
       stopFollowing();
@@ -931,6 +932,7 @@ function renderStandings() {
           L.followDriver = num;
           L._resettingZoom = false;
           renderStandings();
+          updateTelemetryPanel();
         }
       });
     }

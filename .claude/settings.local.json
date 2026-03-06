@@ -64,7 +64,11 @@
       "Bash(file \"/c/Users/Gracjan/Desktop/f1-2d-replay/static/assets/drivers-hd/\"*.png)",
       "Bash(npx vercel --version)",
       "Bash(OPENF1_USERNAME=\"m@d8a.gg\" OPENF1_PASSWORD=\"DSJLuZHJUBRHX7BN\" node -e \":*)",
-      "WebFetch(domain:api.multiviewer.app)"
+      "WebFetch(domain:api.multiviewer.app)",
+      "Bash(ls -la static/*.js static/*.css static/*.html)",
+      "WebSearch",
+      "WebFetch(domain:www.f1friend.com)",
+      "WebFetch(domain:www.liveabout.com)"
     ]
   }
 }

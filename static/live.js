@@ -1632,6 +1632,11 @@ async function init() {
           const rotRad = rotDeg * Math.PI / 180;
           L.trackRotCos = Math.cos(rotRad);
           L.trackRotSin = Math.sin(rotRad);
+
+          // Use Multiviewer track path if available
+          if (circuitData.x && circuitData.y && circuitData.x.length > 0) {
+            L.track = { x: circuitData.x, y: circuitData.y };
+          }
         }
       }
     } catch (err) {

@@ -656,16 +656,22 @@ function updateLivePositions(locationData) {
         fromX: pt.x, fromY: pt.y,
         toX: pt.x, toY: pt.y,
         startTime: now,
+        duration: 100, // first appearance: snap instantly
+        updates: 0,
       };
     } else {
       const pos = L.livePositions[key];
       // Start new animation from current displayed position to new target
-      const t = Math.min(1, (now - pos.startTime) / 3000);
+      const t = Math.min(1, (now - pos.startTime) / pos.duration);
       pos.fromX = pos.fromX + (pos.toX - pos.fromX) * t;
       pos.fromY = pos.fromY + (pos.toY - pos.fromY) * t;
       pos.toX = pt.x;
       pos.toY = pt.y;
       pos.startTime = now;
+      pos.updates++;
+      // Ramp up animation duration: snap quickly at first, smooth out over time
+      // update 1: 300ms, 2: 1000ms, 3+: 3000ms
+      pos.duration = pos.updates <= 1 ? 300 : pos.updates <= 2 ? 1000 : 3000;
     }
   }
 }
@@ -673,8 +679,7 @@ function updateLivePositions(locationData) {
 function getDriverPosition(num) {
   const pos = L.livePositions[num];
   if (!pos) return null;
-  // Linear interpolation from previous to target over 3 seconds
-  const t = Math.min(1, (Date.now() - pos.startTime) / 3000);
+  const t = Math.min(1, (Date.now() - pos.startTime) / pos.duration);
   return {
     x: pos.fromX + (pos.toX - pos.fromX) * t,
     y: pos.fromY + (pos.toY - pos.fromY) * t,
@@ -1316,7 +1321,7 @@ async function pollStandings() {
 
 async function pollLaps() {
   const params = { session_key: L.sessionKey };
-  if (L.lastPollTs.laps) params['date>'] = L.lastPollTs.laps;
+  if (L.lastPollTs.laps) params['date_start>'] = L.lastPollTs.laps;
 
   try {
     const data = await api('laps', params);

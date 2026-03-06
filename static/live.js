@@ -1275,7 +1275,12 @@ function buildTrackFromLocations(locations) {
 
 async function pollLocation() {
   const params = { session_key: L.sessionKey };
-  if (L.lastPollTs.location) params['date>'] = L.lastPollTs.location;
+  // Always use a date filter to avoid 422 (too much data)
+  if (L.lastPollTs.location) {
+    params['date>'] = L.lastPollTs.location;
+  } else {
+    params['date>'] = new Date(Date.now() - 30000).toISOString();
+  }
 
   try {
     const data = await api('location', params);
@@ -1319,13 +1324,10 @@ async function pollStandings() {
 }
 
 async function pollLaps() {
-  const params = { session_key: L.sessionKey };
-  if (L.lastPollTs.laps) params['date_start>'] = L.lastPollTs.laps;
-
   try {
-    const data = await api('laps', params);
+    // Fetch all laps each time (small dataset, deduplication via seenLapKeys)
+    const data = await api('laps', { session_key: L.sessionKey });
     if (data.length > 0) {
-      L.lastPollTs.laps = data[data.length - 1].date_start;
       processNewLaps(data);
 
       // Also add to live events feed
@@ -1745,10 +1747,25 @@ async function init() {
       L.qualiSegment = 'Q1';
     }
 
-    // 3. Fetch initial location data for all drivers
+    // 3. Fetch initial location data for all drivers (last 30s to avoid 422)
     setLoading('Loading positions...', 60);
     try {
-      const locations = await api('location', { session_key: L.sessionKey });
+      // Use session start time + offset to avoid clock skew issues
+      // Try progressively wider windows if no data found
+      let locations = [];
+      for (const seconds of [30, 120, 600]) {
+        const since = new Date(Date.now() - seconds * 1000).toISOString();
+        try {
+          locations = await api('location', {
+            session_key: L.sessionKey,
+            'date>': since,
+          });
+          if (locations.length > 0) break;
+        } catch (e) {
+          // 422 = too much data, try smaller window; 404 = no data, try wider
+          if (e.message.includes('422')) break;
+        }
+      }
       if (locations.length > 0) {
         updateLivePositions(locations);
         L.lastPollTs.location = locations[locations.length - 1].date;

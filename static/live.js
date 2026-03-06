@@ -640,23 +640,46 @@ function setupZoomPan() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function updateLivePositions(locationData) {
-  // Group by driver and keep only the latest point per driver
-  const latest = {};
+  // Collect all points per driver (sorted by date from API)
+  const byDriver = {};
   for (const pt of locationData) {
-    latest[pt.driver_number] = pt;
+    const key = String(pt.driver_number);
+    if (!byDriver[key]) byDriver[key] = [];
+    byDriver[key].push(pt);
   }
+
   const now = Date.now();
-  for (const num in latest) {
-    const pt = latest[num];
-    const key = String(num);
+  for (const key in byDriver) {
+    const points = byDriver[key];
+    // Use the last two points to get velocity for extrapolation
+    const last = points[points.length - 1];
+    const prev = points.length >= 2 ? points[points.length - 2] : null;
+
     if (!L.livePositions[key]) {
-      L.livePositions[key] = { x: pt.x, y: pt.y, prevX: pt.x, prevY: pt.y, ts: now };
+      L.livePositions[key] = {
+        x: last.x, y: last.y,
+        vx: 0, vy: 0,
+        ts: now,
+      };
     } else {
       const pos = L.livePositions[key];
-      pos.prevX = pos.x;
-      pos.prevY = pos.y;
-      pos.x = pt.x;
-      pos.y = pt.y;
+      if (prev) {
+        // Compute velocity from the last two API data points
+        const dt = (new Date(last.date) - new Date(prev.date)) / 1000;
+        if (dt > 0) {
+          pos.vx = (last.x - prev.x) / dt;
+          pos.vy = (last.y - prev.y) / dt;
+        }
+      } else {
+        // Single point — estimate velocity from previous known position
+        const dtSec = (now - pos.ts) / 1000;
+        if (dtSec > 0) {
+          pos.vx = (last.x - pos.x) / dtSec;
+          pos.vy = (last.y - pos.y) / dtSec;
+        }
+      }
+      pos.x = last.x;
+      pos.y = last.y;
       pos.ts = now;
     }
   }
@@ -665,12 +688,13 @@ function updateLivePositions(locationData) {
 function getDriverPosition(num) {
   const pos = L.livePositions[num];
   if (!pos) return null;
-  // Smooth interpolation over 3 seconds
-  const elapsed = (Date.now() - pos.ts) / 3000;
-  const t = Math.min(1, elapsed);
+  // Extrapolate from last known position using velocity
+  const dtSec = (Date.now() - pos.ts) / 1000;
+  // Cap extrapolation to 3 seconds to avoid overshooting
+  const t = Math.min(dtSec, 3);
   return {
-    x: pos.prevX + (pos.x - pos.prevX) * t,
-    y: pos.prevY + (pos.y - pos.prevY) * t,
+    x: pos.x + pos.vx * t,
+    y: pos.y + pos.vy * t,
   };
 }
 
@@ -1508,7 +1532,7 @@ function startPolling() {
   const lapInterval = timed ? 5000 : 10000;
   const rcInterval = timed ? 5000 : 10000;
 
-  L.pollTimers.location = setInterval(pollLocation, 3000);
+  L.pollTimers.location = setInterval(pollLocation, 1000);
   setTimeout(() => { L.pollTimers.position = setInterval(pollStandings, 5000); }, 1500);
   setTimeout(() => { L.pollTimers.laps = setInterval(pollLaps, lapInterval); }, 3000);
   setTimeout(() => { L.pollTimers.raceControl = setInterval(pollRaceControl, rcInterval); }, 4500);

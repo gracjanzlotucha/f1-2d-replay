@@ -669,9 +669,8 @@ function updateLivePositions(locationData) {
       pos.toY = pt.y;
       pos.startTime = now;
       pos.updates++;
-      // Ramp up animation duration: snap quickly at first, smooth out over time
-      // update 1: 300ms, 2: 1000ms, 3+: 3000ms
-      pos.duration = pos.updates <= 1 ? 300 : pos.updates <= 2 ? 1000 : 3000;
+      // First update after init: snap quickly. Then smooth 3s animation.
+      pos.duration = pos.updates <= 1 ? 500 : 3000;
     }
   }
 }
@@ -1746,14 +1745,10 @@ async function init() {
       L.qualiSegment = 'Q1';
     }
 
-    // 3. Fetch initial location data for all drivers (last 10s)
+    // 3. Fetch initial location data for all drivers
     setLoading('Loading positions...', 60);
     try {
-      const since = new Date(Date.now() - 10000).toISOString();
-      const locations = await api('location', {
-        session_key: L.sessionKey,
-        'date>': since,
-      });
+      const locations = await api('location', { session_key: L.sessionKey });
       if (locations.length > 0) {
         updateLivePositions(locations);
         L.lastPollTs.location = locations[locations.length - 1].date;

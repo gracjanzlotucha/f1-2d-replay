@@ -493,6 +493,7 @@ function stopFollowing() {
       clearInterval(L.pollTimers.telemetry);
       delete L.pollTimers.telemetry;
     }
+    updateTelemetryPanel();
     renderStandings();
   }
 }
@@ -646,37 +647,38 @@ function updateLivePositions(locationData) {
     latest[pt.driver_number] = pt;
   }
 
+  const now = Date.now();
   for (const num in latest) {
     const pt = latest[num];
     const key = String(num);
     if (!L.livePositions[key]) {
-      // First time seeing this driver — place at target immediately
       L.livePositions[key] = {
-        targetX: pt.x, targetY: pt.y,
-        displayX: pt.x, displayY: pt.y,
+        fromX: pt.x, fromY: pt.y,
+        toX: pt.x, toY: pt.y,
+        startTime: now,
       };
     } else {
-      // Update target — display will smoothly catch up in render loop
-      L.livePositions[key].targetX = pt.x;
-      L.livePositions[key].targetY = pt.y;
+      const pos = L.livePositions[key];
+      // Start new animation from current displayed position to new target
+      const t = Math.min(1, (now - pos.startTime) / 3000);
+      pos.fromX = pos.fromX + (pos.toX - pos.fromX) * t;
+      pos.fromY = pos.fromY + (pos.toY - pos.fromY) * t;
+      pos.toX = pt.x;
+      pos.toY = pt.y;
+      pos.startTime = now;
     }
-  }
-}
-
-function lerpPositions() {
-  // Called every frame — smoothly move display positions toward targets
-  const lerpFactor = 0.12; // ~90% in 18 frames (~300ms at 60fps)
-  for (const key in L.livePositions) {
-    const pos = L.livePositions[key];
-    pos.displayX += (pos.targetX - pos.displayX) * lerpFactor;
-    pos.displayY += (pos.targetY - pos.displayY) * lerpFactor;
   }
 }
 
 function getDriverPosition(num) {
   const pos = L.livePositions[num];
   if (!pos) return null;
-  return { x: pos.displayX, y: pos.displayY };
+  // Linear interpolation from previous to target over 3 seconds
+  const t = Math.min(1, (Date.now() - pos.startTime) / 3000);
+  return {
+    x: pos.fromX + (pos.toX - pos.fromX) * t,
+    y: pos.fromY + (pos.toY - pos.fromY) * t,
+  };
 }
 
 function getDriverScreenPos(num) {
@@ -701,9 +703,6 @@ function renderFrame() {
   const ctx = L.ctx;
   if (!ctx) return;
   ctx.clearRect(0, 0, L.canvasW, L.canvasH);
-
-  // Smooth position updates
-  lerpPositions();
 
   // Follow driver mode
   if (L.followDriver && L.livePositions[L.followDriver]) {
@@ -751,9 +750,6 @@ function renderFrame() {
     const fd = carData.find(c => c.num === L.followDriver);
     if (fd) drawCar(ctx, fd.num, fd.cx, fd.cy);
   }
-
-  // Update telemetry panel
-  updateTelemetryPanel();
 
   // Update elapsed time
   updateElapsedTime();
@@ -1415,6 +1411,7 @@ async function pollTelemetry() {
         brake: latest.brake || 0,
         drs: latest.drs || 0,
       };
+      updateTelemetryPanel();
     }
   } catch (err) {
     console.warn('Telemetry poll error:', err);

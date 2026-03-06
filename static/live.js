@@ -129,6 +129,10 @@ let L = {
   followZoom: 3,
   showLabels: true,
 
+  // Telemetry (car_data for followed driver)
+  telemetry: {},  // { speed, rpm, gear, throttle, brake, drs }
+  _telPanelDriver: null,
+
   // Polling
   pollTimers: {},
   connected: false,
@@ -483,6 +487,12 @@ function stopFollowing() {
   if (L.followDriver) {
     L.followDriver = null;
     L._resettingZoom = true;
+    L.telemetry = {};
+    L._telPanelDriver = null;
+    if (L.pollTimers.telemetry) {
+      clearInterval(L.pollTimers.telemetry);
+      delete L.pollTimers.telemetry;
+    }
     renderStandings();
   }
 }
@@ -630,17 +640,24 @@ function setupZoomPan() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function updateLivePositions(locationData) {
+  // Group by driver and keep only the latest point per driver
+  const latest = {};
   for (const pt of locationData) {
-    const num = String(pt.driver_number);
-    if (!L.livePositions[num]) {
-      L.livePositions[num] = { x: pt.x, y: pt.y, prevX: pt.x, prevY: pt.y, ts: Date.now() };
+    latest[pt.driver_number] = pt;
+  }
+  const now = Date.now();
+  for (const num in latest) {
+    const pt = latest[num];
+    const key = String(num);
+    if (!L.livePositions[key]) {
+      L.livePositions[key] = { x: pt.x, y: pt.y, prevX: pt.x, prevY: pt.y, ts: now };
     } else {
-      const pos = L.livePositions[num];
+      const pos = L.livePositions[key];
       pos.prevX = pos.x;
       pos.prevY = pos.y;
       pos.x = pt.x;
       pos.y = pt.y;
-      pos.ts = Date.now();
+      pos.ts = now;
     }
   }
 }
@@ -726,6 +743,9 @@ function renderFrame() {
     const fd = carData.find(c => c.num === L.followDriver);
     if (fd) drawCar(ctx, fd.num, fd.cx, fd.cy);
   }
+
+  // Update telemetry panel
+  updateTelemetryPanel();
 
   // Update elapsed time
   updateElapsedTime();
@@ -1364,6 +1384,120 @@ async function pollStints() {
     }
   } catch (err) {
     console.warn('Stints poll error:', err);
+  }
+}
+
+async function pollTelemetry() {
+  if (!L.followDriver) return;
+  try {
+    const data = await api('car_data', {
+      session_key: L.sessionKey,
+      driver_number: L.followDriver,
+    });
+    if (data.length > 0) {
+      const latest = data[data.length - 1];
+      L.telemetry = {
+        speed: latest.speed || 0,
+        rpm: latest.rpm || 0,
+        gear: latest.n_gear || 0,
+        throttle: latest.throttle || 0,
+        brake: latest.brake || 0,
+        drs: latest.drs || 0,
+      };
+    }
+  } catch (err) {
+    console.warn('Telemetry poll error:', err);
+  }
+}
+
+function updateTelemetryPanel() {
+  const panel = document.getElementById('telemetry-panel');
+  if (!panel) return;
+
+  const trackSection = document.querySelector('.track-section');
+
+  if (!L.followDriver) {
+    panel.classList.add('hidden');
+    if (trackSection) trackSection.classList.remove('tel-active');
+    L._telPanelDriver = null;
+    return;
+  }
+
+  const driver = L.drivers[L.followDriver];
+  if (!driver) { panel.classList.add('hidden'); if (trackSection) trackSection.classList.remove('tel-active'); return; }
+
+  const t = L.telemetry;
+  if (!t || t.speed == null) { panel.classList.add('hidden'); if (trackSection) trackSection.classList.remove('tel-active'); return; }
+
+  panel.classList.remove('hidden');
+  if (trackSection) trackSection.classList.add('tel-active');
+
+  const color = driver.color || '#888';
+
+  // Update driver info only when followed driver changes
+  if (L._telPanelDriver !== L.followDriver) {
+    L._telPanelDriver = L.followDriver;
+
+    const header = document.getElementById('tel-header');
+    header.style.background = `linear-gradient(to right, ${hexAlpha(color, 0.15)}, ${hexAlpha(color, 0.08)}), #0d0e12`;
+
+    const teamSlug = TEAM_LOGO_MAP[driver.team] || '';
+    const logoEl = document.getElementById('tel-team-logo');
+    logoEl.src = teamSlug ? `assets/teams/${teamSlug}.svg` : '';
+    logoEl.style.display = teamSlug ? '' : 'none';
+
+    const nameEl = document.getElementById('tel-driver-name');
+    const parts = driver.name.split(' ');
+    nameEl.textContent = parts.length > 1 ? parts[parts.length - 1] : driver.name;
+    nameEl.textContent = nameEl.textContent.charAt(0).toUpperCase()
+      + nameEl.textContent.slice(1).toLowerCase();
+
+    const photoEl = document.getElementById('tel-driver-photo');
+    photoEl.src = `assets/drivers-hd/${driver.abbr}.png`;
+
+    document.getElementById('tel-speed-fill').style.background = color;
+    document.getElementById('tel-speed-fill').parentElement.style.background = hexAlpha(color, 0.15);
+
+    // Start telemetry polling for this driver
+    if (L.pollTimers.telemetry) clearInterval(L.pollTimers.telemetry);
+    pollTelemetry();
+    L.pollTimers.telemetry = setInterval(pollTelemetry, 1000);
+  }
+
+  const speed = Math.round(t.speed);
+  const rpm = Math.round(t.rpm);
+  const brakeOn = t.brake >= 0.5;
+  const throttlePct = Math.min(t.throttle / 100, 1);
+  const drsActive = t.drs >= 10;
+
+  document.getElementById('tel-speed').textContent = speed;
+  document.getElementById('tel-rpm').textContent = rpm;
+
+  const drsEl = document.getElementById('tel-drs');
+  drsEl.classList.toggle('active', drsActive);
+
+  const maxSpeed = 360;
+  document.getElementById('tel-speed-fill').style.width = Math.min(speed / maxSpeed * 100, 100) + '%';
+
+  const throttleFill = document.getElementById('tel-throttle-fill');
+  const brakeFill = document.getElementById('tel-brake-fill');
+  throttleFill.style.background = throttlePct > 0.01
+    ? `linear-gradient(to right, #3d83ea ${throttlePct * 100}%, rgba(61,131,234,0.15) ${throttlePct * 100}%)`
+    : 'rgba(61,131,234,0.15)';
+  brakeFill.style.background = brakeOn ? '#e02c59' : 'rgba(224,44,89,0.15)';
+
+  const gear = t.gear;
+  const strip = document.getElementById('tel-gear-strip');
+  if (strip) {
+    const gearNum = strip.querySelector('.tel-gear-num');
+    const gearWidth = gearNum ? gearNum.offsetWidth : 20;
+    const windowWidth = strip.parentElement ? strip.parentElement.offsetWidth : 56;
+    const offset = -(gear * gearWidth) + (windowWidth / 2 - gearWidth / 2);
+    strip.style.transform = `translateX(${offset}px)`;
+    const nums = strip.querySelectorAll('.tel-gear-num');
+    for (let i = 0; i < nums.length; i++) {
+      nums[i].classList.toggle('active', i === gear);
+    }
   }
 }
 

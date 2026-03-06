@@ -90,8 +90,11 @@ let L = {
   toCanvas: null,
   toCanvasBase: null,
 
-  // Live positions (latest per driver)
-  livePositions: {},
+  // Position & telemetry buffers (time-series for smooth interpolation)
+  posBuffers: {},       // { [driverNum]: { t:[], x:[], y:[] } }
+  telBuffers: {},       // { [driverNum]: { t:[], speed:[], rpm:[], throttle:[], brake:[], gear:[], drs:[] } }
+  playbackDelay: 4000,  // ms behind latest server data
+  baseTimeOffset: null, // serverTimestamp - clientTimestamp calibration
 
   // Standings
   standings: [],
@@ -129,8 +132,7 @@ let L = {
   followZoom: 3,
   showLabels: true,
 
-  // Telemetry (car_data for followed driver)
-  telemetry: {},  // { speed, rpm, gear, throttle, brake, drs }
+  // Telemetry panel
   _telPanelDriver: null,
 
   // Polling
@@ -257,6 +259,15 @@ function fmtElapsed(seconds) {
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
   return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function bisect(arr, t) {
+  let lo = 0, hi = arr.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (arr[mid] < t) lo = mid + 1; else hi = mid;
+  }
+  return lo;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -485,9 +496,10 @@ function drawCar(ctx, num, cx, cy) {
 
 function stopFollowing() {
   if (L.followDriver) {
+    const prevDriver = L._telPanelDriver;
     L.followDriver = null;
     L._resettingZoom = true;
-    L.telemetry = {};
+    if (prevDriver) delete L.telBuffers[prevDriver];
     L._telPanelDriver = null;
     if (L.pollTimers.telemetry) {
       clearInterval(L.pollTimers.telemetry);
@@ -612,7 +624,7 @@ function setupZoomPan() {
     const my = e.clientY - rect.top;
 
     let closest = null, closestDist = Infinity;
-    for (const num in L.livePositions) {
+    for (const num in L.posBuffers) {
       const pos = getDriverScreenPos(num);
       if (!pos) continue;
       const d = Math.hypot(pos[0] - mx, pos[1] - my);
@@ -642,47 +654,104 @@ function setupZoomPan() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function updateLivePositions(locationData) {
-  // Keep only the latest point per driver
-  const latest = {};
+  // Append all incoming points to per-driver time-series buffers
   for (const pt of locationData) {
-    latest[pt.driver_number] = pt;
+    const key = String(pt.driver_number);
+    if (!L.posBuffers[key]) {
+      L.posBuffers[key] = { t: [], x: [], y: [] };
+    }
+    const buf = L.posBuffers[key];
+    const ts = new Date(pt.date).getTime();
+
+    // Only append if newer than last entry (API data is sorted by time)
+    if (buf.t.length === 0 || ts > buf.t[buf.t.length - 1]) {
+      buf.t.push(ts);
+      buf.x.push(pt.x);
+      buf.y.push(pt.y);
+    }
   }
 
-  const now = Date.now();
-  for (const num in latest) {
-    const pt = latest[num];
-    const key = String(num);
-    if (!L.livePositions[key]) {
-      L.livePositions[key] = {
-        fromX: pt.x, fromY: pt.y,
-        toX: pt.x, toY: pt.y,
-        startTime: now,
-        duration: 100, // first appearance: snap instantly
-        updates: 0,
-      };
+  // Calibrate time offset between server timestamps and client clock
+  if (locationData.length > 0) {
+    const serverTs = new Date(locationData[locationData.length - 1].date).getTime();
+    const newOffset = serverTs - Date.now();
+    if (L.baseTimeOffset === null) {
+      L.baseTimeOffset = newOffset;
     } else {
-      const pos = L.livePositions[key];
-      // Start new animation from current displayed position to new target
-      const t = Math.min(1, (now - pos.startTime) / pos.duration);
-      pos.fromX = pos.fromX + (pos.toX - pos.fromX) * t;
-      pos.fromY = pos.fromY + (pos.toY - pos.fromY) * t;
-      pos.toX = pt.x;
-      pos.toY = pt.y;
-      pos.startTime = now;
-      pos.updates++;
-      // First update after init: snap quickly. Then smooth 3s animation.
-      pos.duration = pos.updates <= 1 ? 500 : 3000;
+      // Smooth recalibration to prevent jumps from clock drift
+      L.baseTimeOffset = 0.9 * L.baseTimeOffset + 0.1 * newOffset;
+    }
+  }
+
+  // Prune old data (keep last 120s)
+  const cutoff = Date.now() + (L.baseTimeOffset || 0) - 120000;
+  for (const key in L.posBuffers) {
+    const buf = L.posBuffers[key];
+    const pruneIdx = bisect(buf.t, cutoff);
+    if (pruneIdx > 1) {
+      const keep = pruneIdx - 1; // keep 1 point before cutoff for interpolation
+      buf.t.splice(0, keep);
+      buf.x.splice(0, keep);
+      buf.y.splice(0, keep);
     }
   }
 }
 
 function getDriverPosition(num) {
-  const pos = L.livePositions[num];
-  if (!pos) return null;
-  const t = Math.min(1, (Date.now() - pos.startTime) / pos.duration);
+  const buf = L.posBuffers[num];
+  if (!buf || buf.t.length === 0) return null;
+
+  // Playback time: server time minus delay for smooth buffered playback
+  const playT = Date.now() + (L.baseTimeOffset || 0) - L.playbackDelay;
+  const idx = bisect(buf.t, playT);
+
+  // Before first sample: show at first known position
+  if (idx === 0) return { x: buf.x[0], y: buf.y[0] };
+
+  // After last sample (buffer underrun): hold at last known position
+  if (idx >= buf.t.length) return { x: buf.x[buf.t.length - 1], y: buf.y[buf.t.length - 1] };
+
+  // Interpolate between surrounding samples
+  const t0 = buf.t[idx - 1], t1 = buf.t[idx];
+  const frac = t1 === t0 ? 0 : (playT - t0) / (t1 - t0);
   return {
-    x: pos.fromX + (pos.toX - pos.fromX) * t,
-    y: pos.fromY + (pos.toY - pos.fromY) * t,
+    x: buf.x[idx - 1] + frac * (buf.x[idx] - buf.x[idx - 1]),
+    y: buf.y[idx - 1] + frac * (buf.y[idx] - buf.y[idx - 1]),
+  };
+}
+
+function getLiveTelemetry(num) {
+  const buf = L.telBuffers[num];
+  if (!buf || buf.t.length === 0) return null;
+
+  const playT = Date.now() + (L.baseTimeOffset || 0) - L.playbackDelay;
+  const idx = bisect(buf.t, playT);
+
+  // Before or after buffer: return nearest endpoint
+  if (idx === 0 || buf.t.length === 1) {
+    const i = 0;
+    return { speed: buf.speed[i], rpm: buf.rpm[i], throttle: buf.throttle[i],
+      brake: buf.brake[i], gear: buf.gear[i], drs: buf.drs[i] };
+  }
+  if (idx >= buf.t.length) {
+    const i = buf.t.length - 1;
+    return { speed: buf.speed[i], rpm: buf.rpm[i], throttle: buf.throttle[i],
+      brake: buf.brake[i], gear: buf.gear[i], drs: buf.drs[i] };
+  }
+
+  // Lerp continuous values, nearest-neighbor for discrete
+  const t0 = buf.t[idx - 1], t1 = buf.t[idx];
+  const f = t1 === t0 ? 0 : (playT - t0) / (t1 - t0);
+  const lerp = (a, b) => a + f * (b - a);
+  const near = f < 0.5 ? idx - 1 : idx;
+
+  return {
+    speed: lerp(buf.speed[idx - 1], buf.speed[idx]),
+    rpm: lerp(buf.rpm[idx - 1], buf.rpm[idx]),
+    throttle: lerp(buf.throttle[idx - 1], buf.throttle[idx]),
+    brake: lerp(buf.brake[idx - 1], buf.brake[idx]),
+    gear: buf.gear[near],
+    drs: buf.drs[near],
   };
 }
 
@@ -710,7 +779,7 @@ function renderFrame() {
   ctx.clearRect(0, 0, L.canvasW, L.canvasH);
 
   // Follow driver mode
-  if (L.followDriver && L.livePositions[L.followDriver]) {
+  if (L.followDriver && L.posBuffers[L.followDriver]) {
     const pos = getDriverPosition(L.followDriver);
     if (pos) {
       const [baseCx, baseCy] = L.toCanvasBase(pos.x, pos.y);
@@ -755,6 +824,9 @@ function renderFrame() {
     const fd = carData.find(c => c.num === L.followDriver);
     if (fd) drawCar(ctx, fd.num, fd.cx, fd.cy);
   }
+
+  // Update telemetry panel (smooth interpolated values from buffer)
+  if (L.followDriver) updateTelemetryPanel();
 
   // Update elapsed time
   updateElapsedTime();
@@ -1402,7 +1474,6 @@ async function pollStints() {
 async function pollTelemetry() {
   if (!L.followDriver) return;
   try {
-    // Only fetch last few seconds of data to keep response fast
     const since = new Date(Date.now() - 10000).toISOString();
     const data = await api('car_data', {
       session_key: L.sessionKey,
@@ -1410,16 +1481,32 @@ async function pollTelemetry() {
       'date>': since,
     });
     if (data.length > 0) {
-      const latest = data[data.length - 1];
-      L.telemetry = {
-        speed: latest.speed || 0,
-        rpm: latest.rpm || 0,
-        gear: latest.n_gear || 0,
-        throttle: latest.throttle || 0,
-        brake: latest.brake || 0,
-        drs: latest.drs || 0,
-      };
-      updateTelemetryPanel();
+      const num = L.followDriver;
+      if (!L.telBuffers[num]) {
+        L.telBuffers[num] = { t: [], speed: [], rpm: [], throttle: [], brake: [], gear: [], drs: [] };
+      }
+      const buf = L.telBuffers[num];
+      for (const pt of data) {
+        const ts = new Date(pt.date).getTime();
+        if (buf.t.length === 0 || ts > buf.t[buf.t.length - 1]) {
+          buf.t.push(ts);
+          buf.speed.push(pt.speed || 0);
+          buf.rpm.push(pt.rpm || 0);
+          buf.throttle.push(pt.throttle || 0);
+          buf.brake.push(pt.brake || 0);
+          buf.gear.push(pt.n_gear || 0);
+          buf.drs.push(pt.drs || 0);
+        }
+      }
+      // Prune old telemetry (keep 60s)
+      const cutoff = Date.now() + (L.baseTimeOffset || 0) - 60000;
+      const pruneIdx = bisect(buf.t, cutoff);
+      if (pruneIdx > 1) {
+        const keep = pruneIdx - 1;
+        for (const k of ['t', 'speed', 'rpm', 'throttle', 'brake', 'gear', 'drs']) {
+          buf[k].splice(0, keep);
+        }
+      }
     }
   } catch (err) {
     console.warn('Telemetry poll error:', err);
@@ -1478,9 +1565,9 @@ function updateTelemetryPanel() {
   panel.classList.remove('hidden');
   if (trackSection) trackSection.classList.add('tel-active');
 
-  // Update live telemetry values (skip if no data yet)
-  const t = L.telemetry;
-  if (!t || t.speed == null) return;
+  // Update live telemetry values from buffer (skip if no data yet)
+  const t = getLiveTelemetry(L.followDriver);
+  if (!t) return;
 
   const speed = Math.round(t.speed);
   const rpm = Math.round(t.rpm);

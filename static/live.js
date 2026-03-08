@@ -16,6 +16,30 @@ const TIRE_COLORS = {
   INTERMEDIATE: '#39B54A', WET: '#0067FF', UNKNOWN: '#555555',
 };
 
+// Fallback driver number → abbreviation for when API omits name_acronym
+const DRIVER_NUM_TO_ABBR = {
+  // 2025 grid
+  '1': 'VER', '11': 'PER', '4': 'NOR', '81': 'PIA',
+  '16': 'LEC', '44': 'HAM', '63': 'RUS', '12': 'ANT',
+  '14': 'ALO', '18': 'STR', '55': 'SAI', '23': 'ALB',
+  '10': 'GAS', '31': 'OCO', '27': 'HUL', '87': 'BOR',
+  '22': 'TSU', '30': 'LAW', '5': 'HAD', '6': 'COL',
+  '77': 'BOT', '24': 'ZHO', '3': 'RIC', '20': 'MAG',
+  // 2026 additions / reserves
+  '43': 'COL', '41': 'BEA',
+};
+
+// Fallback driver number → team name for when API omits team_name
+const DRIVER_NUM_TO_TEAM = {
+  '1': 'Red Bull Racing', '11': 'Red Bull Racing', '4': 'McLaren', '81': 'McLaren',
+  '16': 'Ferrari', '44': 'Ferrari', '63': 'Mercedes', '12': 'Mercedes',
+  '14': 'Aston Martin', '18': 'Aston Martin', '55': 'Williams', '23': 'Williams',
+  '10': 'Alpine', '6': 'Alpine', '31': 'Cadillac', '43': 'Cadillac',
+  '27': 'Haas F1 Team', '41': 'Haas F1 Team', '87': 'Kick Sauber', '77': 'Kick Sauber',
+  '22': 'Racing Bulls', '30': 'Racing Bulls', '5': 'Racing Bulls', '24': 'Kick Sauber',
+  '3': 'Racing Bulls', '20': 'Haas F1 Team',
+};
+
 const TEAM_LOGO_MAP = {
   'Red Bull Racing': 'red-bull',
   'McLaren': 'mclaren',
@@ -1313,22 +1337,25 @@ function renderInsights() {
 function processDrivers(rawDrivers) {
   for (const d of rawDrivers) {
     const num = String(d.driver_number);
-    const team = d.team_name || '';
+    const team = d.team_name || DRIVER_NUM_TO_TEAM[num] || '';
     const knownColor = TEAM_COLORS[team];
     const rawColor = d.team_colour;
     const color = knownColor || (rawColor ? '#' + rawColor : '#888888');
+    const abbr = d.name_acronym || DRIVER_NUM_TO_ABBR[num] || num;
 
     const existing = L.drivers[num];
     if (existing) {
       // Merge: only overwrite with non-empty values
       if (d.name_acronym) existing.abbr = d.name_acronym;
+      else if (existing.abbr === num && DRIVER_NUM_TO_ABBR[num]) existing.abbr = DRIVER_NUM_TO_ABBR[num];
       if (d.full_name) existing.name = d.full_name;
-      if (team) existing.team = team;
+      if (d.team_name || (!existing.team && DRIVER_NUM_TO_TEAM[num])) existing.team = team;
       if (knownColor || rawColor) existing.color = color;
+      else if (!existing.color || existing.color === '#888888') existing.color = TEAM_COLORS[DRIVER_NUM_TO_TEAM[num]] || existing.color;
     } else {
       L.drivers[num] = {
         number: num,
-        abbr: d.name_acronym || num,
+        abbr,
         name: d.full_name || '',
         team,
         color,

@@ -972,6 +972,25 @@ function renderStandings() {
         tyreImg.src = tyreImgSrc;
         tyreImg.alt = compound;
       }
+      // Update driver info if it changed (e.g. data arrived after row was created)
+      const abbrEl = row.querySelector('.dr-abbr');
+      if (abbrEl && abbrEl.textContent !== driver.abbr) {
+        abbrEl.textContent = driver.abbr;
+        const photoImg = row.querySelector('.dr-photo img');
+        if (photoImg) {
+          photoImg.src = `assets/drivers/${driver.abbr}.png`;
+          photoImg.alt = driver.abbr;
+        }
+      }
+      const teamLogoImg = row.querySelector('.dr-team-logo img');
+      if (teamSlug && !teamLogoImg) {
+        const teamLogoDiv = row.querySelector('.dr-team-logo');
+        if (teamLogoDiv) teamLogoDiv.innerHTML = `<img src="${teamLogoSrc}" alt="${driver.team}" />`;
+      }
+      const colorBar = row.querySelector('.dr-color-bar');
+      if (colorBar && colorBar.style.backgroundColor !== teamColor) {
+        colorBar.style.background = teamColor;
+      }
       delete existingRows[num];
     } else {
       row = document.createElement('div');
@@ -1299,13 +1318,22 @@ function processDrivers(rawDrivers) {
     const rawColor = d.team_colour;
     const color = knownColor || (rawColor ? '#' + rawColor : '#888888');
 
-    L.drivers[num] = {
-      number: num,
-      abbr: d.name_acronym || num,
-      name: d.full_name || '',
-      team,
-      color,
-    };
+    const existing = L.drivers[num];
+    if (existing) {
+      // Merge: only overwrite with non-empty values
+      if (d.name_acronym) existing.abbr = d.name_acronym;
+      if (d.full_name) existing.name = d.full_name;
+      if (team) existing.team = team;
+      if (knownColor || rawColor) existing.color = color;
+    } else {
+      L.drivers[num] = {
+        number: num,
+        abbr: d.name_acronym || num,
+        name: d.full_name || '',
+        team,
+        color,
+      };
+    }
   }
 }
 
@@ -1346,6 +1374,18 @@ function buildTrackFromLocations(locations) {
 // ═══════════════════════════════════════════════════════════════════════════
 // POLLING ENGINE
 // ═══════════════════════════════════════════════════════════════════════════
+
+async function pollDrivers() {
+  try {
+    const data = await api('drivers', { session_key: L.sessionKey });
+    if (data.length > 0) {
+      processDrivers(data);
+      renderStandings();
+    }
+  } catch (err) {
+    console.warn('Drivers poll error:', err);
+  }
+}
 
 async function pollLocation() {
   const params = { session_key: L.sessionKey };
@@ -1619,6 +1659,7 @@ function startPolling() {
   setTimeout(() => { L.pollTimers.raceControl = setInterval(pollRaceControl, rcInterval); }, 4500);
   setTimeout(() => { L.pollTimers.weather = setInterval(pollWeather, 30000); }, 6000);
   setTimeout(() => { L.pollTimers.stints = setInterval(pollStints, 60000); }, 8000);
+  setTimeout(() => { L.pollTimers.drivers = setInterval(pollDrivers, 60000); }, 10000);
 }
 
 function stopPolling() {

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>F1 Qualifying Session Design</title>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@500;600&family=Geist+Mono:wght@500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #16171d; --bg-2: #111111; --bg-3: #1a1a1a; --bg-4: #222222;
+      --border: rgba(255,255,255,.07); --border-2: rgba(255,255,255,.12);
+      --text: #f0f0f0; --text-dim: #888888; --text-dimmer: #555555;
+      --red: #BFFF4A; --red-dim: rgba(191,255,74,.18);
+      --green: #39b54a; --yellow: #ffd700; --purple: #a855f7;
+      --header-h: 60px; --footer-h: 48px; --side-w: 280px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 13px; overflow: hidden; -webkit-font-smoothing: antialiased; }
+    body { height: 100%; overflow: hidden; }
+
+    #app {
+      display: grid; grid-template-rows: var(--header-h) 1fr var(--footer-h);
+      height: 100vh; overflow: hidden;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex; align-items: stretch; background: #0d0e12;
+      border-bottom: 1px solid #272a35; height: var(--header-h);
+    }
+    .header-logo-wrap {
+      width: 64px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .header-content { flex: 1; display: flex; align-items: center; padding: 0 16px; }
+    .header-inner { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+    .race-select { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .race-select-label {
+      font-family: 'Clash Display', sans-serif; font-size: 20px; font-weight: 600; color: #eaecf0;
+    }
+    .hdr-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: 'Geist', 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+      color: #eaecf0; background: #272a35; border: none; border-radius: 8px;
+      padding: 8px 14px; cursor: pointer;
+    }
+
+    /* MAIN GRID */
+    .main-grid {
+      display: grid;
+      grid-template-columns: var(--side-w) 1fr var(--side-w);
+      overflow: hidden;
+    }
+
+    /* STANDINGS PANEL */
+    .standings-panel {
+      background: #16171d; border-right: 1px solid #272a35;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px; flex-shrink: 0; background: #16171d;
+      border-bottom: 1px solid #0d0e12;
+    }
+    .panel-title {
+      font-family: 'Clash Display', sans-serif; font-size: 16px; font-weight: 600; color: #eaecf0;
+    }
+    .standings-list {
+      overflow-y: auto; flex: 1; background: #16171d;
+    }
+
+    .driver-row {
+      display: grid; grid-template-columns: 36px 1fr 44px 82px 44px;
+      align-items: center; background: #16171d; cursor: pointer;
+      transition: background .15s; border-bottom: 1px solid #0d0e12; position: relative;
+    }
+    .driver-row:hover { background: #1e2029; }
+    .driver-row.highlighted { background: #272a35; }
+    .driver-row.eliminated { opacity: 0.4; }
+    .driver-row.danger-zone { background: rgba(232,0,45,0.06); }
+    .driver-row.danger-zone .dr-pos { color: #E8002D; }
+
+    .dr-pos {
+      font-family: 'Clash Display', sans-serif; font-size: 14px; font-weight: 600;
+      color: #eaecf0; text-align: center; padding: 10px 8px; position: relative;
+    }
+    .dr-color-bar {
+      position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      width: 2px; height: 20px; border-radius: 0 2px 2px 0; display: none;
+    }
+    .driver-row.highlighted .dr-color-bar { display: block; }
+
+    .dr-driver {
+      display: flex; align-items: center; gap: 8px; padding: 8px 12px; overflow: hidden;
+    }
+    .dr-photo {
+      width: 24px; height: 24px; border-radius: 9999px; flex-shrink: 0; overflow: hidden;
+      background: #272a35;
+    }
+    .dr-abbr {
+      font-family: 'Clash Display', sans-serif; font-size: 14px; font-weight: 600; color: #eaecf0; white-space: nowrap;
+    }
+
+    .dr-team-logo {
+      display: flex; align-items: center; justify-content: center; padding: 10px 12px;
+    }
+    .team-icon {
+      width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+      font-size: 8px; font-weight: 700; color: #fff;
+    }
+
+    .dr-gap {
+      font-family: 'Geist Mono', 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500;
+      color: #eaecf0; text-align: right; padding: 10px 12px; white-space: nowrap;
+    }
+    .dr-gap-time { color: #BFFF4A; font-weight: 600; }
+
+    .dr-tyre {
+      display: flex; align-items: center; justify-content: center; padding: 10px 12px;
+    }
+    .tyre-icon {
+      width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 8px; font-weight: 700; color: #000;
+    }
+    .tyre-soft { background: #e02c59; }
+    .tyre-medium { background: #ffd700; }
+    .tyre-hard { background: #eaecf0; }
+
+    /* Elimination line */
+    .elimination-line {
+      height: 20px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(90deg, transparent, rgba(232,0,45,0.15), transparent);
+      border-top: 1px dashed rgba(232,0,45,0.5);
+      border-bottom: 1px dashed rgba(232,0,45,0.5);
+      font-family: 'Geist', 'Inter', sans-serif;
+      font-size: 9px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #E8002D;
+    }
+
+    /* Qualifying segment badge */
+    .quali-segment-badge {
+      font-family: 'Clash Display', sans-serif; font-size: 14px; font-weight: 600;
+      color: #BFFF4A; background: rgba(191,255,74,0.1);
+      padding: 2px 10px; border-radius: 4px;
+    }
+
+    /* TRACK SECTION */
+    .track-section {
+      display: flex; align-items: center; justify-content: center;
+      background: #0d0e12; overflow: hidden; position: relative;
+    }
+    .track-placeholder {
+      position: relative; width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .track-svg { max-width: 80%; max-height: 80%; opacity: 0.3; }
+    .track-dot {
+      position: absolute; width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Geist Mono', monospace; font-size: 8px; font-weight: 600; color: #fff;
+    }
+
+    /* RIGHT PANEL */
+    .insights-panel {
+      border-left: 1px solid #272a35; background: #0d0e12;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .seg-control {
+      display: flex; background: #16171d; border-radius: 8px; padding: 4px; margin: 8px;
+      position: relative;
+    }
+    .seg-tab {
+      flex: 1; text-align: center; font-family: 'Geist', 'Inter', sans-serif;
+      font-size: 13px; font-weight: 500; color: #838aa5;
+      padding: 6px 12px; border: none; background: none; cursor: pointer; border-radius: 6px;
+      position: relative; z-index: 1;
+    }
+    .seg-tab.active { color: #eaecf0; background: #272a35; }
+
+    /* TIMELINE */
+    .timeline-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #0d0e12; border-top: 1px solid #272a35;
+      padding: 0 12px; height: var(--footer-h);
+    }
+    .tl-time {
+      font-family: 'Geist Mono', monospace; font-size: 12px; color: #838aa5; min-width: 100px;
+    }
+    .tl-controls {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .tl-btn {
+      width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+      background: none; border: none; cursor: pointer; color: #838aa5;
+    }
+    .tl-play {
+      width: 32px; height: 32px; border-radius: 50%; background: #BFFF4A;
+      display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;
+    }
+    .tl-actions {
+      display: flex; align-items: center; gap: 12px; min-width: 100px; justify-content: flex-end;
+    }
+    .tl-action-btn {
+      width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+      background: none; border: none; cursor: pointer; color: #838aa5;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-logo-wrap">
+      <svg width="32" height="28" viewBox="0 0 32 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.3067 3.63262C16.9522 5.5664 15.0771 7.11272 13.118 7.08724L12.904 8.25529C14.8629 8.28128 16.1636 9.86942 15.8095 11.8031L16.9918 11.8186C17.3464 9.88484 19.2223 8.33836 21.1815 8.36403L21.3956 7.19599C19.4363 7.17018 18.1348 5.58206 18.4891 3.64815L19.1308 0.145953L29.0355 0.27607C30.9949 0.301823 32.2962 1.89083 31.9418 3.82488L30.4446 11.9954L30.4006 12.1819C30.1376 13.1005 29.2186 13.8082 28.2617 13.7957L26.858 13.7772L26.6441 14.9443L28.1223 14.9637C29.0407 14.976 29.6696 15.675 29.5985 16.5591L29.5755 16.7381L28.1451 24.5441C27.7907 26.4781 25.9146 28.0254 23.9552 27.9997L14.0505 27.8696L14.6923 24.3674C15.0469 22.4335 16.9227 20.887 18.882 20.9128L19.096 19.7447C17.1368 19.719 15.8354 18.1307 16.1895 16.1969L15.0072 16.1813C14.6526 18.1152 12.7768 19.6617 10.8175 19.636L10.6035 20.804C12.5627 20.8297 13.8642 22.4179 13.5099 24.3518L12.8682 27.854L2.9645 27.7239C1.0051 27.6982 -0.296229 26.1092 0.0581828 24.1751L1.46186 16.5152L1.50345 16.3364C1.75595 15.4545 2.63819 14.7753 3.55678 14.7874L5.03499 14.8068L5.24885 13.6397L3.77065 13.6203C2.79101 13.6074 2.1404 12.8128 2.31749 11.8459L3.85494 3.4559C4.20935 1.52185 6.0854 -0.025424 8.04479 0.000316565L17.9485 0.130421L17.3067 3.63262Z" fill="#BFFF4A"/>
+      </svg>
+    </div>
+    <div class="header-content">
+      <div class="header-inner">
+        <div class="race-select">
+          <span class="race-select-label">British Grand Prix 2025</span>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 15.5635L6.26 9.69L7.35 8.6L12 13.38L16.65 8.6L17.74 9.69L12 15.5635Z" fill="#838AA5"/></svg>
+        </div>
+        <div class="header-buttons">
+          <button class="hdr-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.3563 3.64365C11.0537 2.34101 8.94167 2.34101 7.63907 3.64365L7.63593 3.64675L7.13493 4.14116C6.87293 4.39979 6.45081 4.39702 6.19217 4.13496C5.93354 3.87291 5.93631 3.45081 6.19837 3.19217L6.69787 2.69923C8.52133 0.877493 11.4763 0.878033 13.2991 2.70085C15.122 4.52367 15.1225 7.47873 13.3007 9.3022L13.2991 9.3038L12.8078 9.8016C12.5492 10.0637 12.1271 10.0665 11.8651 9.8078C11.603 9.5492 11.6002 9.12707 11.8589 8.86507L12.3563 8.36093C13.659 7.05833 13.659 4.94631 12.3563 3.64365ZM4.13496 6.19217C4.39702 6.45081 4.39979 6.87293 4.14116 7.13493L3.64366 7.63907C2.34101 8.94167 2.34101 11.0537 3.64365 12.3563C4.94631 13.659 7.05833 13.659 8.36093 12.3563L8.36407 12.3533L8.86507 11.8589C9.12707 11.6002 9.5492 11.603 9.8078 11.8651C10.0665 12.1271 10.0637 12.5492 9.8016 12.8078L9.3038 13.2991L9.30213 13.3007C7.47867 15.1225 4.52366 15.1219 2.70085 13.2991C0.878033 11.4763 0.877493 8.52133 2.69924 6.6978L3.19217 6.19837C3.45081 5.93631 3.87291 5.93354 4.13496 6.19217ZM9.80473 6.19526C10.0651 6.45561 10.0651 6.87773 9.80473 7.13807L7.13807 9.80473C6.87773 10.0651 6.45561 10.0651 6.19526 9.80473C5.93491 9.5444 5.93491 9.12227 6.19526 8.86193L8.86193 6.19526C9.12227 5.93491 9.5444 5.93491 9.80473 6.19526Z" fill="#EAECF0"/></svg>
+            <span>Share</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="main-grid">
+    <!-- STANDINGS -->
+    <aside class="standings-panel">
+      <div class="panel-header">
+        <span class="panel-title">Qualifying</span>
+        <span class="quali-segment-badge">Q2</span>
+      </div>
+      <div class="standings-list timed-session" id="standings-list">
+        <!-- Q2 phase: Top 10 advance, P11-P15 eliminated from Q1, shown grayed -->
+
+        <!-- P1 - Leader -->
+        <div class="driver-row highlighted">
+          <div class="dr-pos"><div class="dr-color-bar" style="background:#3671C6;display:block"></div>1</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#3671C6"></div><span class="dr-abbr">VER</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#3671C6">RB</div></div>
+          <div class="dr-gap"><span class="dr-gap-time">1:28.456</span></div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row">
+          <div class="dr-pos">2</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#FF8000"></div><span class="dr-abbr">NOR</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#FF8000">MC</div></div>
+          <div class="dr-gap">+0.089</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row">
+          <div class="dr-pos">3</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#E8002D"></div><span class="dr-abbr">LEC</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#E8002D">FE</div></div>
+          <div class="dr-gap">+0.134</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row">
+          <div class="dr-pos">4</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#FF8000"></div><span class="dr-abbr">PIA</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#FF8000">MC</div></div>
+          <div class="dr-gap">+0.201</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row">
+          <div class="dr-pos">5</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#27F4D2"></div><span class="dr-abbr">HAM</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#27F4D2;color:#000">FE</div></div>
+          <div class="dr-gap">+0.278</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row">
+          <div class="dr-pos">6</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#64C4FF"></div><span class="dr-abbr">RUS</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#64C4FF;color:#000">ME</div></div>
+          <div class="dr-gap">+0.345</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row">
+          <div class="dr-pos">7</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#E8002D"></div><span class="dr-abbr">SAI</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#E8002D">FE</div></div>
+          <div class="dr-gap">+0.412</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row">
+          <div class="dr-pos">8</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#0093CC"></div><span class="dr-abbr">GAS</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#0093CC">AL</div></div>
+          <div class="dr-gap">+0.489</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row">
+          <div class="dr-pos">9</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#229971"></div><span class="dr-abbr">ALO</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#229971">AM</div></div>
+          <div class="dr-gap">+0.534</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+
+        <!-- P10 - Danger zone (close to elimination) -->
+        <div class="driver-row danger-zone">
+          <div class="dr-pos">10</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#64C4FF"></div><span class="dr-abbr">ANT</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#64C4FF;color:#000">ME</div></div>
+          <div class="dr-gap">+0.612</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+
+        <!-- ELIMINATION LINE - Q2 cutoff at P10 -->
+        <div class="elimination-line">ELIMINATION ZONE</div>
+
+        <!-- P11-P15: Will be eliminated after Q2 -->
+        <div class="driver-row danger-zone">
+          <div class="dr-pos">11</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#229971"></div><span class="dr-abbr">STR</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#229971">AM</div></div>
+          <div class="dr-gap">+0.678</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row danger-zone">
+          <div class="dr-pos">12</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#6692FF"></div><span class="dr-abbr">ALB</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#6692FF">WI</div></div>
+          <div class="dr-gap">+0.734</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row danger-zone">
+          <div class="dr-pos">13</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#B6BABD"></div><span class="dr-abbr">HUL</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#B6BABD;color:#000">ST</div></div>
+          <div class="dr-gap">+0.823</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row danger-zone">
+          <div class="dr-pos">14</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#3671C6"></div><span class="dr-abbr">TSU</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#3671C6">RB</div></div>
+          <div class="dr-gap">+0.912</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row danger-zone">
+          <div class="dr-pos">15</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#6692FF"></div><span class="dr-abbr">COL</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#6692FF">WI</div></div>
+          <div class="dr-gap">+1.034</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+
+        <!-- P16-P20: Eliminated from Q1, grayed out -->
+        <div class="driver-row eliminated">
+          <div class="dr-pos">16</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#B6BABD"></div><span class="dr-abbr">BOR</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#B6BABD;color:#000">ST</div></div>
+          <div class="dr-gap">Q1</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row eliminated">
+          <div class="dr-pos">17</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#0093CC"></div><span class="dr-abbr">OCO</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#0093CC">AL</div></div>
+          <div class="dr-gap">Q1</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row eliminated">
+          <div class="dr-pos">18</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#52E252"></div><span class="dr-abbr">HAD</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#52E252;color:#000">CA</div></div>
+          <div class="dr-gap">Q1</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row eliminated">
+          <div class="dr-pos">19</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#1868DB"></div><span class="dr-abbr">LAW</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#1868DB">VR</div></div>
+          <div class="dr-gap">Q1</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+        <div class="driver-row eliminated">
+          <div class="dr-pos">20</div>
+          <div class="dr-driver"><div class="dr-photo" style="background:#52E252"></div><span class="dr-abbr">BEA</span></div>
+          <div class="dr-team-logo"><div class="team-icon" style="background:#52E252;color:#000">CA</div></div>
+          <div class="dr-gap">Q1</div>
+          <div class="dr-tyre"><div class="tyre-icon tyre-soft">S</div></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- TRACK -->
+    <section class="track-section">
+      <div class="track-placeholder">
+        <svg class="track-svg" viewBox="0 0 800 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M200 50 L350 30 L500 60 L620 120 L680 200 L700 320 L660 400 L550 450 L400 460 L250 440 L150 380 L80 280 L70 180 L100 100 Z" stroke="#272a35" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M180 340 L300 400 L420 410" stroke="#272a35" stroke-width="4" fill="none" stroke-dasharray="8 4" opacity="0.5"/>
+          <text x="280" y="380" fill="#535a73" font-family="Geist Mono, monospace" font-size="14" font-weight="600">PIT</text>
+          <rect x="165" y="310" width="12" height="16" fill="#535a73" opacity="0.6" rx="1"/>
+        </svg>
+
+        <!-- Only 15 drivers on track (Q2 - 5 eliminated from Q1) -->
+        <div class="track-dot" style="background:#3671C6;left:22%;top:38%">VER</div>
+        <div class="track-dot" style="background:#FF8000;left:35%;top:22%">NOR</div>
+        <div class="track-dot" style="background:#E8002D;left:48%;top:30%">LEC</div>
+        <div class="track-dot" style="background:#FF8000;left:55%;top:28%">PIA</div>
+        <div class="track-dot" style="background:#27F4D2;left:62%;top:38%">HAM</div>
+        <div class="track-dot" style="background:#64C4FF;left:70%;top:45%">RUS</div>
+        <div class="track-dot" style="background:#E8002D;left:30%;top:50%">SAI</div>
+        <div class="track-dot" style="background:#0093CC;left:42%;top:55%">GAS</div>
+        <div class="track-dot" style="background:#229971;left:75%;top:32%">ALO</div>
+        <div class="track-dot" style="background:#64C4FF;left:58%;top:55%">ANT</div>
+        <div class="track-dot" style="background:#229971;left:78%;top:48%">STR</div>
+        <div class="track-dot" style="background:#6692FF;left:40%;top:65%">ALB</div>
+        <div class="track-dot" style="background:#B6BABD;left:50%;top:68%">HUL</div>
+        <div class="track-dot" style="background:#3671C6;left:25%;top:58%">TSU</div>
+        <div class="track-dot" style="background:#6692FF;left:65%;top:60%">COL</div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL -->
+    <aside class="insights-panel">
+      <div class="seg-control">
+        <button class="seg-tab active">Events</button>
+        <button class="seg-tab">Track</button>
+      </div>
+    </aside>
+  </main>
+
+  <!-- TIMELINE -->
+  <div class="timeline-bar">
+    <div class="tl-time">0:08:42 / 0:15:00</div>
+    <div class="tl-controls">
+      <button class="tl-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 3h3v10H3zM10 3l-4 5 4 5z"/></svg></button>
+      <button class="tl-play"><svg width="16" height="16" viewBox="0 0 16 16" fill="#000"><path d="M5 3l8 5-8 5z"/></svg></button>
+      <button class="tl-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M10 3h3v10h-3zM6 3l4 5-4 5z"/></svg></button>
+    </div>
+    <div class="tl-actions">
+      <button class="tl-action-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="1.5"/><path d="M13.5 8a5.5 5.5 0 01-11 0 5.5 5.5 0 0111 0z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></button>
+      <button class="tl-action-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z"/></svg></button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

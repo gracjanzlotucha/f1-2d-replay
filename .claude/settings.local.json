@@ -68,7 +68,14 @@
       "Bash(ls -la static/*.js static/*.css static/*.html)",
       "WebSearch",
       "WebFetch(domain:www.f1friend.com)",
-      "WebFetch(domain:www.liveabout.com)"
+      "WebFetch(domain:www.liveabout.com)",
+      "mcp__figma__get_design_context",
+      "mcp__figma__get_screenshot",
+      "mcp__figma__generate_figma_design",
+      "Bash(netstat -ano)",
+      "Bash(findstr :8765)",
+      "Bash(start \"\" \"http://localhost:8765/mockup-practice.html#figmacapture=11971f3f-7760-475a-a1e1-0560dba14740&figmaendpoint=https%3A%2F%2Fmcp.figma.com%2Fmcp%2Fcapture%2F11971f3f-7760-475a-a1e1-0560dba14740%2Fsubmit&figmadelay=3000\")",
+      "Bash(start \"\" \"http://localhost:8765/mockup-qualifying.html#figmacapture=5a032cd0-3196-49ee-af21-444685c257a3&figmaendpoint=https%3A%2F%2Fmcp.figma.com%2Fmcp%2Fcapture%2F5a032cd0-3196-49ee-af21-444685c257a3%2Fsubmit&figmadelay=3000\")"
     ]
   }
 }

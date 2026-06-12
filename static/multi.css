@@ -1,0 +1,69 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MultiView — detachable panel additions (loaded after style.css on /multi)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Detach buttons ─────────────────────────────────────────────────────── */
+.mv-detach-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #838aa5;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s, color .15s;
+}
+.mv-detach-btn:hover {
+  background: #272a35;
+  color: #eaecf0;
+}
+.mv-detach-btn svg { width: 14px; height: 14px; }
+
+/* Tab bar: keep segmented control flexible, button beside it */
+.panel-tab-bar { align-items: center; gap: 6px; }
+.panel-tab-bar .seg-control { flex: 1; min-width: 0; }
+
+/* Hidden (detached) tab buttons */
+.seg-tab.mv-tab-hidden { display: none; }
+
+/* ─── Adaptive grid when panels are detached (desktop only) ─────────────── */
+@media (min-width: 901px) {
+  body.mv-d-standings:not(.mv-d-right) .main-grid {
+    grid-template-columns: 1fr var(--side-w);
+    grid-template-areas:
+      "track     insights"
+      "timeline  timeline";
+  }
+  body.mv-d-right:not(.mv-d-standings) .main-grid {
+    grid-template-columns: var(--side-w) 1fr;
+    grid-template-areas:
+      "standings track"
+      "timeline  timeline";
+  }
+  body.mv-d-standings.mv-d-right .main-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "track"
+      "timeline";
+  }
+}
+@media (min-width: 769px) and (max-width: 900px) {
+  /* Insights panel is already collapsed at this width */
+  body.mv-d-standings .main-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "track"
+      "timeline";
+  }
+}
+@media (min-width: 769px) {
+  body.mv-d-standings .standings-panel { display: none; }
+  body.mv-d-right .insights-panel { display: none; }
+}
+
+/* Detach is a desktop feature — hide the buttons on mobile */
+@media (max-width: 768px) {
+  .mv-detach-btn { display: none; }
+}

@@ -1,0 +1,249 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Detached panel window (panel.html) — loaded after style.css
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.pp-body {
+  background: #0d0e12;
+  overflow: hidden;
+  height: 100vh;
+}
+
+.pp-loading {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 13px; color: #838aa5;
+  letter-spacing: .06em;
+}
+
+#pp-app {
+  display: flex; flex-direction: column;
+  height: 100vh;
+}
+#pp-app.hidden { display: none; }
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+.pp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #16171d;
+  border-bottom: 1px solid #272a35;
+  flex-shrink: 0;
+  user-select: none;
+}
+.pp-header-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pp-title {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 16px; font-weight: 600;
+  color: #eaecf0; line-height: 20px;
+}
+.pp-race {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 11px; font-weight: 500;
+  color: #838aa5;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pp-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.pp-lap {
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 500; color: #eaecf0;
+}
+.pp-lap-dim { color: #838aa5; }
+.pp-sync {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 10px; font-weight: 600; letter-spacing: .08em;
+  color: #2ee86b;
+  background: rgba(46,232,107,.08);
+  padding: 4px 8px; border-radius: 9999px;
+}
+.pp-sync-dot {
+  width: 6px; height: 6px; border-radius: 99px;
+  background: currentColor;
+}
+.pp-sync.disconnected {
+  color: #e02c59;
+  background: rgba(224,44,89,.08);
+}
+
+/* ─── Content area ───────────────────────────────────────────────────────── */
+.pp-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+  background: #0d0e12;
+}
+.pp-content::-webkit-scrollbar { width: 6px; }
+.pp-content::-webkit-scrollbar-thumb { background: #272a35; border-radius: 99px; }
+
+/* Reused insight/event/track sections fill width */
+.pp-content .race-insight-card,
+.pp-content .ev-lap-group,
+.pp-content .trk-section { border-bottom: 1px solid #0d0e12; }
+#pp-content > .insights-empty {
+  padding: 24px; text-align: center;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 12px; color: #555;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EXTENDED STANDINGS (MultiViewer-style timing grid)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.mvs-table {
+  display: flex; flex-direction: column;
+  min-width: 880px;
+}
+.pp-content.pp-standings { overflow: auto; }
+
+.mvs-head, .mvs-row {
+  display: grid;
+  grid-template-columns:
+    34px   /* pos */
+    26px   /* pos change */
+    92px   /* driver tag */
+    56px   /* tyre + life */
+    34px   /* pit count */
+    74px   /* last lap */
+    74px   /* best lap */
+    66px   /* interval */
+    66px   /* gap to leader */
+    60px   /* s1 */
+    60px   /* s2 */
+    60px   /* s3 */
+    48px   /* speed */
+    40px;  /* drs */
+  align-items: center;
+}
+
+.mvs-head {
+  position: sticky; top: 0; z-index: 2;
+  background: #0d0e12;
+  border-bottom: 1px solid #272a35;
+  padding: 6px 0;
+}
+.mvs-head > div {
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 9px; font-weight: 600; letter-spacing: .1em;
+  color: #555f78;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mvs-row {
+  background: #16171d;
+  border-bottom: 1px solid #0d0e12;
+  cursor: pointer;
+  transition: background .15s;
+  height: 38px;
+}
+.mvs-row:hover { background: #1e2029; }
+.mvs-row.following { background: #272a35; }
+.mvs-row.retired { opacity: .4; }
+
+.mvs-pos {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 15px; font-weight: 600;
+  color: #eaecf0;
+  text-align: center;
+}
+
+.mvs-chg {
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 500;
+  text-align: center;
+  color: #555f78;
+}
+.mvs-chg.up   { color: #2ee86b; }
+.mvs-chg.down { color: #e02c59; }
+
+.mvs-tag {
+  display: flex; align-items: center; gap: 6px;
+  height: 24px;
+  padding: 0 8px 0 0;
+  overflow: hidden;
+}
+.mvs-tag-bar {
+  width: 3px; height: 18px;
+  border-radius: 0 2px 2px 0;
+  flex-shrink: 0;
+}
+.mvs-num {
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 500;
+  color: #838aa5;
+  min-width: 16px; text-align: right;
+}
+.mvs-abbr {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 14px; font-weight: 600;
+  color: #eaecf0;
+  white-space: nowrap;
+}
+
+.mvs-tyre {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+.mvs-tyre img { width: 18px; height: 18px; }
+.mvs-tyre-life {
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+  font-size: 11px; color: #838aa5;
+  min-width: 14px;
+}
+
+.mvs-pits {
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+  font-size: 11px; color: #838aa5;
+  text-align: center;
+}
+
+.mvs-time, .mvs-int, .mvs-gap, .mvs-sec {
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  color: #eaecf0;
+  text-align: center;
+  white-space: nowrap;
+}
+.mvs-int, .mvs-gap { color: #c3c9d9; }
+.mvs-sec { font-size: 11px; color: #9aa1b5; }
+
+/* Timing colors: green = personal best, purple = session best */
+.mvs-time.pb, .mvs-sec.pb { color: #2ee86b; }
+.mvs-time.sb, .mvs-sec.sb { color: #c36bff; }
+
+.mvs-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 9px; font-weight: 600;
+  padding: 2px 7px; border-radius: 9999px;
+}
+.mvs-badge.pit { background: rgba(255,137,4,.15); color: #ff8904; }
+.mvs-badge.dnf { background: rgba(224,44,89,.15); color: #e02c59; }
+.mvs-badge.dns { background: #272a35; color: #838aa5; }
+
+.mvs-spd {
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  color: #eaecf0;
+  text-align: center;
+}
+.mvs-spd-unit { font-size: 8px; color: #555f78; display: block; line-height: 6px; }
+
+.mvs-drs {
+  display: flex; align-items: center; justify-content: center;
+}
+.mvs-drs-box {
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+  font-size: 9px; font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,.12);
+  color: #555f78;
+}
+.mvs-drs-box.active {
+  border-color: #2ee86b;
+  color: #2ee86b;
+  background: rgba(46,232,107,.1);
+}

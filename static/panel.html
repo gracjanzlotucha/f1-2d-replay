@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#16171d">
+  <title>F1 2D Replay — Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@500;600&family=Geist+Mono:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="panel.css" />
+</head>
+<body class="pp-body">
+
+  <div id="pp-loading" class="pp-loading">Loading…</div>
+
+  <div id="pp-app" class="hidden">
+    <header class="pp-header">
+      <div class="pp-header-left">
+        <div class="pp-title" id="pp-title">Panel</div>
+        <div class="pp-race" id="pp-race">—</div>
+      </div>
+      <div class="pp-header-right">
+        <div class="pp-lap">LAP <span id="pp-lap-cur">—</span><span class="pp-lap-dim"> / <span id="pp-lap-total">—</span></span></div>
+        <div class="pp-sync" id="pp-sync"><span class="pp-sync-dot"></span><span id="pp-sync-label">SYNC</span></div>
+      </div>
+    </header>
+    <main class="pp-content" id="pp-content"></main>
+  </div>
+
+<script src="panel.js"></script>
+</body>
+</html>

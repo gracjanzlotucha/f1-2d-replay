@@ -1,14 +1,39 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/f1.js", "use": "@vercel/node" },
-    { "src": "static/**", "use": "@vercel/static" }
+    {
+      "src": "api/f1.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "static/**",
+      "use": "@vercel/static"
+    }
   ],
   "routes": [
-    { "src": "/api/f1", "dest": "api/f1.js" },
-    { "src": "/live", "dest": "/static/live.html" },
-    { "src": "/bahrain", "dest": "/static/bahrain/index.html" },
-    { "src": "/", "dest": "/static/index.html" },
-    { "src": "/(.*)", "dest": "/static/$1" }
+    {
+      "src": "/api/f1",
+      "dest": "api/f1.js"
+    },
+    {
+      "src": "/live",
+      "dest": "/static/live.html"
+    },
+    {
+      "src": "/bahrain",
+      "dest": "/static/bahrain/index.html"
+    },
+    {
+      "src": "/multi",
+      "dest": "/static/multi.html"
+    },
+    {
+      "src": "/",
+      "dest": "/static/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/static/$1"
+    }
   ]
 }

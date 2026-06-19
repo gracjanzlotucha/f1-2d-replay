@@ -28,6 +28,10 @@
       "dest": "/static/multi.html"
     },
     {
+      "src": "/3d",
+      "dest": "/static/track3d.html"
+    },
+    {
       "src": "/",
       "dest": "/static/index.html"
     },

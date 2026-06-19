@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 cache/
 .env
+
+# Large source car model — only the decimated LOD (car-model-lod.stl) is shipped
+static/assets/car-model.stl

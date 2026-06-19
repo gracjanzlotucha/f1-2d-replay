@@ -1,0 +1,105 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   3D track view — loaded after style.css on /3d
+   Overlays a Three.js canvas on top of app.js's (hidden) 2D canvas.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* The 2D canvas keeps running underneath (app.js owns the replay clock &
+   standings) but is fully covered by the 3D scene. */
+#track-canvas { opacity: 0; }
+
+#td-root {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+#td-root canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+}
+
+/* Telemetry panel & tooltip (from app.js) must stay above the 3D scene */
+#telemetry-panel { z-index: 4; }
+#car-tooltip { z-index: 4; }
+
+/* ─── Loading overlay ────────────────────────────────────────────────────── */
+#td-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: #0d0e12;
+  color: #838aa5;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 13px;
+  letter-spacing: .04em;
+  transition: opacity .4s ease;
+}
+#td-loading.hidden { opacity: 0; pointer-events: none; }
+.td-spinner {
+  width: 34px; height: 34px;
+  border: 3px solid #272a35;
+  border-top-color: #BFFF4A;
+  border-radius: 50%;
+  animation: td-spin .8s linear infinite;
+}
+@keyframes td-spin { to { transform: rotate(360deg); } }
+
+/* ─── Hint bar ───────────────────────────────────────────────────────────── */
+#td-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 6px 12px;
+  background: rgba(13, 14, 18, 0.72);
+  backdrop-filter: blur(6px);
+  border: 1px solid #272a35;
+  border-radius: 9999px;
+  color: #c3c9d9;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .4s ease;
+}
+#td-hint.show { opacity: 1; }
+#td-hint.fade { opacity: 0; }
+
+/* ─── Camera mode pill (top-left of track) ───────────────────────────────── */
+#td-cam {
+  position: absolute;
+  left: 12px; top: 12px;
+  z-index: 3;
+  display: flex; gap: 4px;
+  background: rgba(13, 14, 18, 0.72);
+  backdrop-filter: blur(6px);
+  border: 1px solid #272a35;
+  border-radius: 10px;
+  padding: 4px;
+}
+#td-cam button {
+  background: none; border: none;
+  color: #838aa5;
+  font-family: 'Geist', 'Inter', sans-serif;
+  font-size: 11px; font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+#td-cam button:hover { color: #eaecf0; }
+#td-cam button.active { background: #BFFF4A; color: #0d0e12; }
+
+@media (max-width: 768px) {
+  #td-hint { display: none; }
+}

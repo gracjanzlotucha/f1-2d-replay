@@ -358,43 +358,110 @@ function loadCars() {
   });
 }
 
-/** Position/orient one car instance from app.js interpolated data. */
-function updateCar(num, t) {
+// Car footprint for anti-overlap, in metres (real F1: 5.4 × 1.9 m + a little gap)
+const HALF_LEN = 2.7, HALF_WID = 0.95, SEP_GAP = 0.4;
+const MAX_NUDGE = 3.0;        // cap how far a model may drift from its true spot
+const _states = [];           // reused each frame
+
+/**
+ * Gather every car's true world position + heading from app.js data.
+ * Telemetry is metre-accurate, so two cars racing wheel-to-wheel can resolve
+ * to nearly the same point; separateCars() then de-interpenetrates the models.
+ */
+function gatherCarStates(t) {
   const G = app().G;
-  const idx = S.carIndex[num];
-  if (idx == null) return;
+  _states.length = 0;
+  for (const num of S.driverList) {
+    const idx = S.carIndex[num];
+    const ds = G.driverStatus[num];
+    let visible = true;
+    if (ds && ds.status === 'dns') visible = false;
+    if (ds && ds.status === 'dnf' && ds.retirementLap != null) {
+      const retT = G.lapStartMap[ds.retirementLap + 1] || G.lapStartMap[ds.retirementLap];
+      if (retT != null && t > retT + 10) visible = false;
+    }
+    const pos = visible ? app().getPosition(num, t) : null;
+    if (!pos) { _states.push({ idx, num, visible: false }); continue; }
 
-  const ds = G.driverStatus[num];
-  let visible = true;
-  if (ds && ds.status === 'dns') visible = false;
-  if (ds && ds.status === 'dnf' && ds.retirementLap != null) {
-    const retT = G.lapStartMap[ds.retirementLap + 1] || G.lapStartMap[ds.retirementLap];
-    if (retT != null && t > retT + 10) visible = false;
+    const elev = elevAt(pos.x, pos.y);
+    const w = toWorld(pos.x, pos.y, elev);
+
+    // Heading from a look-ahead sample; keep last good heading when stationary
+    const ahead = app().getPosition(num, t + 0.35);
+    let yaw = S._heading[num] ?? 0;
+    if (ahead) {
+      const dx = (ahead.x - pos.x), dz = -(ahead.y - pos.y);
+      if (dx * dx + dz * dz > 1e-4) { yaw = Math.atan2(-dz, dx); S._heading[num] = yaw; }
+    }
+    _states.push({ idx, num, visible: true, x: w.x, y: w.y, z: w.z, ox: w.x, oz: w.z, yaw });
   }
+}
 
-  const pos = visible ? app().getPosition(num, t) : null;
-  if (!pos) {
-    TMP_M.makeTranslation(0, -9999, 0);
-    S.cars.setMatrixAt(idx, TMP_M);
-    return;
-  }
+/**
+ * Push apart any two car models that would interpenetrate, resolving along the
+ * smaller overlap axis in the pair's shared heading frame (so a near-coincident
+ * pair separates side-by-side like an overtake, and a near-touching queue
+ * spreads out in line). Displacement from each car's true position is capped.
+ */
+function separateCars() {
+  const arr = _states.filter(s => s.visible);
+  const ALONG = HALF_LEN * 2 + SEP_GAP, LAT = HALF_WID * 2 + SEP_GAP;
+  for (let iter = 0; iter < 2; iter++) {
+    for (let i = 0; i < arr.length; i++) {
+      for (let j = i + 1; j < arr.length; j++) {
+        const a = arr[i], b = arr[j];
+        let dx = b.x - a.x, dz = b.z - a.z;
+        if (dx * dx + dz * dz > 36) continue; // >6 m apart: no overlap possible
 
-  const elev = elevAt(pos.x, pos.y);
-  TMP_P.copy(toWorld(pos.x, pos.y, elev));
+        // shared frame from the mean heading
+        const my = (a.yaw + b.yaw) / 2;
+        const fx = Math.cos(my), fz = -Math.sin(my);   // forward (x,z)
+        const rx = -fz, rz = fx;                        // right (x,z)
+        const along = dx * fx + dz * fz;
+        const lat = dx * rx + dz * rz;
+        const oAlong = ALONG - Math.abs(along);
+        const oLat = LAT - Math.abs(lat);
+        if (oAlong <= 0 || oLat <= 0) continue;         // boxes don't overlap
 
-  // Heading from a look-ahead sample; keep last good heading when stationary
-  const ahead = app().getPosition(num, t + 0.35);
-  let yaw = S._heading[num] ?? 0;
-  if (ahead) {
-    const dx = (ahead.x - pos.x), dz = -(ahead.y - pos.y); // world dx, dz
-    if (dx * dx + dz * dz > 1e-4) {
-      yaw = Math.atan2(-dz, dx); // rotate local +X to (cosθ,0,-sinθ)=dir
-      S._heading[num] = yaw;
+        let px, pz, mag;
+        if (oLat <= oAlong) {
+          const s = lat > 1e-4 ? 1 : lat < -1e-4 ? -1 : (b.idx > a.idx ? 1 : -1);
+          px = rx * s; pz = rz * s; mag = oLat;
+        } else {
+          const s = along > 1e-4 ? 1 : along < -1e-4 ? -1 : (b.idx > a.idx ? 1 : -1);
+          px = fx * s; pz = fz * s; mag = oAlong;
+        }
+        const h = mag / 2;
+        a.x -= px * h; a.z -= pz * h;
+        b.x += px * h; b.z += pz * h;
+      }
     }
   }
-  TMP_Q.setFromAxisAngle(UP, yaw);
-  TMP_M.compose(TMP_P, TMP_Q, TMP_S);
-  S.cars.setMatrixAt(idx, TMP_M);
+  // Clamp drift from the true position so nudges never throw a car off-track
+  for (const s of arr) {
+    const dx = s.x - s.ox, dz = s.z - s.oz;
+    const d = Math.hypot(dx, dz);
+    if (d > MAX_NUDGE) { const k = MAX_NUDGE / d; s.x = s.ox + dx * k; s.z = s.oz + dz * k; }
+  }
+}
+
+/** Write instance matrices and record rendered positions for the cameras. */
+function writeCarMatrices() {
+  const RP = S.renderPos || (S.renderPos = {});
+  for (const s of _states) {
+    if (!s.visible) {
+      TMP_M.makeTranslation(0, -9999, 0);
+      S.cars.setMatrixAt(s.idx, TMP_M);
+      delete RP[s.num];
+      continue;
+    }
+    TMP_P.set(s.x, s.y, s.z);
+    TMP_Q.setFromAxisAngle(UP, s.yaw);
+    TMP_M.compose(TMP_P, TMP_Q, TMP_S);
+    S.cars.setMatrixAt(s.idx, TMP_M);
+    RP[s.num] = { x: s.x, y: s.y, z: s.z, yaw: s.yaw };
+  }
+  S.cars.instanceMatrix.needsUpdate = true;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -418,17 +485,24 @@ function frameOverview() {
   S.controls.update();
 }
 
-// Compute the chase camera target pose for a driver at time t.
-function chasePose(num, t) {
+// Rendered (post-nudge) world pose of a car, falling back to raw data before
+// the first frame has run. Keeps cameras locked to the model the user sees.
+function renderedPose(num, t) {
+  const rp = S.renderPos && S.renderPos[num];
+  if (rp) return { pos: new THREE.Vector3(rp.x, rp.y, rp.z), yaw: rp.yaw };
   const pos = app().getPosition(num, t);
   if (!pos) return null;
-  const elev = elevAt(pos.x, pos.y);
-  const carPos = toWorld(pos.x, pos.y, elev);
-  const yaw = S._heading[num] ?? 0;
-  const fwd = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)); // car forward
+  return { pos: toWorld(pos.x, pos.y, elevAt(pos.x, pos.y)), yaw: S._heading[num] ?? 0 };
+}
+
+// Compute the chase camera target pose for a driver at time t.
+function chasePose(num, t) {
+  const rp = renderedPose(num, t);
+  if (!rp) return null;
+  const fwd = new THREE.Vector3(Math.cos(rp.yaw), 0, -Math.sin(rp.yaw)); // car forward
   return {
-    pos: carPos.clone().addScaledVector(fwd, -16).add(new THREE.Vector3(0, 7.5, 0)),
-    look: carPos.clone().addScaledVector(fwd, 8).add(new THREE.Vector3(0, 1.5, 0)),
+    pos: rp.pos.clone().addScaledVector(fwd, -16).add(new THREE.Vector3(0, 7.5, 0)),
+    look: rp.pos.clone().addScaledVector(fwd, 8).add(new THREE.Vector3(0, 1.5, 0)),
   };
 }
 
@@ -444,15 +518,12 @@ function updateFollowCamera(num, t) {
 // TV-helicopter pose: high and behind a target car. Shows the asphalt, the
 // elevation and several cars at true scale — the default, watchable view.
 function broadcastPose(num, t) {
-  const pos = app().getPosition(num, t);
-  if (!pos) return null;
-  const elev = elevAt(pos.x, pos.y);
-  const carPos = toWorld(pos.x, pos.y, elev);
-  const yaw = S._heading[num] ?? 0;
-  const fwd = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+  const rp = renderedPose(num, t);
+  if (!rp) return null;
+  const fwd = new THREE.Vector3(Math.cos(rp.yaw), 0, -Math.sin(rp.yaw));
   return {
-    pos: carPos.clone().addScaledVector(fwd, -42).add(new THREE.Vector3(0, 30, 0)),
-    look: carPos.clone().addScaledVector(fwd, 14).add(new THREE.Vector3(0, 1.5, 0)),
+    pos: rp.pos.clone().addScaledVector(fwd, -42).add(new THREE.Vector3(0, 30, 0)),
+    look: rp.pos.clone().addScaledVector(fwd, 14).add(new THREE.Vector3(0, 1.5, 0)),
   };
 }
 
@@ -578,8 +649,9 @@ function animate() {
 
   const t = app().G.currentT;
 
-  for (const num of S.driverList) updateCar(num, t);
-  S.cars.instanceMatrix.needsUpdate = true;
+  gatherCarStates(t);
+  separateCars();
+  writeCarMatrices();
 
   syncFollowFromApp();
   if (S.camMode === 'follow' && S.followNum) updateFollowCamera(S.followNum, t);
